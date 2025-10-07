@@ -1,7 +1,7 @@
 /**
- * Social Media Import Service v2.0
- * Универсальный импорт постов из VK и Instagram
- * Поддерживает: ID, username, полные ссылки
+ * Social Media Import Service v2.1
+ * Универсальный импорт постов из VK, Instagram и Telegram
+ * Поддерживает: ID, username, полные ссылки, @каналы
  */
 
 /**
@@ -39,6 +39,9 @@ function importSocialPosts() {
     case 'instagram':
       posts = importInstagramPosts(sourceInfo.value, count);
       break;
+    case 'telegram':
+      posts = importTelegramPosts(sourceInfo.value, count);
+      break;
     default:
       throw new Error('Неподдерживаемая платформа или неверный формат ссылки');
   }
@@ -68,6 +71,27 @@ function parseSource(source) {
       platform: 'instagram',
       type: 'url', 
       value: match[1],
+      original: sourceStr
+    };
+  }
+  
+  // Telegram ссылки и каналы
+  if (sourceStr.match(/t\.me\/([^\/\?]+)/i) || sourceStr.match(/telegram\.me\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/(?:t\.me|telegram\.me)\/([^\/\?]+)/i);
+    return {
+      platform: 'telegram',
+      type: 'url',
+      value: match[1].replace(/^@/, ''), // Убираем @ если есть
+      original: sourceStr
+    };
+  }
+  
+  // Telegram @channel
+  if (sourceStr.match(/^@[a-zA-Z0-9_]+$/)) {
+    return {
+      platform: 'telegram',
+      type: 'username',
+      value: sourceStr.substring(1), // Убираем @
       original: sourceStr
     };
   }
@@ -102,7 +126,17 @@ function parseSource(source) {
     };
   }
   
-  // По умолчанию считаем VK username, если ничего не подошло
+  // Если содержит только буквы/цифры/_ - вероятно Telegram канал
+  if (sourceStr.match(/^[a-zA-Z0-9_]+$/)) {
+    return {
+      platform: 'telegram',
+      type: 'username',
+      value: sourceStr,
+      original: sourceStr
+    };
+  }
+  
+  // По умолчанию считаем VK username
   return {
     platform: 'vk', 
     type: 'username',
