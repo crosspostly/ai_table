@@ -109,9 +109,11 @@ function parseSource(source, explicitPlatform) {
     };
   }
   
+  // ТОЛЬКО полные https ссылки определяются автоматически
+  
   // Instagram ссылки
-  if (sourceStr.match(/instagram\.com\/([^\/\?]+)/i)) {
-    var match = sourceStr.match(/instagram\.com\/([^\/\?]+)/i);
+  if (sourceStr.match(/https?:\/\/(?:www\.)?instagram\.com\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/https?:\/\/(?:www\.)?instagram\.com\/([^\/\?]+)/i);
     return {
       platform: 'instagram',
       type: 'url', 
@@ -120,9 +122,9 @@ function parseSource(source, explicitPlatform) {
     };
   }
   
-  // Telegram ссылки и каналы
-  if (sourceStr.match(/t\.me\/([^\/\?]+)/i) || sourceStr.match(/telegram\.me\/([^\/\?]+)/i)) {
-    var match = sourceStr.match(/(?:t\.me|telegram\.me)\/([^\/\?]+)/i);
+  // Telegram ссылки
+  if (sourceStr.match(/https?:\/\/(?:www\.)?(?:t\.me|telegram\.me)\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/https?:\/\/(?:www\.)?(?:t\.me|telegram\.me)\/([^\/\?]+)/i);
     return {
       platform: 'telegram',
       type: 'url',
@@ -131,19 +133,9 @@ function parseSource(source, explicitPlatform) {
     };
   }
   
-  // Telegram @channel
-  if (sourceStr.match(/^@[a-zA-Z0-9_]+$/)) {
-    return {
-      platform: 'telegram',
-      type: 'username',
-      value: sourceStr.substring(1), // Убираем @
-      original: sourceStr
-    };
-  }
-  
   // VK ссылки
-  if (sourceStr.match(/vk\.com\/([^\/\?]+)/i)) {
-    var match = sourceStr.match(/vk\.com\/([^\/\?]+)/i);
+  if (sourceStr.match(/https?:\/\/(?:www\.)?vk\.com\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/https?:\/\/(?:www\.)?vk\.com\/([^\/\?]+)/i);
     var vkId = match[1];
     
     // Если это club123456 или public123456, преобразуем в -123456
@@ -151,7 +143,6 @@ function parseSource(source, explicitPlatform) {
       var numMatch = vkId.match(/^(club|public)(\d+)$/);
       vkId = '-' + numMatch[2];
     }
-    // Если это обычный username, оставляем как есть
     
     return {
       platform: 'vk',
@@ -161,28 +152,12 @@ function parseSource(source, explicitPlatform) {
     };
   }
   
-  // VK ID (начинается с минуса или цифры)
-  if (sourceStr.match(/^-?\d+$/)) {
-    return {
-      platform: 'vk',
-      type: 'id',
-      value: sourceStr,
-      original: sourceStr
-    };
-  }
+  // ВСЁ ОСТАЛЬНОЕ требует указания платформы в C1
+  // -123456 может быть VK или TG
+  // @durov может быть VK или TG  
+  // durov может быть любой платформой
   
-  // Для простых username без платформы - требуется явное указание в C1
-  if (sourceStr.match(/^[a-zA-Z0-9_]+$/)) {
-    throw new Error('Для простого username "' + sourceStr + '" укажите платформу в ячейке C1 (тг/вк/инста)');
-  }
-  
-  // Fallback для остальных случаев (например, сложные VK username с точками)
-  return {
-    platform: 'vk', 
-    type: 'username',
-    value: sourceStr,
-    original: sourceStr
-  };
+  throw new Error('Для "' + sourceStr + '" укажите платформу в ячейке C1 (тг/вк/инста). Автоматически определяются только полные ссылки!');
 }
 
 /**
