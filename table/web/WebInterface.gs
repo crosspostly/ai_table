@@ -4,22 +4,31 @@
  */
 
 /**
- * Открыть основной веб-интерфейс
+ * Открыть реалистичный веб-интерфейс (РАБОТАЕТ в Google Apps Script)
  */
 function openWebInterface() {
-  var htmlOutput = HtmlService.createTemplateFromFile('WebApp');
-  
-  // Передаем данные в шаблон
-  htmlOutput.credentials = getClientCredentials();
-  htmlOutput.systemStatus = getSystemStatusData();
-  htmlOutput.recentResults = getRecentResults();
-  
-  var html = htmlOutput.evaluate()
-    .setTitle('🤖 Table AI Bot - Веб Интерфейс')
-    .setWidth(1200)
-    .setHeight(800);
+  try {
+    // Создаем HTML из реалистичного шаблона
+    var htmlOutput = HtmlService.createHtmlOutputFromFile('RealisticWebApp')
+      .setTitle('🤖 Table AI Bot - Веб Интерфейс')
+      .setWidth(750)
+      .setHeight(700);
     
-  SpreadsheetApp.getUi().showModalDialog(html, 'Table AI Bot');
+    SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Table AI Bot');
+    
+    // Логируем успешное открытие
+    addSystemLog('Web interface opened successfully', 'INFO', 'WEB_INTERFACE');
+    
+  } catch (error) {
+    // Fallback: если HTML не работает, показываем простое сообщение
+    var ui = SpreadsheetApp.getUi();
+    ui.alert('Ошибка веб-интерфейса', 
+             'Не удалось открыть веб-интерфейс: ' + error.message + 
+             '\n\nИспользуйте стандартное меню для работы с ботом.', 
+             ui.ButtonSet.OK);
+    
+    addSystemLog('Web interface error: ' + error.message, 'ERROR', 'WEB_INTERFACE');
+  }
 }
 
 /**
