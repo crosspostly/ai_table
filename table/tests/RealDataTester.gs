@@ -16,50 +16,116 @@ function runRealDataTests() {
     details: []
   };
   
-  // Реальные открытые источники для тестирования
+  // РЕАЛЬНЫЕ открытые источники для comprehensive тестирования
   const testCases = [
-    // Instagram - популярные открытые аккаунты
+    // === INSTAGRAM ТЕСТЫ (популярные публичные) ===
     {
-      name: 'Instagram URL Test',
+      name: 'Instagram NASA (официальный)',
       source: 'https://www.instagram.com/nasa/',
       platform: '',
-      count: 5,
+      count: 3,
+      expectedPlatform: 'instagram'
+    },
+    {
+      name: 'Instagram National Geographic', 
+      source: 'https://www.instagram.com/natgeo/',
+      platform: '',
+      count: 3,
+      expectedPlatform: 'instagram'
+    },
+    {
+      name: 'Instagram BBC News',
+      source: 'https://www.instagram.com/bbcnews/',
+      platform: '',
+      count: 2,
       expectedPlatform: 'instagram'
     },
     
-    // Telegram - популярные открытые каналы  
+    // === TELEGRAM ТЕСТЫ (открытые каналы) ===
     {
-      name: 'Telegram URL Test',
+      name: 'Telegram Durov Channel',
       source: 'https://t.me/durov',
       platform: '',
       count: 3,
       expectedPlatform: 'telegram'
     },
-    
-    // VK - открытые группы
     {
-      name: 'VK URL Test', 
-      source: 'https://vk.com/club1',
+      name: 'Telegram Medusa News',
+      source: 'https://t.me/meduzalive',
       platform: '',
-      count: 5,
-      expectedPlatform: 'vk'
+      count: 2,
+      expectedPlatform: 'telegram'
     },
-    
-    // Explicit platform tests
     {
-      name: 'Explicit Telegram Platform',
-      source: 'durov',
-      platform: 'telegram', 
-      count: 3,
+      name: 'Telegram IT News',
+      source: 'https://t.me/tproger',
+      platform: '',
+      count: 2,
       expectedPlatform: 'telegram'
     },
     
+    // === VK ТЕСТЫ (открытые группы) ===
     {
-      name: 'Explicit VK Platform',
-      source: '-1',
-      platform: 'vk',
+      name: 'VK Durov Profile',
+      source: 'https://vk.com/durov',
+      platform: '',
       count: 3,
       expectedPlatform: 'vk'
+    },
+    {
+      name: 'VK Tproger Group',
+      source: 'https://vk.com/tproger',
+      platform: '',
+      count: 3,
+      expectedPlatform: 'vk'
+    },
+    {
+      name: 'VK VC.ru',
+      source: 'https://vk.com/vcru',
+      platform: '',
+      count: 2,
+      expectedPlatform: 'vk'
+    },
+    
+    // === EXPLICIT PLATFORM TESTS ===
+    {
+      name: 'Telegram Username (explicit)',
+      source: 'durov',
+      platform: 'telegram', 
+      count: 2,
+      expectedPlatform: 'telegram'
+    },
+    {
+      name: 'VK Username (explicit)',
+      source: 'durov',
+      platform: 'vk',
+      count: 2,
+      expectedPlatform: 'vk'
+    },
+    {
+      name: 'Instagram Username (explicit)',
+      source: 'nasa',
+      platform: 'instagram',
+      count: 2,
+      expectedPlatform: 'instagram'
+    },
+    
+    // === ID TESTS ===
+    {
+      name: 'VK Group ID',
+      source: '-1',
+      platform: 'vk',
+      count: 2,
+      expectedPlatform: 'vk'
+    },
+    
+    // === EDGE CASES ===
+    {
+      name: 'Telegram @username format',
+      source: '@durov',
+      platform: 'telegram',
+      count: 1,
+      expectedPlatform: 'telegram'
     }
   ];
   
