@@ -1,69 +1,145 @@
 /**
- * Social Media Import Service v2.0
- * Универсальный импорт постов из VK и Instagram
- * Поддерживает: ID, username, полные ссылки
+ * Social Media Import Service v2.1
+ * Универсальный импорт постов из VK, Instagram и Telegram
+ * Поддерживает: ID, username, полные ссылки, @каналы
  */
 
 /**
  * Универсальный импорт постов из социальных сетей
+ * Теперь с input validation, retry logic и улучшенной обработкой ошибок
  */
 function importSocialPosts() {
-  addSystemLog('→ Запуск универсального импорта соцсетей', 'INFO', 'SOCIAL_IMPORT');
+  addSystemLog('→ Запуск универсального импорта соцсетей v2.1', 'INFO', 'SOCIAL_IMPORT');
   
-  var ss = SpreadsheetApp.getActive();
-  var params = ss.getSheetByName('Параметры');
+  try {
+    var ss = SpreadsheetApp.getActive();
+    var params = ss.getSheetByName('Параметры');
+    
+    if (!params) {
+      throw createCustomError('Лист "Параметры" не найден! Создайте лист с именем "Параметры" для настроек.');
+    }
+    
+    // Чтение параметров с валидацией
+    var sourceValue = String(params.getRange('B1').getValue() || '').trim();
+    var countValue = params.getRange('B2').getValue() || 50;
+    var platformValue = String(params.getRange('C1').getValue() || '').trim();
+    
+    // КРИТИЧЕСКАЯ ВАЛИДАЦИЯ входных данных
+    addSystemLog('🛡️ Валидация входных данных...', 'INFO', 'SOCIAL_IMPORT');
+    var validatedInput = validateAndSanitizeInputs(sourceValue, countValue, platformValue);
+    
+    var cleanSourceUrl = validatedInput.sourceUrl;
+    var count = validatedInput.count;
+    var explicitPlatform = normalizePlatformName(validatedInput.platform);
   
-  if (!params) {
-    addSystemLog('❌ Нет листа "Параметры"', 'ERROR', 'SOCIAL_IMPORT');
-    throw new Error('Лист "Параметры" не найден!');
+    addSystemLog('📊 Параметры: source=' + cleanSourceUrl + ', count=' + count + (explicitPlatform ? ', platform=' + explicitPlatform : ''), 'INFO', 'SOCIAL_IMPORT');
+    
+    // Определяем тип источника и платформу
+    var sourceInfo = parseSource(cleanSourceUrl, explicitPlatform);
+    addSystemLog('📊 Источник: ' + sourceInfo.platform + ', тип: ' + sourceInfo.type, 'INFO', 'SOCIAL_IMPORT');
+    
+    var posts = [];
+    
+    // Импортируем с обработкой ошибок для каждой платформы
+    switch (sourceInfo.platform) {
+      case 'vk':
+        posts = executeWithErrorHandling(
+          function() { return importVkPostsAdvanced(sourceInfo.value, count); },
+          { operation: 'social_import', platform: 'vk', username: sourceInfo.value }
+        );
+        break;
+      case 'instagram':
+        posts = executeWithErrorHandling(
+          function() { return importInstagramPosts(sourceInfo.value, count); },
+          { operation: 'social_import', platform: 'instagram', username: sourceInfo.value }
+        );
+        break;
+      case 'telegram':
+        posts = executeWithErrorHandling(
+          function() { return importTelegramPosts(sourceInfo.value, count); },
+          { operation: 'social_import', platform: 'telegram', username: sourceInfo.value }
+        );
+        break;
+      default:
+        throw createCustomError('Неподдерживаемая платформа: ' + sourceInfo.platform);
+    }
+    
+    if (posts && posts.length > 0) {
+      writePostsToSheet(posts, 'посты');
+      addSystemLog('✅ Импортировано постов: ' + posts.length, 'INFO', 'SOCIAL_IMPORT');
+      return { success: true, count: posts.length, platform: sourceInfo.platform };
+    } else {
+      throw createCustomError('Не удалось получить посты из ' + sourceInfo.platform + '. Проверьте доступность источника.');
+    }
+    
+  } catch (error) {
+    // Создаем user-friendly ошибку
+    var friendlyError = createUserFriendlyError(error, {
+      operation: 'social_import',
+      platform: error.context?.platform || 'unknown',
+      username: error.context?.username || cleanSourceUrl,
+      url: cleanSourceUrl
+    });
+    
+    addSystemLog('❌ Импорт неуспешен: ' + friendlyError.message, 'ERROR', 'SOCIAL_IMPORT');
+    throw friendlyError;
+  }
+}
+
+
+
+/**
+ * Нормализация названий платформ
+ * @param {string} platform - введенное название платформы
+ * @return {string|null} - стандартное название или null
+ */
+function normalizePlatformName(platform) {
+  if (!platform) return null;
+  
+  var platformStr = platform.toLowerCase().trim();
+  
+  // Instagram
+  if (['instagram', 'инста', 'инстаграм', 'ig', 'insta'].includes(platformStr)) {
+    return 'instagram';
   }
   
-  var sourceValue = params.getRange('B1').getValue();
-  var count = Math.min(parseInt(params.getRange('B2').getValue() || 50), 100);
-  
-  if (!sourceValue) {
-    addSystemLog('❌ Не указан источник в B1', 'ERROR', 'SOCIAL_IMPORT');
-    throw new Error('Укажите источник (ID, username или ссылку) в ячейке Параметры!B1');
+  // Telegram
+  if (['telegram', 'телеграм', 'тг', 'tg', 't'].includes(platformStr)) {
+    return 'telegram';
   }
   
-  // Определяем тип источника и платформу
-  var sourceInfo = parseSource(sourceValue);
-  addSystemLog('📊 Источник: ' + sourceInfo.platform + ', тип: ' + sourceInfo.type, 'INFO', 'SOCIAL_IMPORT');
-  
-  var posts = [];
-  
-  switch (sourceInfo.platform) {
-    case 'vk':
-      posts = importVkPostsAdvanced(sourceInfo.value, count);
-      break;
-    case 'instagram':
-      posts = importInstagramPosts(sourceInfo.value, count);
-      break;
-    default:
-      throw new Error('Неподдерживаемая платформа или неверный формат ссылки');
+  // VK
+  if (['vk', 'вк', 'вконтакте', 'vkontakte', 'v'].includes(platformStr)) {
+    return 'vk';
   }
   
-  if (posts && posts.length > 0) {
-    writePostsToSheet(posts, 'посты');
-    addSystemLog('✅ Импортировано постов: ' + posts.length, 'INFO', 'SOCIAL_IMPORT');
-    return { success: true, count: posts.length, platform: sourceInfo.platform };
-  } else {
-    addSystemLog('❌ Посты не получены', 'ERROR', 'SOCIAL_IMPORT');
-    return { success: false, error: 'Не удалось получить посты' };
-  }
+  return null;
 }
 
 /**
  * Парсинг источника для определения платформы
  * @param {string} source - ID, username или ссылка
+ * @param {string} explicitPlatform - явно указанная платформа (приоритет)
  * @return {Object} - информация об источнике
  */
-function parseSource(source) {
+function parseSource(source, explicitPlatform) {
   var sourceStr = String(source).trim();
   
+  // Если платформа указана явно - используем её
+  if (explicitPlatform && ['vk', 'instagram', 'telegram'].includes(explicitPlatform)) {
+    return {
+      platform: explicitPlatform,
+      type: 'explicit',
+      value: sourceStr,
+      original: sourceStr
+    };
+  }
+  
+  // ТОЛЬКО полные https ссылки определяются автоматически
+  
   // Instagram ссылки
-  if (sourceStr.match(/instagram\.com\/([^\/\?]+)/i)) {
-    var match = sourceStr.match(/instagram\.com\/([^\/\?]+)/i);
+  if (sourceStr.match(/https?:\/\/(?:www\.)?instagram\.com\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/https?:\/\/(?:www\.)?instagram\.com\/([^\/\?]+)/i);
     return {
       platform: 'instagram',
       type: 'url', 
@@ -72,9 +148,20 @@ function parseSource(source) {
     };
   }
   
+  // Telegram ссылки
+  if (sourceStr.match(/https?:\/\/(?:www\.)?(?:t\.me|telegram\.me)\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/https?:\/\/(?:www\.)?(?:t\.me|telegram\.me)\/([^\/\?]+)/i);
+    return {
+      platform: 'telegram',
+      type: 'url',
+      value: match[1].replace(/^@/, ''), // Убираем @ если есть
+      original: sourceStr
+    };
+  }
+  
   // VK ссылки
-  if (sourceStr.match(/vk\.com\/([^\/\?]+)/i)) {
-    var match = sourceStr.match(/vk\.com\/([^\/\?]+)/i);
+  if (sourceStr.match(/https?:\/\/(?:www\.)?vk\.com\/([^\/\?]+)/i)) {
+    var match = sourceStr.match(/https?:\/\/(?:www\.)?vk\.com\/([^\/\?]+)/i);
     var vkId = match[1];
     
     // Если это club123456 или public123456, преобразуем в -123456
@@ -82,7 +169,6 @@ function parseSource(source) {
       var numMatch = vkId.match(/^(club|public)(\d+)$/);
       vkId = '-' + numMatch[2];
     }
-    // Если это обычный username, оставляем как есть
     
     return {
       platform: 'vk',
@@ -92,23 +178,12 @@ function parseSource(source) {
     };
   }
   
-  // VK ID (начинается с минуса или цифры)
-  if (sourceStr.match(/^-?\d+$/)) {
-    return {
-      platform: 'vk',
-      type: 'id',
-      value: sourceStr,
-      original: sourceStr
-    };
-  }
+  // ВСЁ ОСТАЛЬНОЕ требует указания платформы в C1
+  // -123456 может быть VK или TG
+  // @durov может быть VK или TG  
+  // durov может быть любой платформой
   
-  // По умолчанию считаем VK username, если ничего не подошло
-  return {
-    platform: 'vk', 
-    type: 'username',
-    value: sourceStr,
-    original: sourceStr
-  };
+  throw new Error('Для "' + sourceStr + '" укажите платформу в ячейке C1 (тг/вк/инста). Автоматически определяются только полные ссылки!');
 }
 
 /**
@@ -120,15 +195,14 @@ function importVkPostsAdvanced(source, count) {
     
     var url = VK_PARSER_URL + '?owner=' + encodeURIComponent(source) + '&count=' + encodeURIComponent(count);
     
-    var options = {
+    // Используем fetchSocialApiWithRetry вместо прямого UrlFetchApp.fetch
+    var response = fetchSocialApiWithRetry('vk', url, {
       method: 'GET',
-      muteHttpExceptions: true,
       headers: {
         'User-Agent': USER_AGENT
       }
-    };
+    });
     
-    var response = UrlFetchApp.fetch(url, options);
     addSystemLog('← VK API ответ: HTTP ' + response.getResponseCode(), 'DEBUG', 'VK_IMPORT');
     
     if (response.getResponseCode() !== 200) {
@@ -169,18 +243,15 @@ function importInstagramPosts(username, limit) {
   try {
     addSystemLog('→ Импорт Instagram постов: ' + username, 'INFO', 'INSTAGRAM_IMPORT');
     
-    // Первичный запрос профиля
+    // Первичный запрос профиля с retry логикой
     var profileUrl = 'https://www.instagram.com/api/v1/users/web_profile_info/?username=' + encodeURIComponent(username);
-    var options = {
+    
+    var response = fetchSocialApiWithRetry('instagram', profileUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'X-IG-App-ID': '936619743392459'
-      },
-      muteHttpExceptions: true
-    };
-    
-    var response = UrlFetchApp.fetch(profileUrl, options);
+        'X-IG-App-ID': '936619743392459' // Хардкод ок для веб-приложения
+      }
+    });
     addSystemLog('← Instagram API ответ: HTTP ' + response.getResponseCode(), 'DEBUG', 'INSTAGRAM_IMPORT');
     
     if (response.getResponseCode() !== 200) {

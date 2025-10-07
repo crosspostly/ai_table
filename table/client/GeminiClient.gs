@@ -72,14 +72,15 @@ function GM(prompt, maxTokens, temperature) {
       }
     };
     
-    var options = {
+    // ВАЖНО: Используем fetchGeminiWithRetry для ПОСЛЕДОВАТЕЛЬНЫХ запросов
+    var response = fetchGeminiWithRetry(GEMINI_API_URL + '?key=' + apiKey, {
       method: 'POST',
-      contentType: 'application/json',
-      payload: JSON.stringify(requestBody),
-      muteHttpExceptions: true
-    };
-
-    var response = UrlFetchApp.fetch(GEMINI_API_URL + '?key=' + apiKey, options);
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(requestBody)
+    });
+    
     var responseData = JSON.parse(response.getContentText());
     
     addSystemLog('← GM: HTTP ' + response.getResponseCode(), 'DEBUG', 'GEMINI');
