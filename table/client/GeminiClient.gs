@@ -41,24 +41,24 @@ function gmCachePut_(key, value, ttlSec) {
  * Основная функция GM для Gemini API
  */
 function GM(prompt, maxTokens, temperature) {
-  maxTokens = maxTokens || 25000;
+  maxTokens = maxTokens || 250000;  // Увеличено в 10 раз
   temperature = temperature || 0.7;
   
-  logMessage('→ GM: prompt=' + (prompt ? prompt.slice(0,60)+'...' : 'нет') + ' (' + (prompt ? prompt.length : 0) + ')', 'INFO');
+  addSystemLog('→ GM: prompt=' + (prompt ? prompt.slice(0,60)+'...' : 'нет') + ' (' + (prompt ? prompt.length : 0) + ')', 'INFO', 'GEMINI');
   
   if (!prompt || typeof prompt !== 'string') {
     throw new Error('Промпт должен быть непустой строкой.');
   }
   
-  if (prompt.length > 50000) {
-    throw new Error('Промпт слишком длинный, сократите до 50000 символов.');
+  if (prompt.length > 500000) {
+    throw new Error('Промпт слишком длинный, сократите до 500000 символов.');
   }
 
   // Проверяем кэш
   var cacheKey = gmCacheKey_(prompt, maxTokens, temperature);
   var cached = gmCacheGet_(cacheKey);
   if (cached) {
-    logMessage('✅ GM: из кэша, длина=' + cached.length, 'INFO');
+    addSystemLog('✅ GM: из кэша, длина=' + cached.length, 'INFO', 'GEMINI');
     return cached;
   }
 
@@ -82,11 +82,11 @@ function GM(prompt, maxTokens, temperature) {
     var response = UrlFetchApp.fetch(GEMINI_API_URL + '?key=' + apiKey, options);
     var responseData = JSON.parse(response.getContentText());
     
-    logMessage('← GM: HTTP ' + response.getResponseCode(), 'DEBUG');
+    addSystemLog('← GM: HTTP ' + response.getResponseCode(), 'DEBUG', 'GEMINI');
     
     if (response.getResponseCode() !== 200) {
       var message = responseData.error && responseData.error.message ? responseData.error.message : 'Unknown error';
-      logMessage('❌ GM API ошибка: ' + message, 'ERROR');
+      addSystemLog('❌ GM API ошибка: ' + message, 'ERROR', 'GEMINI');
       return 'Error: ' + message;
     }
     
@@ -100,11 +100,11 @@ function GM(prompt, maxTokens, temperature) {
     // Кэшируем результат
     gmCachePut_(cacheKey, processedResult, 300); // 5 минут
     
-    logMessage('✅ GM: результат, длина=' + result.length + (processedResult !== result ? ', преобразован из Markdown' : ''), 'INFO');
+    addSystemLog('✅ GM: результат, длина=' + result.length + (processedResult !== result ? ', преобразован из Markdown' : ''), 'INFO', 'GEMINI');
     return processedResult;
     
   } catch (error) {
-    logMessage('❌ GM исключение: ' + error.message, 'ERROR');
+    addSystemLog('❌ GM исключение: ' + error.message, 'ERROR', 'GEMINI');
     return 'Error: ' + error.message;
   }
 }
@@ -139,10 +139,10 @@ function initGeminiKey() {
   if (key) {
     PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', key);
     ui.alert('✅ Ключ установлен!');
-    logMessage('✅ Новый API ключ Gemini установлен', 'INFO');
+    addSystemLog('✅ Новый API ключ Gemini установлен', 'INFO', 'GEMINI');
   } else {
     ui.alert('❌ Ключ не введён.');
-    logMessage('❌ Gemini: ключ не введён', 'WARN');
+    addSystemLog('❌ Gemini: ключ не введён', 'WARN', 'GEMINI');
   }
 }
 

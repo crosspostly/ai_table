@@ -195,3 +195,129 @@ function refreshCurrentGMCell() {
     SpreadsheetApp.getUi().alert(error);
   }
 }
+
+/**
+ * НОВАЯ ФУНКЦИЯ v3.0: Оптимизированная цепочка без дублирования контекста
+ * Передает только необходимый контекст: B3→C3 (получает A3+B3), C3→D3 (получает B3+C3)
+ */
+function smartChainContinueOptimized(row) {
+  try {
+    addSystemLog('🔗 Запуск оптимизированной SmartChain для строки ' + row, 'INFO', 'SMART_CHAIN');
+    
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var currentSheet = spreadsheet.getActiveSheet();
+    
+    if (!currentSheet) {
+      throw new Error('Активный лист не найден');
+    }
+    
+    // Получаем значения из текущей строки
+    var rowData = currentSheet.getRange(row, 1, 1, 20).getValues()[0];
+    
+    // Находим заполненные ячейки
+    var filledCells = [];
+    for (var col = 0; col < rowData.length; col++) {
+      var cellValue = String(rowData[col] || '').trim();
+      if (cellValue && cellValue !== '') {
+        filledCells.push({
+          column: String.fromCharCode(65 + col), // A, B, C, ...
+          value: cellValue,
+          index: col
+        });
+      }
+    }
+    
+    if (filledCells.length === 0) {
+      addSystemLog('⚠️ SmartChain: нет данных в строке ' + row, 'WARN', 'SMART_CHAIN');
+      return;
+    }
+    
+    // Определяем следующую пустую колонку
+    var nextCol = -1;
+    for (var col = 0; col < rowData.length; col++) {
+      if (!rowData[col] || String(rowData[col]).trim() === '') {
+        nextCol = col + 1;
+        break;
+      }
+    }
+    
+    if (nextCol === -1) {
+      addSystemLog('⚠️ SmartChain: нет пустых колонок в строке ' + row, 'WARN', 'SMART_CHAIN');
+      return;
+    }
+    
+    // КЛЮЧЕВАЯ ОПТИМИЗАЦИЯ: Минимальный контекст
+    var contextPrompt = buildMinimalChainContext(filledCells, nextCol, row);
+    
+    // Создаем сессию для цепочки этой строки  
+    var sessionId = 'chain_' + currentSheet.getName() + '_row' + row;
+    
+    // Получаем контекстуальный промпт (он уже включает историю)
+    var fullPrompt = buildContextualPrompt(contextPrompt, sessionId);
+    
+    // Вызываем Gemini
+    var result = callGeminiForOptimizedChain(fullPrompt, row);
+    
+    if (result && !result.startsWith('Error:')) {
+      // Записываем результат
+      currentSheet.getRange(row, nextCol).setValue(result);
+      
+      // Добавляем в контекст ТОЛЬКО текущий шаг (без дублирования)
+      var stepDescription = 'Шаг ' + String.fromCharCode(64 + nextCol) + ': ' + contextPrompt;
+      addToContextHistory('user', stepDescription, sessionId);
+      addToContextHistory('assistant', result, sessionId);
+      
+      var targetCol = String.fromCharCode(64 + nextCol);
+      addSystemLog('✅ Оптимизированная SmartChain: ' + targetCol + row + ' готов', 'INFO', 'SMART_CHAIN');
+    } else {
+      addSystemLog('❌ SmartChain: ошибка Gemini - ' + result, 'ERROR', 'SMART_CHAIN');
+    }
+    
+  } catch (error) {
+    addSystemLog('❌ Оптимизированная SmartChain ошибка: ' + error.message, 'ERROR', 'SMART_CHAIN');
+  }
+}
+
+/**
+ * Создает минимальный контекст для цепочки без избыточности
+ */
+function buildMinimalChainContext(filledCells, nextColIndex, row) {
+  try {
+    var nextCol = String.fromCharCode(64 + nextColIndex);
+    
+    // Для первого шага (A→B)
+    if (filledCells.length === 1 && filledCells[0].column === 'A') {
+      return 'Исходная задача: ' + filledCells[0].value + 
+             '\n\nСоздай первый шаг анализа для колонки ' + nextCol + '.';
+    }
+    
+    // Для последующих шагов (B→C, C→D и т.д.) - берем только последние 2 ячейки
+    if (filledCells.length >= 2) {
+      var lastCell = filledCells[filledCells.length - 1];
+      var prevCell = filledCells[filledCells.length - 2];
+      
+      return 'Предыдущий результат (' + prevCell.column + '): ' + prevCell.value +
+             '\n\nТекущий результат (' + lastCell.column + '): ' + lastCell.value +
+             '\n\nПродолжи логическую цепочку для колонки ' + nextCol + '.';
+    }
+    
+    return 'Продолжи анализ для колонки ' + nextCol + '.';
+    
+  } catch (error) {
+    addSystemLog('Ошибка минимального контекста: ' + error.message, 'ERROR', 'SMART_CHAIN');
+    return 'Продолжи анализ.';
+  }
+}
+
+/**
+ * Optimized Gemini call for chain processing
+ */
+function callGeminiForOptimizedChain(prompt, row) {
+  try {
+    // Используем увеличенные лимиты для цепочек
+    return GM(prompt, 100000, 0.7);  // Увеличенный лимит токенов
+  } catch (error) {
+    addSystemLog('Ошибка вызова Gemini для цепочки: ' + error.message, 'ERROR', 'SMART_CHAIN');
+    return 'Error: ' + error.message;
+  }
+}
