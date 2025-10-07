@@ -48,6 +48,9 @@ function doPost(e) {
       case 'vk_import':
         return handleVkImport(requestData, traceId);
         
+      case 'social_import':
+        return handleSocialImport(requestData, traceId);
+        
       case 'gm':
         return handleGeminiRequest(requestData, traceId);
         
@@ -123,6 +126,77 @@ function handleVkImport(data, traceId) {
   } catch (error) {
     logServer('VK import error: ' + error.message, traceId);
     return createErrorResponse('VK_IMPORT_ERROR: ' + error.message, 500, traceId);
+  }
+}
+
+/**
+ * Обработчик универсального социального импорта
+ */
+function handleSocialImport(data, traceId) {
+  try {
+    // Валидация входных данных  
+    if (!data.source) {
+      return createErrorResponse('SOURCE_REQUIRED', 400, traceId);
+    }
+    
+    var count = Math.min(parseInt(data.count) || 50, 100);
+    var platform = data.platform || '';
+    
+    logServer('Social import request: source=' + data.source + ', count=' + count + ', platform=' + platform, traceId);
+    
+    // Валидация и очистка входных данных
+    var validatedInput = validateAndSanitizeInputs(data.source, count, platform);
+    
+    if (!validatedInput.isValid) {
+      return createErrorResponse('VALIDATION_ERROR: ' + validatedInput.error, 400, traceId);
+    }
+    
+    // Определение типа источника и платформы
+    var sourceInfo = parseSource(validatedInput.sourceUrl, normalizePlatformName(validatedInput.platform));
+    
+    logServer('Parsed source: platform=' + sourceInfo.platform + ', value=' + sourceInfo.value, traceId);
+    
+    // Вызов соответствующего импорта через унифицированный интерфейс
+    var posts = [];
+    
+    switch (sourceInfo.platform) {
+      case 'vk':
+        posts = importVkPostsAdvanced(sourceInfo.value, validatedInput.count);
+        break;
+      case 'instagram':  
+        posts = importInstagramPosts(sourceInfo.value, validatedInput.count);
+        break;
+      case 'telegram':
+        posts = importTelegramPosts(sourceInfo.value, validatedInput.count);
+        break;
+      default:
+        throw new Error('Неподдерживаемая платформа: ' + sourceInfo.platform);
+    }
+    
+    logServer('Social import completed: platform=' + sourceInfo.platform + ', posts=' + (posts ? posts.length : 0), traceId);
+    
+    if (posts && posts.length > 0) {
+      return createSuccessResponse({
+        data: posts,
+        platform: sourceInfo.platform,
+        source: sourceInfo.value,
+        count: posts.length
+      }, traceId);
+    } else {
+      return createErrorResponse('NO_POSTS_FOUND: Не удалось получить посты из ' + sourceInfo.platform, 404, traceId);
+    }
+    
+  } catch (error) {
+    logServer('Social import error: ' + error.message, traceId);
+    
+    // Создаем user-friendly ошибку
+    var friendlyError = createUserFriendlyError(error, {
+      operation: 'social_import',
+      platform: data.platform || 'unknown',
+      source: data.source
+    });
+    
+    return createErrorResponse('SOCIAL_IMPORT_ERROR: ' + friendlyError.message, 500, traceId);
   }
 }
 
