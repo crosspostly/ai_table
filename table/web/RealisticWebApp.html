@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Table AI Bot - Простой интерфейс</title>
+    <style>
+        /* ВСТРОЕННЫЙ CSS - это работает в Google Apps Script */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            color: #1a73e8;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #1a73e8;
+            padding-bottom: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #1557b0;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom-color: #1a73e8;
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Table AI Bot</h1>
+            <p>Простой и надежный интерфейс</p>
+        </div>
+        
+        <!-- Статус системы -->
+        <div class="section">
+            <h3>📊 Статус системы</h3>
+            <div id="systemStatus" class="status info">Проверка системы...</div>
+            <button onclick="checkStatus()" class="btn btn-secondary">Обновить статус</button>
+        </div>
+        
+        <!-- Вкладки -->
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('social')">📱 Социальный импорт</div>
+            <div class="tab" onclick="showTab('ocr')">👁️ OCR анализ</div>
+            <div class="tab" onclick="showTab('settings')">⚙️ Настройки</div>
+        </div>
+        
+        <!-- Социальный импорт -->
+        <div id="tab-social" class="tab-content active">
+            <div class="section">
+                <h3>📱 Импорт постов</h3>
+                <div class="form-group">
+                    <label>Источник (URL или ID):</label>
+                    <input type="text" id="socialSource" placeholder="https://vk.com/durov или @username">
+                </div>
+                <div class="form-group">
+                    <label>Количество постов:</label>
+                    <input type="number" id="socialCount" value="10" min="1" max="50">
+                </div>
+                <div class="form-group">
+                    <label>Платформа:</label>
+                    <select id="socialPlatform">
+                        <option value="">Автоопределение</option>
+                        <option value="vk">VKontakte</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="telegram">Telegram</option>
+                    </select>
+                </div>
+                <button onclick="runSocialImport()" class="btn">Запустить импорт</button>
+                <div id="importResult" class="loading" style="display:none;">Импорт запущен...</div>
+            </div>
+        </div>
+        
+        <!-- OCR анализ -->
+        <div id="tab-ocr" class="tab-content">
+            <div class="section">
+                <h3>👁️ OCR анализ отзывов</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="ocrOverwrite"> Перезаписывать существующие результаты
+                    </label>
+                </div>
+                <button onclick="runOcrAnalysis()" class="btn">Запустить OCR</button>
+                <div id="ocrResult" class="loading" style="display:none;">Анализ запущен...</div>
+            </div>
+        </div>
+        
+        <!-- Настройки -->
+        <div id="tab-settings" class="tab-content">
+            <div class="section">
+                <h3>⚙️ API ключи и настройки</h3>
+                <div class="form-group">
+                    <label>Email лицензии:</label>
+                    <input type="email" id="settingsEmail">
+                </div>
+                <div class="form-group">
+                    <label>Token лицензии:</label>
+                    <input type="password" id="settingsToken">
+                </div>
+                <div class="form-group">
+                    <label>Gemini API Key:</label>
+                    <input type="password" id="settingsGemini">
+                </div>
+                <button onclick="saveSettings()" class="btn">Сохранить настройки</button>
+                <div id="settingsResult" class="loading" style="display:none;">Сохранение...</div>
+            </div>
+        </div>
+        
+        <!-- Последние результаты -->
+        <div class="section">
+            <h3>📋 Последние результаты</h3>
+            <div id="recentResults">
+                <div class="loading">Загрузка данных...</div>
+            </div>
+            <button onclick="loadRecentData()" class="btn btn-secondary">Обновить</button>
+        </div>
+    </div>
+
+    <script>
+        // БАЗОВЫЙ JavaScript - это работает в Google Apps Script
+        
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Показать выбранную вкладку
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function showResult(elementId, message, isError) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = isError ? 'status error' : 'status success';
+            element.textContent = message;
+        }
+        
+        function hideResult(elementId) {
+            document.getElementById(elementId).style.display = 'none';
+        }
+        
+        // Простые функции для Google Apps Script
+        function checkStatus() {
+            document.getElementById('systemStatus').textContent = 'Проверяем...';
+            
+            google.script.run
+                .withSuccessHandler(function(status) {
+                    const statusDiv = document.getElementById('systemStatus');
+                    if (status.success) {
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = '✅ Система работает нормально';
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.textContent = '❌ ' + status.error;
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    document.getElementById('systemStatus').className = 'status error';
+                    document.getElementById('systemStatus').textContent = '❌ Ошибка: ' + error.message;
+                })
+                .webApiTestConnection();
+        }
+        
+        function runSocialImport() {
+            const source = document.getElementById('socialSource').value;
+            const count = document.getElementById('socialCount').value;
+            const platform = document.getElementById('socialPlatform').value;
+            
+            if (!source || !count) {
+                showResult('importResult', 'Заполните все поля', true);
+                return;
+            }
+            
+            showResult('importResult', 'Запуск импорта...', false);
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result.success) {
+                        showResult('importResult', 'Импорт запущен успешно!', false);
+                    } else {
+                        showResult('importResult', 'Ошибка: ' + result.error, true);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    showResult('importResult', 'Ошибка: ' + error.message, true);
+                })
+                .webApiSocialImport({
+                    source: source,
+                    count: parseInt(count),
+                    platform: platform
+                });
+        }
+        
+        function runOcrAnalysis() {
+            const overwrite = document.getElementById('ocrOverwrite').checked;
+            
+            showResult('ocrResult', 'Запуск OCR анализа...', false);
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result.success) {
+                        showResult('ocrResult', 'OCR анализ завершен!', false);
+                    } else {
+                        showResult('ocrResult', 'Ошибка: ' + result.error, true);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    showResult('ocrResult', 'Ошибка: ' + error.message, true);
+                })
+                .webApiOcrAnalysis({overwrite: overwrite});
+        }
+        
+        function saveSettings() {
+            const email = document.getElementById('settingsEmail').value;
+            const token = document.getElementById('settingsToken').value;
+            const gemini = document.getElementById('settingsGemini').value;
+            
+            showResult('settingsResult', 'Сохранение настроек...', false);
+            
+            google.script.run
+                .withSuccessHandler(function(result) {
+                    if (result.success) {
+                        showResult('settingsResult', 'Настройки сохранены!', false);
+                        // Очистить пароли
+                        document.getElementById('settingsToken').value = '';
+                        document.getElementById('settingsGemini').value = '';
+                    } else {
+                        showResult('settingsResult', 'Ошибка: ' + result.error, true);
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    showResult('settingsResult', 'Ошибка: ' + error.message, true);
+                })
+                .webApiSaveSettings({
+                    email: email,
+                    token: token,
+                    geminiKey: gemini
+                });
+        }
+        
+        function loadRecentData() {
+            document.getElementById('recentResults').innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            google.script.run
+                .withSuccessHandler(function(results) {
+                    const container = document.getElementById('recentResults');
+                    if (results && results.length > 0) {
+                        let html = '<table><tr><th>Тип</th><th>Источник</th><th>Результат</th></tr>';
+                        results.forEach(function(result) {
+                            html += `<tr>
+                                <td>${result.type}</td>
+                                <td>${result.source}</td>
+                                <td>${result.result}</td>
+                            </tr>`;
+                        });
+                        html += '</table>';
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<div class="status info">Нет данных</div>';
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    document.getElementById('recentResults').innerHTML = '<div class="status error">Ошибка загрузки: ' + error.message + '</div>';
+                })
+                .getRecentResults();
+        }
+        
+        // Автоматическая загрузка при открытии
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+            loadRecentData();
+        });
+    </script>
+</body>
+</html>
