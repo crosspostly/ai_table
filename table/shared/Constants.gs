@@ -9,7 +9,13 @@ var API_VERSION = 'v2.1';
 // === HTTP USER AGENTS ===
 var USER_AGENT = 'Mozilla/5.0 (compatible; TableAI-Bot/2.1; +https://tableai.bot)';
 
-// === VK PARSER ===
+// === CLIENT-SERVER COMMUNICATION ===
+// URL основного сервера (Main API Server)
+var SERVER_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHniTv_12cAHlqjYfra7fQ3m3Vri5XvZTQ_uUZZovCYeTo2_u6gQw/exec';
+
+// === VK PARSER (ТРЕТЬЕ ОТДЕЛЬНОЕ ПРИЛОЖЕНИЕ) ===
+// Это ОТДЕЛЬНЫЙ Google Apps Script сервис для VK парсинга
+// Развертывается независимо от основного сервера
 var VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbzttbqz16EmmcXbEYCuYhNlXkCxAnCG77phspFL1_rTCi4xVqoorByJAPa4dI4iwT8/exec';
 
 // === GEMINI API ===
