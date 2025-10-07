@@ -18,16 +18,20 @@ function importSocialPosts() {
     throw new Error('Лист "Параметры" не найден!');
   }
   
-  var sourceValue = params.getRange('B1').getValue();
+  // Жёсткие координаты: B1 - профиль, B2 - количество, C1 - платформа
+  var sourceValue = String(params.getRange('B1').getValue() || '').trim();
   var count = Math.min(parseInt(params.getRange('B2').getValue() || 50), 100);
+  var explicitPlatform = normalizePlatformName(String(params.getRange('C1').getValue() || '').trim());
   
   if (!sourceValue) {
     addSystemLog('❌ Не указан источник в B1', 'ERROR', 'SOCIAL_IMPORT');
-    throw new Error('Укажите источник (ID, username или ссылку) в ячейке Параметры!B1');
+    throw new Error('Укажите источник (ссылку, @username или username) в ячейке Параметры!B1');
   }
   
+  addSystemLog('📊 Параметры: B1=' + sourceValue + ', B2=' + count + (explicitPlatform ? ', C1=' + explicitPlatform : ''), 'INFO', 'SOCIAL_IMPORT');
+  
   // Определяем тип источника и платформу
-  var sourceInfo = parseSource(sourceValue);
+  var sourceInfo = parseSource(sourceValue, explicitPlatform);
   addSystemLog('📊 Источник: ' + sourceInfo.platform + ', тип: ' + sourceInfo.type, 'INFO', 'SOCIAL_IMPORT');
   
   var posts = [];
@@ -56,13 +60,54 @@ function importSocialPosts() {
   }
 }
 
+
+
+/**
+ * Нормализация названий платформ
+ * @param {string} platform - введенное название платформы
+ * @return {string|null} - стандартное название или null
+ */
+function normalizePlatformName(platform) {
+  if (!platform) return null;
+  
+  var platformStr = platform.toLowerCase().trim();
+  
+  // Instagram
+  if (['instagram', 'инста', 'инстаграм', 'ig', 'insta'].includes(platformStr)) {
+    return 'instagram';
+  }
+  
+  // Telegram
+  if (['telegram', 'телеграм', 'тг', 'tg', 't'].includes(platformStr)) {
+    return 'telegram';
+  }
+  
+  // VK
+  if (['vk', 'вк', 'вконтакте', 'vkontakte', 'v'].includes(platformStr)) {
+    return 'vk';
+  }
+  
+  return null;
+}
+
 /**
  * Парсинг источника для определения платформы
  * @param {string} source - ID, username или ссылка
+ * @param {string} explicitPlatform - явно указанная платформа (приоритет)
  * @return {Object} - информация об источнике
  */
-function parseSource(source) {
+function parseSource(source, explicitPlatform) {
   var sourceStr = String(source).trim();
+  
+  // Если платформа указана явно - используем её
+  if (explicitPlatform && ['vk', 'instagram', 'telegram'].includes(explicitPlatform)) {
+    return {
+      platform: explicitPlatform,
+      type: 'explicit',
+      value: sourceStr,
+      original: sourceStr
+    };
+  }
   
   // Instagram ссылки
   if (sourceStr.match(/instagram\.com\/([^\/\?]+)/i)) {
@@ -126,17 +171,12 @@ function parseSource(source) {
     };
   }
   
-  // Если содержит только буквы/цифры/_ - вероятно Telegram канал
+  // Для простых username без платформы - требуется явное указание в C1
   if (sourceStr.match(/^[a-zA-Z0-9_]+$/)) {
-    return {
-      platform: 'telegram',
-      type: 'username',
-      value: sourceStr,
-      original: sourceStr
-    };
+    throw new Error('Для простого username "' + sourceStr + '" укажите платформу в ячейке C1 (тг/вк/инста)');
   }
   
-  // По умолчанию считаем VK username
+  // Fallback для остальных случаев (например, сложные VK username с точками)
   return {
     platform: 'vk', 
     type: 'username',
