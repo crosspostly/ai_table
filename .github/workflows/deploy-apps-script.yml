@@ -84,28 +84,34 @@ jobs:
           echo "📦 Deploying Server project..."
           cp .clasp-server.json .clasp.json
           
-          # Сохранить оба appsscript.json
+          # Переместить ВСЁ что НЕ нужно для server deploy
           if [ -f table/appsscript.json ]; then
-            mv table/appsscript.json table/appsscript.json.client-backup
-            echo "Backed up client appsscript.json"
+            mv table/appsscript.json table/appsscript.json.backup
           fi
-          mv table/server/appsscript.json table/server/appsscript.json.server-backup
-          echo "Backed up server appsscript.json"
+          mv table/server/appsscript.json table/server/appsscript.json.backup
+          mv table/client table/client.backup
+          mv table/web table/web.backup
+          echo "Moved client/, web/, and appsscript files to backup"
           
-          # Создать appsscript.json для server в корне table/
-          cp table/server/appsscript.json.server-backup table/appsscript.json
+          # Создать server appsscript.json в корне
+          cp table/server/appsscript.json.backup table/appsscript.json
           echo "Using server appsscript.json"
+          
+          echo "Current table/ structure:"
+          ls -la table/
           
           echo "Pushing to Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
           clasp push -f
           
-          # Восстановить файлы
+          # Восстановить всё обратно
           rm table/appsscript.json
-          mv table/server/appsscript.json.server-backup table/server/appsscript.json
-          if [ -f table/appsscript.json.client-backup ]; then
-            mv table/appsscript.json.client-backup table/appsscript.json
+          mv table/server/appsscript.json.backup table/server/appsscript.json
+          mv table/client.backup table/client
+          mv table/web.backup table/web
+          if [ -f table/appsscript.json.backup ]; then
+            mv table/appsscript.json.backup table/appsscript.json
           fi
-          echo "Restored original files"
+          echo "Restored all files"
           
           echo "✅ Server deployment complete!"
 
