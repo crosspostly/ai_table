@@ -78,7 +78,7 @@ jobs:
 
       - name: Setup clasp credentials
         run: |
-          echo "Setting up clasp credentials..."
+          echo "Setting up clasp credentials with FRESH token..."
           echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
           
           # Validate JSON
@@ -88,12 +88,16 @@ jobs:
             exit 1
           fi
           
-          # Check format and convert if needed (new format -> old format)
+          # Get the refreshed access token
+          NEW_ACCESS_TOKEN=$(cat /tmp/new_access_token.txt)
+          echo "✅ Using refreshed access token: ${NEW_ACCESS_TOKEN:0:30}..."
+          
+          # Check format and convert if needed (new format -> old format) WITH NEW TOKEN
           if cat ~/.clasprc.json | jq -e '.tokens.default' > /dev/null 2>&1; then
-            echo "🔄 Detected new clasp format, converting to old format..."
-            cat ~/.clasprc.json | jq '{
+            echo "🔄 Detected new clasp format, converting to old format with FRESH token..."
+            cat ~/.clasprc.json | jq --arg token "$NEW_ACCESS_TOKEN" '{
               token: {
-                access_token: .tokens.default.access_token,
+                access_token: $token,
                 refresh_token: .tokens.default.refresh_token,
                 scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/script.projects https://www.googleapis.com/auth/script.webapp.deploy https://www.googleapis.com/auth/script.deployments",
                 token_type: "Bearer",
@@ -107,13 +111,17 @@ jobs:
               isLocalCreds: false
             }' > ~/.clasprc.json.new
             mv ~/.clasprc.json.new ~/.clasprc.json
-            echo "✅ Converted to old format"
+            echo "✅ Converted to old format with FRESH token"
           else
-            echo "✅ Already in old format"
+            echo "🔄 Updating OLD format with FRESH token..."
+            cat ~/.clasprc.json | jq --arg token "$NEW_ACCESS_TOKEN" '.token.access_token = $token' > ~/.clasprc.json.new
+            mv ~/.clasprc.json.new ~/.clasprc.json
+            echo "✅ Updated with FRESH token"
           fi
           
           echo "Final .clasprc.json structure:"
           cat ~/.clasprc.json | jq 'keys'
+          echo "Token verification (first 30 chars): $(cat ~/.clasprc.json | jq -r '.token.access_token' | head -c 30)..."
 
       - name: Verify clasp login
         run: |
