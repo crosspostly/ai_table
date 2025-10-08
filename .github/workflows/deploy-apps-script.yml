@@ -154,69 +154,25 @@ jobs:
           
           cp .clasp-server.json .clasp.json
           
-          echo "BEFORE moving - table/ contents:"
-          find table -name "appsscript.json" -o -type d | grep -E "(client|web|server)" | head -20
+          echo "=== PREPARING SERVER DEPLOYMENT ==="
+          echo "Copying shared files into server directory..."
           
-          # Переместить ВСЁ что НЕ нужно ВНЕ table/ (чтобы clasp их не видел)
-          if [ -f table/appsscript.json ]; then
-            echo "Moving root appsscript.json..."
-            mv table/appsscript.json /tmp/appsscript.json.backup
-          fi
-          if [ -f table/server/appsscript.json ]; then
-            echo "Moving server/appsscript.json..."
-            mv table/server/appsscript.json /tmp/server-appsscript.json.backup
-          fi
-          if [ -d table/client ]; then
-            echo "Moving client/ directory..."
-            mv table/client /tmp/client.backup
-          fi
-          if [ -d table/web ]; then
-            echo "Moving web/ directory..."
-            mv table/web /tmp/web.backup
-          fi
+          # Copy shared files directly into server directory (no subdirectory)
+          cp table/shared/*.gs table/server/
+          echo "✅ Copied shared files to table/server/"
           
-          # Создать server appsscript.json в корне table/
-          if [ -f /tmp/server-appsscript.json.backup ]; then
-            cp /tmp/server-appsscript.json.backup table/appsscript.json
-            echo "✅ Copied server appsscript.json to root"
-          else
-            echo "❌ ERROR: /tmp/server-appsscript.json.backup not found!"
+          # Verify appsscript.json exists in server
+          if [ ! -f table/server/appsscript.json ]; then
+            echo "❌ ERROR: table/server/appsscript.json not found!"
             exit 1
           fi
+          echo "✅ Found table/server/appsscript.json"
           
           echo ""
-          echo "AFTER moving - table/ structure:"
-          ls -laR table/ | head -50
+          echo "=== Files ready for upload ==="
+          ls -lh table/server/*.gs table/server/appsscript.json
           echo ""
-          echo "Looking for appsscript files:"
-          find table -name "*appsscript*"
-          echo ""
-          
-          echo "=== FINAL DIAGNOSTIC BEFORE PUSH ==="
-          echo "1. Current .clasp.json:"
-          cat .clasp.json | jq .
-          echo ""
-          echo "2. Validate table/appsscript.json:"
-          if [ -f table/appsscript.json ]; then
-            cat table/appsscript.json | jq . && echo "✅ Valid JSON"
-          else
-            echo "❌ table/appsscript.json not found!"
-            exit 1
-          fi
-          echo ""
-          echo "3. Check for OTHER appsscript files that clasp might see:"
-          find table -name "*.json" | grep -i app
-          echo ""
-          echo "4. Test clasp status before push:"
-          clasp --version
-          echo ""
-          
-          echo "=== FINAL CHECK: What clasp will actually push ==="
-          echo "Current working directory: $(pwd)"
-          echo "Files in rootDir (table/):"
-          find table -type f \( -name "*.gs" -o -name "*.html" -o -name "appsscript.json" \) | sort
-          echo ""
-          echo "Total .gs files: $(find table -name "*.gs" | wc -l)"
+          echo "Total files: $(find table/server -type f \( -name "*.gs" -o -name "appsscript.json" \) | wc -l)"
           echo ""
           
           echo "Pushing to Script ID: 1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP"
@@ -256,13 +212,14 @@ jobs:
           FILES_JSON='{"files": ['
           FIRST=true
           
-          for file in $(find table -type f \( -name "*.gs" -o -name "*.html" -o -name "appsscript.json" \)); do
+          for file in $(find table/server -type f \( -name "*.gs" -o -name "appsscript.json" \)); do
             if [ "$FIRST" = false ]; then
               FILES_JSON+=','
             fi
             FIRST=false
             
-            REL_PATH=${file#table/}
+            # Remove table/server/ prefix to get just the filename
+            REL_PATH=${file#table/server/}
             
             # Determine file type and REMOVE extension for API
             if [[ "$file" == *.gs ]]; then
@@ -328,16 +285,6 @@ jobs:
           echo ""
           echo "⚠️  Hard refresh (Ctrl+F5 / Cmd+Shift+R) to see changes!"
           echo ""
-          # Восстановить всё обратно
-          rm table/appsscript.json
-          mv /tmp/server-appsscript.json.backup table/server/appsscript.json
-          mv /tmp/client.backup table/client
-          mv /tmp/web.backup table/web
-          if [ -f /tmp/appsscript.json.backup ]; then
-            mv /tmp/appsscript.json.backup table/appsscript.json
-          fi
-          echo "Restored all files"
-          
           echo "✅ Server deployment complete!"
 
       - name: Deploy Client Project
@@ -345,56 +292,57 @@ jobs:
           echo "📦 Deploying Client project (Container-bound to Google Sheets)..."
           cp .clasp-client.json .clasp.json
           
-          echo "=== CLIENT DIAGNOSTIC BEFORE PUSH ==="
-          echo "1. Current .clasp.json:"
-          cat .clasp.json | jq .
-          echo ""
-          echo "2. Root appsscript.json exists?"
-          if [ -f table/appsscript.json ]; then
-            echo "✅ table/appsscript.json exists"
-            echo "Content:"
-            cat table/appsscript.json
-            echo ""
-            echo "Validate:"
-            cat table/appsscript.json | jq . && echo "✅ Valid JSON" || echo "❌ Invalid JSON"
-          else
-            echo "❌ table/appsscript.json NOT FOUND!"
+          echo "=== PREPARING CLIENT DEPLOYMENT ==="
+          
+          # 🚨 CRITICAL: Copy appsscript.json to client directory FIRST
+          echo "Copying appsscript.json to client directory..."
+          if [ ! -f table/appsscript.json ]; then
+            echo "❌ ERROR: table/appsscript.json not found!"
+            exit 1
           fi
-          echo ""
+          cp table/appsscript.json table/client/
+          echo "✅ Copied appsscript.json to table/client/"
           
-          # Временно скрыть server/appsscript.json чтобы clasp его не видел
-          if [ -f table/server/appsscript.json ]; then
-            mv table/server/appsscript.json table/server/appsscript.json.server-backup
-            echo "Temporarily moved table/server/appsscript.json"
+          echo "Copying shared files into client directory..."
+          # Copy shared files directly into client directory
+          cp table/shared/*.gs table/client/
+          echo "✅ Copied shared files to table/client/"
+          
+          # Copy web files directly into client directory  
+          cp table/web/*.gs table/client/ 2>/dev/null || true
+          cp table/web/*.html table/client/ 2>/dev/null || true
+          echo "✅ Copied web files to table/client/"
+          
+          # 🔒 SECURITY CHECK: Ensure NO server files in client!
+          echo "🔍 Security check: verifying NO server files in client..."
+          if ls table/client/server* 2>/dev/null || ls table/client/*Server*.gs 2>/dev/null | grep -v ClientUtilities 2>/dev/null; then
+            echo "❌ SECURITY ERROR: Server files found in client directory!"
+            ls -la table/client/server* table/client/*Server*.gs 2>/dev/null || true
+            exit 1
           fi
+          echo "✅ Security check passed: no server files in client"
           
           echo ""
-          echo "3. All appsscript files that clasp can see:"
-          find table -name "*appsscript*"
-          echo ""
-          echo "4. All JSON files in rootDir:"
-          find table -name "*.json" | head -20
+          echo "Files in CLIENT directory:"
+          find table/client -type f \( -name "*.gs" -o -name "*.html" \) | sort
           echo ""
           
-          echo "Using root appsscript.json for client"
           echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
-          echo "Running: clasp push -f"
+          echo "Using clasp push for container-bound script..."
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
             echo ""
             echo "❌ CLIENT CLASP PUSH FAILED!"
             echo "Error output:"
             cat /tmp/clasp-client-push.log
-            echo ""
-            echo "Files that would be uploaded:"
-            find table -type f \( -name "*.gs" -o -name "*.json" -o -name "*.html" \) | sort
             exit 1
           }
           
-          # Восстановить server/appsscript.json
-          if [ -f table/server/appsscript.json.server-backup ]; then
-            mv table/server/appsscript.json.server-backup table/server/appsscript.json
-            echo "Restored server appsscript.json"
-          fi
+          # Clean up copied files
+          echo "Cleaning up copied files..."
+          rm -f table/client/Constants.gs table/client/LoggingService.gs table/client/Utils.gs
+          rm -f table/client/WebInterface.gs table/client/*.html
+          rm -f table/client/appsscript.json
+          echo "✅ Cleaned up"
           
           echo "✅ Client deployment complete!"
 

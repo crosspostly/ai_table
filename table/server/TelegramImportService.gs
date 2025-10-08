@@ -162,9 +162,7 @@ function parseRSSFeed(rssText, limit) {
       if (descMatch && descMatch[1]) {
         var cleanDesc = descMatch[1].replace(/<[^>]*>/g, '').trim();
         if (cleanDesc && cleanDesc !== post.text) {
-          post.text += '
-
-' + cleanDesc;
+          post.text += '\n\n' + cleanDesc;
         }
       }
       
@@ -230,8 +228,7 @@ function parseTelegramEmbedHTML(html, limit) {
  */
 function cleanTelegramHTML(htmlText) {
   return htmlText
-    .replace(/<br\s*\/?>/gi, '
-')
+    .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]*>/g, '')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')

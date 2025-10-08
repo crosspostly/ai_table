@@ -41,8 +41,7 @@ function checkCriticalFunctions() {
     }
   });
   
-  Logger.log(`
-📊 SUMMARY: ${available}/${available + missing} functions available`);
+  Logger.log(`\n📊 SUMMARY: ${available}/${available + missing} functions available`);
   
   if (missing > 0) {
     Logger.log('🚨 CRITICAL: Missing functions detected!');
@@ -57,8 +56,7 @@ function checkCriticalFunctions() {
  * Базовая проверка URL парсинга
  */
 function testBasicUrlParsing() {
-  Logger.log('
-🔗 Testing URL parsing...');
+  Logger.log('\n🔗 Testing URL parsing...');
   
   const tests = [
     ['https://www.instagram.com/nasa', 'instagram'],
@@ -92,8 +90,7 @@ function testBasicUrlParsing() {
  * Проверка валидации входных данных
  */
 function testValidationBasics() {
-  Logger.log('
-🛡️ Testing validation...');
+  Logger.log('\n🛡️ Testing validation...');
   
   try {
     // Test 1: Валидный input
@@ -132,8 +129,7 @@ function testValidationBasics() {
  * Проверка error handling
  */
 function testErrorHandling() {
-  Logger.log('
-💬 Testing error handling...');
+  Logger.log('\n💬 Testing error handling...');
   
   try {
     const testError = new Error('HTTP 403: Forbidden');
@@ -157,8 +153,7 @@ function testErrorHandling() {
  * Полная диагностика системы
  */
 function runSystemDiagnostic() {
-  Logger.log('⚡ Starting System Diagnostic...
-');
+  Logger.log('⚡ Starting System Diagnostic...\n');
   
   const startTime = Date.now();
   const tests = [
@@ -172,8 +167,7 @@ function runSystemDiagnostic() {
   const results = [];
   
   tests.forEach(({ name, test }) => {
-    Logger.log(`
---- ${name} ---`);
+    Logger.log(`\n--- ${name} ---`);
     try {
       const result = test();
       if (result) {
@@ -191,8 +185,7 @@ function runSystemDiagnostic() {
   const duration = Date.now() - startTime;
   const successRate = Math.round((passed / total) * 100);
   
-  Logger.log('
-📊 =============================');
+  Logger.log('\n📊 =============================');
   Logger.log('   ⚡ SYSTEM DIAGNOSTIC RESULTS');
   Logger.log('=============================');
   Logger.log(`⏱️ Duration: ${Math.round(duration / 1000)}s`);
@@ -201,22 +194,18 @@ function runSystemDiagnostic() {
   Logger.log(`❌ Failed: ${total - passed}`);
   Logger.log(`📈 Success Rate: ${successRate}%`);
   
-  Logger.log('
-📝 Results:');
+  Logger.log('\n📝 Results:');
   results.forEach(result => Logger.log(`  ${result}`));
   
   // Вердикт
   if (successRate === 100) {
-    Logger.log('
-🎯 VERDICT: ✅ ALL SYSTEMS OPERATIONAL');
+    Logger.log('\n🎯 VERDICT: ✅ ALL SYSTEMS OPERATIONAL');
     Logger.log('   System ready for full testing!');
   } else if (successRate >= 75) {
-    Logger.log('
-⚠️ VERDICT: 🔄 PARTIAL FUNCTIONALITY');
+    Logger.log('\n⚠️ VERDICT: 🔄 PARTIAL FUNCTIONALITY');
     Logger.log('   Some issues detected, review needed!');
   } else {
-    Logger.log('
-🚨 VERDICT: ❌ CRITICAL ISSUES');
+    Logger.log('\n🚨 VERDICT: ❌ CRITICAL ISSUES');
     Logger.log('   Major problems found, fix before proceeding!');
   }
   

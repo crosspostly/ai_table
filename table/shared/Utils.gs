@@ -12,12 +12,8 @@ function convertMarkdownToReadableText(markdownText) {
   
   try {
     // Блоки кода
-    text = text.replace(/```[\w]*
-?([\s\S]*?)
-?```/g, function(match, code) {
-      return '
-' + String(code || '').trim() + '
-';
+    text = text.replace(/```[\w]*\n?([\s\S]*?)\n?```/g, function(match, code) {
+      return '\n' + String(code || '').trim() + '\n';
     });
     
     // Инлайн код
@@ -33,9 +29,7 @@ function convertMarkdownToReadableText(markdownText) {
     
     // Заголовки
     text = text.replace(/^#{1,6}\s+(.+)$/gm, function(match, header) {
-      return '
-' + String(header || '').toUpperCase() + ':
-';
+      return '\n' + String(header || '').toUpperCase() + ':\n';
     });
     
     // Списки
@@ -52,10 +46,7 @@ function convertMarkdownToReadableText(markdownText) {
     text = text.replace(/^-{3,}$/gm, '---');
     
     // Множественные переносы строк
-    text = text.replace(/
-{3,}/g, '
-
-');
+    text = text.replace(/\n{3,}/g, '\n\n');
     
     // Trim
     text = text.trim();
@@ -142,8 +133,7 @@ function getSystemLogs(limit, level, category) {
     
     return recent.map(function(entry) {
       return '[' + entry.timestamp + '] ' + entry.level + ' [' + entry.category + '] ' + entry.message;
-    }).join('
-');
+    }).join('\n');
     
   } catch (e) {
     return 'Ошибка чтения логов: ' + e.message;
@@ -255,6 +245,68 @@ function generateTraceId(prefix) {
   var timestamp = Date.now().toString(36);
   var random = Math.random().toString(36).substr(2, 5);
   return prefix + '-' + timestamp + '-' + random;
+}
+
+/**
+ * Fetch Gemini with retry logic (КРИТИЧНО!)
+ * Последовательные запросы к Gemini API с retry
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ!
+ */
+function fetchGeminiWithRetry(url, options, maxAttempts) {
+  maxAttempts = maxAttempts || 3;
+  var attempt = 0;
+  var lastError = null;
+  
+  while (attempt < maxAttempts) {
+    attempt++;
+    
+    try {
+      addSystemLog('→ fetchGeminiWithRetry: попытка ' + attempt + '/' + maxAttempts, 'DEBUG', 'FETCH');
+      
+      var response = UrlFetchApp.fetch(url, Object.assign({}, options, {
+        muteHttpExceptions: true
+      }));
+      
+      var code = response.getResponseCode();
+      
+      // Success
+      if (code === 200) {
+        addSystemLog('✅ fetchGeminiWithRetry: успех на попытке ' + attempt, 'INFO', 'FETCH');
+        return response;
+      }
+      
+      // Rate limit - wait and retry
+      if (code === 429) {
+        var waitTime = Math.min(2000 * attempt, 10000); // 2s, 4s, 6s... max 10s
+        addSystemLog('⏳ Rate limit (429), ждем ' + waitTime + 'ms', 'WARN', 'FETCH');
+        Utilities.sleep(waitTime);
+        continue;
+      }
+      
+      // Server error - retry
+      if (code >= 500) {
+        var waitTime = 1000 * attempt;
+        addSystemLog('⚠️ Ошибка сервера (' + code + '), retry через ' + waitTime + 'ms', 'WARN', 'FETCH');
+        Utilities.sleep(waitTime);
+        continue;
+      }
+      
+      // Client error - don't retry
+      addSystemLog('❌ Ошибка клиента (' + code + '), не retry', 'ERROR', 'FETCH');
+      return response;
+      
+    } catch (e) {
+      lastError = e;
+      addSystemLog('❌ Exception на попытке ' + attempt + ': ' + e.message, 'ERROR', 'FETCH');
+      
+      if (attempt < maxAttempts) {
+        Utilities.sleep(1000 * attempt);
+      }
+    }
+  }
+  
+  // Все попытки исчерпаны
+  throw new Error('fetchGeminiWithRetry failed after ' + maxAttempts + ' attempts: ' + (lastError ? lastError.message : 'unknown'));
 }
 
 /**

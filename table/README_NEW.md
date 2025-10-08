@@ -216,36 +216,45 @@ prepareChainSmart() // Автоматически B3→C3→D3... по фраз�
 
 ## 📋 **МЕНЮ И ФУНКЦИИ**
 
+> 📚 **Полный справочник функций:** [`docs/FUNCTIONS_REFERENCE.md`](docs/FUNCTIONS_REFERENCE.md)  
+> Исчерпывающая документация всех 50+ функций с детальным описанием логики работы
+
 ### **🤖 Table AI v2.0** - Главное меню
 ```
-▶️ Подготовить формулы (умный режим)     → prepareChainSmart()
-🔁 Обновить текущую ячейку (GM)         → refreshCurrentGMCell()
-🧹 Очистить B3..G3                      → clearChainForA3()
-📥 Импорт VK постов                      → importVkPosts()
-🔑 Установить API ключ Gemini            → initGeminiKey()
-📝 Фраза готовности (изменить)          → setCompletionPhraseUI()
-🖼️ OCR отзывов (A→B)                   → ocrReviews()
-🖼️ OCR V2 (A→B)                        → ocrReviewsThin()
+🌐 Веб-интерфейс                        → openWebInterface()
+🚀 Запустить анализ                      → prepareChainSmartWithHelp()
+🔄 Обновить данные в ячейке             → refreshCurrentGMCellWithHelp()
+📱 Получить VK посты                     → importVkPostsWithHelp()
+💬 Анализ отзывов                        → ocrReviewsWithHelp()
+🧠 Режим чата                            → initializeChatModeWithHelp()
+⚡ Активировать умные промпты            → setupSmartPromptTriggerWithHelp()
 ```
 
-### **🔐 Лицензия** - Подменю
+### **⚙️ Настройки** - Подменю
 ```
-Ввести Email + Токен                     → setLicenseCredentialsUI()
-Проверить статус                         → checkLicenseStatusUI()
-```
-
-### **🔧 Триггеры** - Подменю  
-```
-Очистить старые триггеры                 → cleanupOldTriggers()
-Показать активные триггеры               → showActiveTriggersDialog()
+🔑 API ключ Gemini                       → initGeminiKeyWithHelp()
+📝 Фраза готовности                      → setCompletionPhraseUIWithHelp()
+🧹 Очистить формулы B3..G3               → clearChainForA3WithHelp()
+🔐 Лицензия: Email + Токен               → setLicenseCredentialsUIWithHelp()
+📊 Проверить статус лицензии             → checkLicenseStatusUIWithHelp()
+🔧 Очистить старые триггеры              → cleanupOldTriggersWithHelp()
+👀 Показать активные триггеры            → showActiveTriggersDialogWithHelp()
+📊 Статус системы                        → showSystemStatusWithHelp()
 ```
 
 ### **🧰 DEV** - Меню разработчика (если DEV_MODE=true)
 ```
-📝 Показать логи                         → showLogsDialog()
-⬇️ Экспорт логов                        → exportSystemLogsToSheet()
-🗑 Очистить логи                         → clearSystemLogs()
-🧪 Тест фильтрации VK                   → testStopWordsFilter()
+📝 Логи системы                          → callServerDevFunction()
+🧪 Тесты                                 → callServerTestFunction()
+```
+
+### **📊 Формулы в ячейках (Custom Functions)**
+```javascript
+// Gemini AI Functions
+=GM(prompt, [maxTokens], [temperature])              // Основной вызов AI
+=GM_STATIC(prompt, [maxTokens], [temperature])      // Статичный (без пересчета)
+=GM_IF(condition, prompt, [maxTokens], [temp])      // Условный вызов
+=GM_IF_STATIC(condition, prompt, [max], [temp])     // Условный статичный
 ```
 
 ---
