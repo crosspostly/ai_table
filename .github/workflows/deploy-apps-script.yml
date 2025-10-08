@@ -250,6 +250,10 @@ jobs:
           FILES_JSON+=']}'
           
           echo ""
+          echo "Saving payload to file..."
+          echo "$FILES_JSON" > /tmp/api-payload.json
+          echo "Payload size: $(wc -c < /tmp/api-payload.json) bytes"
+          echo ""
           echo "Total files: $(echo "$FILES_JSON" | jq '.files | length')"
           echo ""
           echo "Uploading via Apps Script API..."
@@ -258,7 +262,7 @@ jobs:
             "https://script.googleapis.com/v1/projects/1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP/content" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$FILES_JSON")
+            -d @/tmp/api-payload.json)
           
           if echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
             echo "❌ API Upload failed:"
