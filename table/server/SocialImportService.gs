@@ -125,17 +125,47 @@ function normalizePlatformName(platform) {
 function parseSource(source, explicitPlatform) {
   var sourceStr = String(source).trim();
   
-  // Если платформа указана явно - используем её
+  // 1. ПРИОРИТЕТ: Если платформа указана явно - используем её для ЛЮБОГО формата
   if (explicitPlatform && ['vk', 'instagram', 'telegram'].includes(explicitPlatform)) {
+    // Очищаем source для конкретной платформы
+    var cleanValue = sourceStr;
+    
+    // Для VK: извлекаем из ссылки vk.com/username → username
+    if (explicitPlatform === 'vk' && sourceStr.match(/vk\.com\/([^\/\?]+)/i)) {
+      var vkMatch = sourceStr.match(/vk\.com\/([^\/\?]+)/i);
+      cleanValue = vkMatch[1];
+      
+      // Преобразуем club123/public123 → -123
+      if (cleanValue.match(/^(club|public)(\d+)$/)) {
+        var numMatch = cleanValue.match(/^(club|public)(\d+)$/);
+        cleanValue = '-' + numMatch[2];
+      }
+    }
+    
+    // Для Telegram: извлекаем из ссылки t.me/username → username
+    if (explicitPlatform === 'telegram' && sourceStr.match(/(?:t\.me|telegram\.me)\/([^\/\?]+)/i)) {
+      var tgMatch = sourceStr.match(/(?:t\.me|telegram\.me)\/([^\/\?]+)/i);
+      cleanValue = tgMatch[1].replace(/^@/, '');
+    }
+    
+    // Для Instagram: извлекаем из ссылки instagram.com/username → username
+    if (explicitPlatform === 'instagram' && sourceStr.match(/instagram\.com\/([^\/\?]+)/i)) {
+      var instaMatch = sourceStr.match(/instagram\.com\/([^\/\?]+)/i);
+      cleanValue = instaMatch[1];
+    }
+    
+    // Убираем @ для всех платформ
+    cleanValue = cleanValue.replace(/^@/, '');
+    
     return {
       platform: explicitPlatform,
       type: 'explicit',
-      value: sourceStr,
+      value: cleanValue,
       original: sourceStr
     };
   }
   
-  // ТОЛЬКО полные https ссылки определяются автоматически
+  // 2. АВТООПРЕДЕЛЕНИЕ: Только ПОЛНЫЕ https:// ссылки
   
   // Instagram ссылки
   if (sourceStr.match(/https?:\/\/(?:www\.)?instagram\.com\/([^\/\?]+)/i)) {
@@ -154,7 +184,7 @@ function parseSource(source, explicitPlatform) {
     return {
       platform: 'telegram',
       type: 'url',
-      value: match[1].replace(/^@/, ''), // Убираем @ если есть
+      value: match[1].replace(/^@/, ''),
       original: sourceStr
     };
   }
@@ -164,7 +194,7 @@ function parseSource(source, explicitPlatform) {
     var match = sourceStr.match(/https?:\/\/(?:www\.)?vk\.com\/([^\/\?]+)/i);
     var vkId = match[1];
     
-    // Если это club123456 или public123456, преобразуем в -123456
+    // Преобразуем club123/public123 → -123
     if (vkId.match(/^(club|public)(\d+)$/)) {
       var numMatch = vkId.match(/^(club|public)(\d+)$/);
       vkId = '-' + numMatch[2];
@@ -178,12 +208,10 @@ function parseSource(source, explicitPlatform) {
     };
   }
   
-  // ВСЁ ОСТАЛЬНОЕ требует указания платформы в C1
-  // -123456 может быть VK или TG
-  // @durov может быть VK или TG  
-  // durov может быть любой платформой
+  // 3. ВСЁ ОСТАЛЬНОЕ требует указания платформы в C1
+  // Примеры: -123456, @durov, durov, vk.com/durov (без https)
   
-  throw new Error('Для "' + sourceStr + '" укажите платформу в ячейке C1 (тг/вк/инста). Автоматически определяются только полные ссылки!');
+  throw new Error('Для "' + sourceStr + '" укажите платформу в ячейке C1 (тг/вк/инста).\n\nАвтоматически распознаются только полные ссылки:\n• https://instagram.com/username\n• https://t.me/channel\n• https://vk.com/username');
 }
 
 /**
