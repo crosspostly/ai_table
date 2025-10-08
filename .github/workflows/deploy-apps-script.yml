@@ -215,6 +215,13 @@ jobs:
             exit 1
           }
           
+          echo ""
+          echo "=== POST-PUSH VERIFICATION ==="
+          echo "✅ Server push complete! Files should be at:"
+          echo "https://script.google.com/home/projects/1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP/edit"
+          echo ""
+          echo "⚠️  Hard refresh (Ctrl+F5 / Cmd+Shift+R) to see changes!"
+          echo ""
           # Восстановить всё обратно
           rm table/appsscript.json
           mv /tmp/server-appsscript.json.backup table/server/appsscript.json
