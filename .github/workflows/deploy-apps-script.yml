@@ -215,7 +215,31 @@ jobs:
           echo ""
           
           # Get access token
+          echo "DEBUG: Extracting access token from ~/.clasprc.json..."
+          if [ ! -f ~/.clasprc.json ]; then
+            echo "❌ ERROR: ~/.clasprc.json does not exist!"
+            exit 1
+          fi
+          
+          echo "DEBUG: .clasprc.json file size: $(wc -c < ~/.clasprc.json) bytes"
+          echo "DEBUG: .clasprc.json structure: $(cat ~/.clasprc.json | jq -c 'keys' 2>/dev/null || echo 'INVALID JSON')"
+          
           ACCESS_TOKEN=$(cat ~/.clasprc.json | jq -r '.token.access_token')
+          
+          if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" == "null" ]; then
+            echo "❌ ERROR: access_token is empty or null!"
+            echo "DEBUG: Trying to extract token from different path..."
+            ACCESS_TOKEN=$(cat ~/.clasprc.json | jq -r '.token.access_token // empty')
+            if [ -z "$ACCESS_TOKEN" ]; then
+              echo "❌ FATAL: Cannot extract access token!"
+              echo "File structure:"
+              cat ~/.clasprc.json | jq . 2>/dev/null || cat ~/.clasprc.json
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Access token extracted (length: ${#ACCESS_TOKEN} chars)"
+          echo "Token starts with: ${ACCESS_TOKEN:0:10}..."
           
           # Build files JSON for API
           echo "Building file list for API upload..."
