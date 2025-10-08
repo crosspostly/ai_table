@@ -79,7 +79,7 @@ jobs:
       - name: Setup clasp credentials
         run: |
           echo "Setting up clasp credentials with FRESH token..."
-          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          echo "$CLASPRC_JSON" > ~/.clasprc.json
           
           # Validate JSON
           if ! cat ~/.clasprc.json | jq empty 2>/dev/null; then
