@@ -12,12 +12,8 @@ function convertMarkdownToReadableText(markdownText) {
   
   try {
     // Блоки кода
-    text = text.replace(/```[\w]*
-?([\s\S]*?)
-?```/g, function(match, code) {
-      return '
-' + String(code || '').trim() + '
-';
+    text = text.replace(/```[\w]*\n?([\s\S]*?)\n?```/g, function(match, code) {
+      return '\n' + String(code || '').trim() + '\n';
     });
     
     // Инлайн код
@@ -33,9 +29,7 @@ function convertMarkdownToReadableText(markdownText) {
     
     // Заголовки
     text = text.replace(/^#{1,6}\s+(.+)$/gm, function(match, header) {
-      return '
-' + String(header || '').toUpperCase() + ':
-';
+      return '\n' + String(header || '').toUpperCase() + ':\n';
     });
     
     // Списки
@@ -52,10 +46,7 @@ function convertMarkdownToReadableText(markdownText) {
     text = text.replace(/^-{3,}$/gm, '---');
     
     // Множественные переносы строк
-    text = text.replace(/
-{3,}/g, '
-
-');
+    text = text.replace(/\n{3,}/g, '\n\n');
     
     // Trim
     text = text.trim();
@@ -142,8 +133,7 @@ function getSystemLogs(limit, level, category) {
     
     return recent.map(function(entry) {
       return '[' + entry.timestamp + '] ' + entry.level + ' [' + entry.category + '] ' + entry.message;
-    }).join('
-');
+    }).join('\n');
     
   } catch (e) {
     return 'Ошибка чтения логов: ' + e.message;
