@@ -23,54 +23,147 @@ function ocrReviewsThin() {
     return;
   }
   
-  var data = sheet.getDataRange().getValues();
+  var lastRow = Math.max(2, sheet.getLastRow());
   var processed = 0;
   var errors = 0;
+  var skipped = 0;
   var overwrite = getOcrOverwriteFlag();
   
-  for (var i = 1; i < data.length; i++) {
-    var cellData = data[i][0];
-    var resultCell = data[i][1];
-    
-    // Skip if already processed and not in overwrite mode
-    if (resultCell && !overwrite) continue;
-    
-    if (!cellData) continue;
-    
+  logClient('Starting OCR process: rows=' + lastRow + ', overwrite=' + overwrite);
+  
+  for (var r = 2; r <= lastRow; r++) {
     try {
+      var cellRange = sheet.getRange(r, 1);
+      var cellData = String(cellRange.getDisplayValue() || '').trim();
+      var formula = String(cellRange.getFormula() || '');
+      
+      // Skip empty cells
+      if (!cellData && !formula) {
+        continue;
+      }
+      
+      // Check if result already exists
+      var resultValue = String(sheet.getRange(r, 2).getDisplayValue() || '').trim();
+      if (!overwrite && resultValue) {
+        skipped++;
+        continue;
+      }
+      
+      // Extract cell metadata (formula, rich text links)
+      var cellMeta = extractCellMetadata(cellRange);
+      
+      // Call server API
       var response = callServer({
         action: 'ocr_process',
         email: creds.email,
         token: creds.token,
         geminiApiKey: creds.apiKey,
         cellData: cellData,
-        options: {}
+        cellMeta: cellMeta,
+        options: {
+          limit: 50,
+          language: 'ru'
+        }
       });
       
       if (response.ok && response.data && response.data.length > 0) {
-        // Write first result
-        sheet.getRange(i + 1, 2).setValue(response.data[0]);
-        
-        // If multiple results, insert rows
-        if (response.data.length > 1) {
-          sheet.insertRowsAfter(i + 1, response.data.length - 1);
-          for (var j = 1; j < response.data.length; j++) {
-            sheet.getRange(i + 1 + j, 2).setValue(response.data[j]);
-          }
-          i += response.data.length - 1;
-        }
-        
+        // Write results using helper function
+        writeOcrResults(sheet, r, response.data);
         processed++;
+        logClient('OCR success: row=' + r + ', items=' + response.data.length);
+      } else {
+        errors++;
+        logClient('OCR error: row=' + r + ', error=' + (response.error || 'unknown'));
       }
+      
     } catch (e) {
-      logClient('OCR error at row ' + (i + 1) + ': ' + e.message);
       errors++;
+      logClient('Exception at row ' + r + ': ' + e.message);
     }
     
-    Utilities.sleep(100);
+    // Rate limiting
+    if (r % 5 === 0) {
+      Utilities.sleep(100);
+    }
   }
   
-  ui.alert('OCR Complete', 'Processed: ' + processed + ', Errors: ' + errors, ui.ButtonSet.OK);
+  var summary = 'OCR Complete:\nProcessed: ' + processed + '\nSkipped: ' + skipped + '\nErrors: ' + errors;
+  logClient(summary.replace(/\n/g, ', '));
+  ui.alert(summary);
+}
+
+/**
+ * Extract cell metadata (formula, rich text links)
+ */
+function extractCellMetadata(cellRange) {
+  var meta = {
+    formula: '',
+    richTextUrl: ''
+  };
+  
+  try {
+    // Extract formula
+    meta.formula = cellRange.getFormula() || '';
+    
+    // Extract rich text link
+    var richText = cellRange.getRichTextValue();
+    if (richText) {
+      meta.richTextUrl = extractFirstLink(richText);
+    }
+  } catch (e) {
+    // Ignore metadata extraction errors
+  }
+  
+  return meta;
+}
+
+/**
+ * Extract first link from rich text
+ */
+function extractFirstLink(richText) {
+  try {
+    // Check text runs
+    var runs = richText.getRuns && richText.getRuns();
+    if (runs && runs.length) {
+      for (var i = 0; i < runs.length; i++) {
+        var style = runs[i].getTextStyle && runs[i].getTextStyle();
+        var linkUrl = style && style.getLinkUrl && style.getLinkUrl();
+        if (linkUrl) return String(linkUrl).trim();
+      }
+    }
+    
+    // Check cell link
+    var cellLinkUrl = richText.getLinkUrl && richText.getLinkUrl();
+    if (cellLinkUrl) return String(cellLinkUrl).trim();
+    
+    // Check text style
+    var textStyle = richText.getTextStyle && richText.getTextStyle();
+    var styleLinkUrl = textStyle && textStyle.getLinkUrl && textStyle.getLinkUrl();
+    if (styleLinkUrl) return String(styleLinkUrl).trim();
+    
+  } catch (e) {
+    // Ignore errors
+  }
+  
+  return '';
+}
+
+/**
+ * Write OCR results to sheet
+ */
+function writeOcrResults(sheet, startRow, results) {
+  if (!results || !results.length) return;
+  
+  // Insert additional rows if needed
+  if (results.length > 1) {
+    sheet.insertRowsAfter(startRow, results.length - 1);
+  }
+  
+  // Write results
+  for (var i = 0; i < results.length; i++) {
+    var targetRow = startRow + i;
+    sheet.getRange(targetRow, 2).setValue(results[i]);
+  }
 }
 
 /**
