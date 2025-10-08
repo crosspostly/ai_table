@@ -17,9 +17,35 @@ var BaseCollector = {
 };
 
 /**
- * VK Коллектор - работает через VK Parser Web App
+ * VK Коллектор - 🔥 ИНТЕГРИРОВАННЫЙ VK API (вместо внешнего VK_PARSER)
  */
 var VkCollector = Object.create(BaseCollector);
+
+// 🔥 НОВАЯ ФУНКЦИЯ: collectPosts для прямого импорта постов VK
+VkCollector.collectPosts = function(owner, count, traceId) {
+  try {
+    // Используем интегрированную функцию handleWallGet_ из VkImportService.gs
+    var posts = handleWallGet_(owner, count);
+    
+    return {
+      ok: true,
+      data: posts,
+      count: posts.length,
+      traceId: traceId || 'vk-' + Date.now()
+    };
+    
+  } catch (error) {
+    return {
+      ok: false,
+      error: error.message,
+      data: [],
+      count: 0,
+      traceId: traceId || 'vk-error-' + Date.now()
+    };
+  }
+};
+
+// 🔧 СТАРАЯ ФУНКЦИЯ: collect для альбомов/обсуждений/отзывов (всё ещё использует VK_PARSER)
 VkCollector.collect = function(source, limit) {
   var baseUrl = getVkParserBaseUrl();
   var endpoint = this.getEndpointForType(source.type);
@@ -297,4 +323,24 @@ function getVkParserBaseUrl() {
     return String(VK_PARSER_URL).replace(/\\/$/, '');
   }
   throw new Error('VK_PARSER_URL not configured');
+}
+
+/**
+ * 🔥 НОВАЯ ФУНКЦИЯ: Создание коллектора данных по типу источника
+ * Поддерживает интегрированный VK API для постов
+ */
+function createDataCollector(sourceType) {
+  switch(sourceType) {
+    case 'vk':
+    case IMAGE_SOURCES.VK:
+      return VkCollector;
+    case 'yandex':
+      return YandexCollector;
+    case 'dropbox':
+      return DropboxCollector;
+    case 'url':
+      return UrlCollector;
+    default:
+      throw new Error('Неподдерживаемый тип источника: ' + sourceType);
+  }
 }

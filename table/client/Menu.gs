@@ -6,6 +6,8 @@ function onOpen() {
   
   // Главное меню - часто используемые функции
   ui.createMenu('🤖 Table AI')
+    .addItem('🌐 Веб-интерфейс', 'openWebInterface')
+    .addSeparator()
     .addItem('🚀 Запустить анализ', 'prepareChainSmartWithHelp')
     .addItem('🔄 Обновить данные в ячейке', 'refreshCurrentGMCellWithHelp') 
     .addItem('📱 Получить VK посты', 'importVkPostsWithHelp')
