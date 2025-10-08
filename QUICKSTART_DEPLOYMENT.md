@@ -45,8 +45,8 @@ clasp login
 ## ✅ Готово!
 
 Теперь при каждом push в ветку `web-interface-with-design`:
-- 📦 Server код → Apps Script Server Project
-- 📦 Client + Shared + Web → Apps Script Client Project
+- 📦 Весь код (server + client + shared + web) → Apps Script Project
+- 📋 Script ID: `15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa`
 
 Проверить: вкладка **Actions** в GitHub
 
