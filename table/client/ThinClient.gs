@@ -306,26 +306,56 @@ function normalizeCondition(condition) {
 
 /**
  * Get client credentials from script properties
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/Main.txt
  */
 function getClientCredentials() {
-  var props = PropertiesService.getScriptProperties();
-  var email = props.getProperty('LICENSE_EMAIL');
-  var token = props.getProperty('LICENSE_TOKEN');
-  var apiKey = props.getProperty('GEMINI_API_KEY');
-  
-  if (!email || !token || !apiKey) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    
+    // Пробуем СНАЧАЛА старые ключи (из old версии)
+    var email = props.getProperty('USER_EMAIL');
+    var token = props.getProperty('USER_TOKEN');
+    var apiKey = props.getProperty('GEMINI_API_KEY');
+    
+    // Fallback на новые ключи
+    if (!email) email = props.getProperty('LICENSE_EMAIL');
+    if (!token) token = props.getProperty('LICENSE_TOKEN');
+    
+    // Проверяем что ВСЕ заполнены
+    if (!email || !String(email).trim()) {
+      return {
+        ok: false,
+        error: 'Email не настроен в Script Properties (USER_EMAIL или LICENSE_EMAIL)'
+      };
+    }
+    
+    if (!token || !String(token).trim()) {
+      return {
+        ok: false,
+        error: 'Token не настроен в Script Properties (USER_TOKEN или LICENSE_TOKEN)'
+      };
+    }
+    
+    if (!apiKey || !String(apiKey).trim()) {
+      return {
+        ok: false,
+        error: 'Gemini API Key не настроен в Script Properties (GEMINI_API_KEY)'
+      };
+    }
+    
+    return {
+      ok: true,
+      email: String(email).trim(),
+      token: String(token).trim(),
+      apiKey: String(apiKey).trim()
+    };
+    
+  } catch (e) {
     return {
       ok: false,
-      error: 'Missing credentials. Set LICENSE_EMAIL, LICENSE_TOKEN, and GEMINI_API_KEY in Script Properties'
+      error: 'Ошибка чтения credentials: ' + e.message
     };
   }
-  
-  return {
-    ok: true,
-    email: email,
-    token: token,
-    apiKey: apiKey
-  };
 }
 
 /**
