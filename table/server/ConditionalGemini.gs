@@ -124,7 +124,9 @@ function getCellValue(sheetName, row, col) {
     // Auto convert Markdown for text values (except column A)
     if (value && typeof value === 'string' && col > 1) {
       var processed = processGeminiResponse(value);
-      if (processetRange(row, col).getA1Notation(), 'INFO');
+      if (processed !== value) {
+        sheet.getRange(row, col).setValue(processed);
+        logMessage('🔄 Markdown converted in ' + sheet.getRange(row, col).getA1Notation(), 'INFO');
         return processed;
       }
     }
