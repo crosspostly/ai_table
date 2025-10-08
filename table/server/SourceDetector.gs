@@ -1,17 +1,15 @@
-// New/server/SourceDetector.gs
-// Single Responsibility: извлечение и классификация источников данных
-// Separation of Concerns: отделена от логики сбора данных
+/**
+ * Source Detection Service
+ * Extracts and classifies data sources from cell content
+ */
 
 /**
- * Парсинг источников из содержимого ячейки
- * @param {string} cellData - содержимое ячейки A (текст + формулы + rich text)
- * @param {Object} cellMeta - метаданные ячейки {formula, richTextUrl}
- * @returns {Array} массив источников [{type, url, id}]
+ * Extract sources from cell data
  */
 function extractSources(cellData, cellMeta) {
   var sources = [];
   
-  // 1. Rich text ссылки (приоритет)
+  // Rich text URL
   if (cellMeta && cellMeta.richTextUrl) {
     var normalized = normalizeUrl(cellMeta.richTextUrl);
     if (normalized) {
@@ -19,7 +17,7 @@ function extractSources(cellData, cellMeta) {
     }
   }
   
-  // 2. Формулы IMAGE() и HYPERLINK()
+  // Formula URLs
   if (cellMeta && cellMeta.formula) {
     var urlFromFormula = extractUrlFromFormula(cellMeta.formula);
     if (urlFromFormula) {
@@ -30,7 +28,7 @@ function extractSources(cellData, cellMeta) {
     }
   }
   
-  // 3. Явные URL в тексте
+  // URLs in text
   var textUrls = extractUrlsFromText(cellData || '');
   textUrls.forEach(function(url) {
     var normalized = normalizeUrl(url);
@@ -39,25 +37,24 @@ function extractSources(cellData, cellMeta) {
     }
   });
   
-  // Дедупликация (DRY principle)
   return deduplicateSources(sources);
 }
 
 /**
- * Нормализация URL (KISS principle)
+ * Normalize URL
  */
 function normalizeUrl(url) {
   try {
     var cleaned = String(url || '').trim();
     if (!cleaned) return '';
     
-    // Убираем HTML теги и угловые скобки
+    // Remove HTML tags
     cleaned = cleaned.replace(/<[^>]*>/g, ' ').replace(/^<+|>+$/g, '');
     
-    // Добавляем протокол если нужно
-    if (/^https?:\\/\\//i.test(cleaned)) return cleaned;
-    if (/^www\\./i.test(cleaned)) return 'https://' + cleaned;
-    if (/^(vk\\.com|drive\\.google\\.com|yadi\\.sk|disk\\.yandex\\.(ru|com)|dropbox\\.com)/i.test(cleaned)) {
+    // Add protocol if needed
+    if (/^https?:\/\//i.test(cleaned)) return cleaned;
+    if (/^www\./i.test(cleaned)) return 'https://' + cleaned;
+    if (/^(vk\.com|drive\.google\.com)/i.test(cleaned)) {
       return 'https://' + cleaned;
     }
     
@@ -68,113 +65,57 @@ function normalizeUrl(url) {
 }
 
 /**
- * Классификация источника по URL
+ * Classify source by URL
  */
 function classifySource(url) {
   var u = String(url);
   
-  // VK источники
-  if (/vk\\.com\\/reviews-?\\d+/i.test(u)) return {type: 'vk-reviews', url: u};
-  if (/vk\\.com\\/album-?\\d+_\\d+/i.test(u)) return {type: 'vk-album', url: u};
-  if (/vk\\.com\\/topic-?\\d+_\\d+/i.test(u)) return {type: 'vk-topic', url: u};
+  if (/vk\.com/i.test(u)) return {type: 'vk', url: u};
+  if (/drive\.google\.com/i.test(u)) return {type: 'drive', url: u};
   
-  // Google Drive
-  var driveMatch = detectDriveLink(u);
-  if (driveMatch) {
-    return {
-      type: driveMatch.type === 'folder' ? 'drive-folder' : 'drive-file',
-      id: driveMatch.id
-    };
-  }
-  
-  // Облачные хранилища
-  if (/yadi\\.sk\\//i.test(u) || /disk\\.yandex\\.(ru|com)\\//i.test(u)) {
-    return {type: 'yandex', url: u};
-  }
-  if (/dropbox\\.com\\//i.test(u)) {
-    return {type: 'dropbox', url: u};
-  }
-  
-  // Generic URL
   return {type: 'url', url: u};
 }
 
 /**
- * Извлечение URL из формул
+ * Extract URL from formula
  */
 function extractUrlFromFormula(formula) {
   if (!formula) return '';
   
   var f = String(formula).trim();
   
-  // IMAGE() или ИЗОБРАЖЕНИЕ()
-  var imageMatch = f.match(/^=\\s*(?:IMAGE|ИЗОБРАЖЕНИЕ)\\s*\\(\\s*([\"'])([^\"']+)\\1/i);
-  if (imageMatch) return imageMatch[2];
+  var imageMatch = f.match(/^=\s*IMAGE\s*\(\s*["']([^"']+)["']/i);
+  if (imageMatch) return imageMatch[1];
   
-  // HYPERLINK() или ГИПЕРССЫЛКА()
-  var linkMatch = f.match(/^=\\s*(?:HYPERLINK|ГИПЕРССЫЛКА)\\s*\\(\\s*([\"'])([^\"']+)\\1/i);
-  if (linkMatch) return linkMatch[2];
+  var linkMatch = f.match(/^=\s*HYPERLINK\s*\(\s*["']([^"']+)["']/i);
+  if (linkMatch) return linkMatch[1];
   
   return '';
 }
 
 /**
- * Извлечение URL из текста
+ * Extract URLs from text
  */
 function extractUrlsFromText(text) {
   var urls = [];
   
   try {
-    // HTTP/HTTPS ссылки
-    var httpMatches = text.match(/https?:\\/\\/[^\\s<>\\)\\]\"]+/g) || [];
+    var httpMatches = text.match(/https?:\/\/[^\s<>)]+/g) || [];
     urls = urls.concat(httpMatches);
-    
-    // Домены без протокола
-    var domainMatches = text.match(/(?:^|\\s)(?:vk\\.com|drive\\.google\\.com|yadi\\.sk|disk\\.yandex\\.(?:ru|com)|dropbox\\.com)\\/[^\
-\\s<>\\)\\]\"]+/gi) || [];
-    urls = urls.concat(domainMatches.map(function(m) { return m.trim(); }));
-    
   } catch (e) {
-    // Ignore regex errors
+    // Ignore
   }
   
-  return urls.map(function(url) {
-    return url.replace(/[),.;]+$/, ''); // Убираем знаки препинания в конце
-  });
+  return urls;
 }
 
 /**
- * Определение Drive ссылки
- */
-function detectDriveLink(url) {
-  try {
-    var u = String(url);
-    
-    // Папка
-    var folderMatch = u.match(/drive\\.google\\.com\\/drive\\/(?:u\\/\\d+\\/)?folders\\/([a-zA-Z0-9_-]+)/);
-    if (folderMatch) return {type: 'folder', id: folderMatch[1]};
-    
-    // Файл
-    var fileMatch = u.match(/drive\\.google\\.com\\/file\\/d\\/([a-zA-Z0-9_-]+)/);
-    if (fileMatch) return {type: 'file', id: fileMatch[1]};
-    
-    // ID параметр
-    var idMatch = u.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (idMatch) return {type: 'file', id: idMatch[1]};
-    
-    return null;
-  } catch (e) {
-    return null;
-  }
-}
-
-/**
- * Дедупликация источников
+ * Deduplicate sources
  */
 function deduplicateSources(sources) {
   var seen = {};
   return sources.filter(function(source) {
-    var key = source.type + ':' + (source.url || source.id || '');
+    var key = source.type + ':' + (source.url || '');
     if (seen[key]) return false;
     seen[key] = true;
     return true;
