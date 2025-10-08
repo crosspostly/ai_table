@@ -1,0 +1,58 @@
+name: 🚀 Auto Deploy to Google Apps Script
+
+on:
+  push:
+    branches:
+      - web-interface-with-design
+    paths:
+      - 'table/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Apps Script
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: 📦 Install clasp
+        run: npm install -g @google/clasp
+      
+      - name: 🔐 Setup clasp credentials
+        run: |
+          echo "${{ secrets.CLASPRC_JSON }}" > ~/.clasprc.json
+          echo "✅ Credentials configured"
+      
+      - name: 🚀 Deploy Server Project
+        working-directory: table
+        run: |
+          echo "📤 Deploying server files..."
+          cp .clasp-server.json .clasp.json
+          clasp push -f
+          echo "✅ Server deployment complete"
+      
+      - name: 🚀 Deploy Client Project
+        working-directory: table
+        run: |
+          echo "📤 Deploying client files (client + shared)..."
+          cp .clasp-client.json .clasp.json
+          clasp push -f
+          echo "✅ Client deployment complete"
+      
+      - name: 🎉 Deployment Summary
+        run: |
+          echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed projects:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 🖥️ Server (API endpoints)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📱 Client (UI + shared utilities)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

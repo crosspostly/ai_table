@@ -1,0 +1,13 @@
+# Server-specific ignore file
+# Only server files should be deployed
+
+# Ignore documentation
+**/*.md
+
+# Ignore backup files
+**/*_backup.gs
+**/*_old.gs
+
+# Ignore test files
+**/*test*.gs
+**/*Test*.gs

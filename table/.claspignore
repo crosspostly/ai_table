@@ -1,0 +1,29 @@
+# Ignore documentation and non-code files
+**/*.md
+*.md
+README*
+BRANCH_INFO.md
+AGENTS.md
+smart_prompts.md
+
+# Ignore test files
+tests/**
+**/*test*.gs
+**/*Test*.gs
+
+# Ignore docs folder
+docs/**
+
+# Ignore backup files
+**/*_backup.gs
+**/*_old.gs
+
+# Ignore Git files
+.git/**
+.gitignore
+
+# Ignore clasp config files (they should not be pushed to Apps Script)
+.clasp*.json
+
+# Ignore web folder for client deployment
+web/**
