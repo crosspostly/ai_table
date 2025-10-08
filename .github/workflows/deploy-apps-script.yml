@@ -45,7 +45,7 @@ jobs:
                 access_token: .tokens.default.access_token,
                 refresh_token: .tokens.default.refresh_token,
                 scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/script.projects https://www.googleapis.com/auth/script.webapp.deploy https://www.googleapis.com/auth/script.deployments",
-                token_type: (.tokens.default.type // "Bearer"),
+                token_type: "Bearer",
                 expiry_date: 9999999999999
               },
               oauth2ClientSettings: {
