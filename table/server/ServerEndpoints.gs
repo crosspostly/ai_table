@@ -54,6 +54,12 @@ function doPost(e) {
       case 'gm':
         return handleGeminiRequest(requestData, traceId);
         
+      case 'gm_image':
+        return handleGeminiImageRequest(requestData, traceId);
+        
+      case 'status':
+        return handleStatusRequest(requestData, traceId);
+        
       case 'health':
         return handleHealthCheck(traceId);
         
@@ -394,6 +400,16 @@ function getVkParserUrl() {
   } catch (e) {
     return null;
   }
+}
+
+/**
+ * Маскировка email для логов
+ */
+function maskEmail(email) {
+  if (!email || typeof email !== 'string') return 'unknown';
+  var parts = email.split('@');
+  if (parts.length !== 2) return email.substring(0, 3) + '***';
+  return parts[0].substring(0, 2) + '***@' + parts[1];
 }
 
 /**
