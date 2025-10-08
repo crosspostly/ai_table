@@ -18,7 +18,8 @@ function runAllComprehensiveTests() {
   };
   
   // 1. SYNTAX & STRUCTURE TESTS
-  Logger.log('\n📋 === PHASE 1: SYNTAX & STRUCTURE ===');
+  Logger.log('
+📋 === PHASE 1: SYNTAX & STRUCTURE ===');
   const syntaxResults = runSyntaxTests();
   allResults.suites.push({ name: 'Syntax Tests', ...syntaxResults });
   allResults.totalTests += syntaxResults.totalTests;
@@ -26,7 +27,8 @@ function runAllComprehensiveTests() {
   allResults.failed += syntaxResults.failed;
   
   // 2. VALIDATION TESTS
-  Logger.log('\n🛡️ === PHASE 2: INPUT VALIDATION ===');
+  Logger.log('
+🛡️ === PHASE 2: INPUT VALIDATION ===');
   const validationResults = runValidationTests();
   allResults.suites.push({ name: 'Validation Tests', ...validationResults });
   allResults.totalTests += validationResults.totalTests;
@@ -34,7 +36,8 @@ function runAllComprehensiveTests() {
   allResults.failed += validationResults.failed;
   
   // 3. RETRY LOGIC TESTS
-  Logger.log('\n🔄 === PHASE 3: RETRY LOGIC ===');
+  Logger.log('
+🔄 === PHASE 3: RETRY LOGIC ===');
   const retryResults = runRetryLogicTests();
   allResults.suites.push({ name: 'Retry Logic Tests', ...retryResults });
   allResults.totalTests += retryResults.totalTests;
@@ -42,7 +45,8 @@ function runAllComprehensiveTests() {
   allResults.failed += retryResults.failed;
   
   // 4. ERROR HANDLING TESTS
-  Logger.log('\n💬 === PHASE 4: ERROR HANDLING ===');
+  Logger.log('
+💬 === PHASE 4: ERROR HANDLING ===');
   const errorResults = runErrorHandlingTests();
   allResults.suites.push({ name: 'Error Handling Tests', ...errorResults });
   allResults.totalTests += errorResults.totalTests;
@@ -50,7 +54,8 @@ function runAllComprehensiveTests() {
   allResults.failed += errorResults.failed;
   
   // 5. PLATFORM DETECTION TESTS
-  Logger.log('\n🔍 === PHASE 5: PLATFORM DETECTION ===');
+  Logger.log('
+🔍 === PHASE 5: PLATFORM DETECTION ===');
   const platformResults = runPlatformDetectionTests();
   allResults.suites.push({ name: 'Platform Detection Tests', ...platformResults });
   allResults.totalTests += platformResults.totalTests;
@@ -58,7 +63,8 @@ function runAllComprehensiveTests() {
   allResults.failed += platformResults.failed;
   
   // 6. REAL DATA TESTS (самые важные!)
-  Logger.log('\n🧪 === PHASE 6: REAL DATA TESTS ===');
+  Logger.log('
+🧪 === PHASE 6: REAL DATA TESTS ===');
   const realDataResults = runRealDataTests();
   allResults.suites.push({ name: 'Real Data Tests', ...realDataResults });
   allResults.totalTests += realDataResults.totalTests || realDataResults.passed + realDataResults.failed;
@@ -66,7 +72,8 @@ function runAllComprehensiveTests() {
   allResults.failed += realDataResults.failed;
   
   // 7. GEMINI SEQUENTIAL TESTS
-  Logger.log('\n🤖 === PHASE 7: GEMINI SEQUENTIAL TESTS ===');
+  Logger.log('
+🤖 === PHASE 7: GEMINI SEQUENTIAL TESTS ===');
   const geminiResults = runGeminiSequentialTests();
   allResults.suites.push({ name: 'Gemini Sequential Tests', ...geminiResults });
   allResults.totalTests += geminiResults.totalTests;
@@ -75,9 +82,426 @@ function runAllComprehensiveTests() {
   
   // FINAL REPORT
   const duration = Date.now() - startTime;
-  Logger.log('\n📊 ===============================');
+  Logger.log('
+📊 ===============================');
   Logger.log('   🎯 COMPREHENSIVE TEST RESULTS');
   Logger.log('===============================');
   Logger.log(`⏱️ Duration: ${Math.round(duration / 1000)}s`);
   Logger.log(`📊 Total Tests: ${allResults.totalTests}`);
-  Logger.log(`✅ Passed: ${allResults.passed}`);\n  Logger.log(`❌ Failed: ${allResults.failed}`);\n  Logger.log(`📈 Success Rate: ${Math.round((allResults.passed / allResults.totalTests) * 100)}%`);\n  \n  // Детальный отчет по каждому набору\n  Logger.log('\\n📋 Detailed Results:');\n  allResults.suites.forEach(suite => {\n    const rate = suite.totalTests ? Math.round((suite.passed / suite.totalTests) * 100) : 0;\n    Logger.log(`  ${suite.passed}/${suite.totalTests || (suite.passed + suite.failed)} ${suite.name} (${rate}%)`);\n  });\n  \n  // Сохраняем результаты в лист\n  writeTestResultsToSheet(allResults);\n  \n  return allResults;\n}\n\n/**\n * Тест синтаксиса и структуры\n */\nfunction runSyntaxTests() {\n  Logger.log('⚡ Running syntax tests...');\n  \n  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };\n  \n  // Тест 1: Основные функции существуют\n  results.totalTests++;\n  try {\n    const functionsToCheck = [\n      'importSocialPosts',\n      'parseSource', \n      'normalizePlatformName',\n      'importInstagramPosts',\n      'importTelegramPosts', \n      'importVkPostsAdvanced',\n      'validateAndSanitizeInputs',\n      'fetchWithRetry',\n      'createUserFriendlyError'\n    ];\n    \n    const missingFunctions = [];\n    functionsToCheck.forEach(funcName => {\n      if (typeof eval(funcName) !== 'function') {\n        missingFunctions.push(funcName);\n      }\n    });\n    \n    if (missingFunctions.length === 0) {\n      results.passed++;\n      results.details.push('✅ All core functions exist');\n    } else {\n      results.failed++;\n      results.details.push(`❌ Missing functions: ${missingFunctions.join(', ')}`);\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Function check error: ${error.message}`);\n  }\n  \n  // Тест 2: Парсинг URL работает\n  results.totalTests++;\n  try {\n    const testSource = parseSource('https://www.instagram.com/nasa/', null);\n    if (testSource.platform === 'instagram' && testSource.value === 'nasa') {\n      results.passed++;\n      results.details.push('✅ URL parsing works');\n    } else {\n      results.failed++;\n      results.details.push(`❌ URL parsing failed: got ${JSON.stringify(testSource)}`);\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ URL parsing error: ${error.message}`);\n  }\n  \n  // Тест 3: Нормализация платформ\n  results.totalTests++;\n  try {\n    const testCases = [\n      ['инста', 'instagram'],\n      ['тг', 'telegram'], \n      ['вк', 'vk'],\n      ['instagram', 'instagram']\n    ];\n    \n    let allPassed = true;\n    for (const [input, expected] of testCases) {\n      const result = normalizePlatformName(input);\n      if (result !== expected) {\n        allPassed = false;\n        break;\n      }\n    }\n    \n    if (allPassed) {\n      results.passed++;\n      results.details.push('✅ Platform normalization works');\n    } else {\n      results.failed++;\n      results.details.push('❌ Platform normalization failed');\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Platform normalization error: ${error.message}`);\n  }\n  \n  Logger.log(`Syntax Tests: ${results.passed}/${results.totalTests} passed`);\n  return results;\n}\n\n/**\n * Тест валидации входных данных\n */\nfunction runValidationTests() {\n  Logger.log('🛡️ Running validation tests...');\n  \n  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };\n  \n  // Тест 1: Валидные данные проходят\n  results.totalTests++;\n  try {\n    const valid = validateAndSanitizeInputs('https://instagram.com/nasa', 5, 'instagram');\n    if (valid.isValid && valid.sourceUrl && valid.count === 5) {\n      results.passed++;\n      results.details.push('✅ Valid inputs pass validation');\n    } else {\n      results.failed++;\n      results.details.push('❌ Valid inputs failed validation');\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Valid input test error: ${error.message}`);\n  }\n  \n  // Тест 2: XSS блокируется\n  results.totalTests++;\n  try {\n    validateAndSanitizeInputs('javascript:alert(\"xss\")', 5, '');\n    results.failed++;\n    results.details.push('❌ XSS not blocked');\n  } catch (error) {\n    if (error.message.includes('Недопустимый протокол')) {\n      results.passed++;\n      results.details.push('✅ XSS properly blocked');\n    } else {\n      results.failed++;\n      results.details.push(`❌ XSS test unexpected error: ${error.message}`);\n    }\n  }\n  \n  // Тест 3: Невалидные count исправляются\n  results.totalTests++;\n  try {\n    const result = validateAndSanitizeInputs('test', 'invalid', '');\n    if (result.count === 20) { // default value\n      results.passed++;\n      results.details.push('✅ Invalid count fixed to default');\n    } else {\n      results.failed++;\n      results.details.push(`❌ Invalid count not fixed: got ${result.count}`);\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Count validation error: ${error.message}`);\n  }\n  \n  Logger.log(`Validation Tests: ${results.passed}/${results.totalTests} passed`);\n  return results;\n}\n\n/**\n * Тест retry логики\n */\nfunction runRetryLogicTests() {\n  Logger.log('🔄 Running retry logic tests...');\n  \n  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };\n  \n  // Тест 1: calculateBackoffDelay работает правильно\n  results.totalTests++;\n  try {\n    const delay1 = calculateBackoffDelay(1, 1000, 30000);\n    const delay2 = calculateBackoffDelay(2, 1000, 30000); \n    const delay3 = calculateBackoffDelay(10, 1000, 5000); // должен быть ограничен 5000\n    \n    if (delay1 >= 750 && delay1 <= 1250 && // 1000 ± jitter\n        delay2 >= 1500 && delay2 <= 2500 && // 2000 ± jitter\n        delay3 <= 5000) { // max delay limit\n      results.passed++;\n      results.details.push('✅ Backoff delay calculation works');\n    } else {\n      results.failed++;\n      results.details.push(`❌ Backoff delays wrong: ${delay1}, ${delay2}, ${delay3}`);\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Backoff calculation error: ${error.message}`);\n  }\n  \n  // Тест 2: fetchWithRetry function exists and has right signature\n  results.totalTests++;\n  try {\n    if (typeof fetchWithRetry === 'function') {\n      results.passed++;\n      results.details.push('✅ fetchWithRetry function exists');\n    } else {\n      results.failed++;\n      results.details.push('❌ fetchWithRetry function missing');\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ fetchWithRetry check error: ${error.message}`);\n  }\n  \n  Logger.log(`Retry Logic Tests: ${results.passed}/${results.totalTests} passed`);\n  return results;\n}\n\n/**\n * Тест обработки ошибок\n */\nfunction runErrorHandlingTests() {\n  Logger.log('💬 Running error handling tests...');\n  \n  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };\n  \n  // Тест 1: createUserFriendlyError работает\n  results.totalTests++;\n  try {\n    const techError = new Error('HTTP 403: Forbidden');\n    const friendlyError = createUserFriendlyError(techError, {\n      platform: 'instagram',\n      username: 'test'\n    });\n    \n    if (friendlyError.message.includes('🚫') && friendlyError.originalError === techError) {\n      results.passed++;\n      results.details.push('✅ User-friendly errors work');\n    } else {\n      results.failed++;\n      results.details.push('❌ User-friendly error generation failed');\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Error handling test error: ${error.message}`);\n  }\n  \n  // Тест 2: HTTP code extraction работает\n  results.totalTests++;\n  try {\n    const httpCode = extractHttpCode('Request failed: HTTP 429 Too Many Requests');\n    if (httpCode === 429) {\n      results.passed++;\n      results.details.push('✅ HTTP code extraction works');\n    } else {\n      results.failed++;\n      results.details.push(`❌ HTTP code extraction failed: got ${httpCode}`);\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ HTTP code extraction error: ${error.message}`);\n  }\n  \n  Logger.log(`Error Handling Tests: ${results.passed}/${results.totalTests} passed`);\n  return results;\n}\n\n/**\n * Тест определения платформ\n */\nfunction runPlatformDetectionTests() {\n  Logger.log('🔍 Running platform detection tests...');\n  \n  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };\n  \n  const testCases = [\n    ['https://www.instagram.com/nasa/', null, 'instagram', 'nasa'],\n    ['https://t.me/durov', null, 'telegram', 'durov'],\n    ['https://vk.com/durov', null, 'vk', 'durov'],\n    ['durov', 'telegram', 'telegram', 'durov'],\n    ['@channel', 'telegram', 'telegram', 'channel']\n  ];\n  \n  testCases.forEach(([source, platform, expectedPlatform, expectedValue]) => {\n    results.totalTests++;\n    try {\n      const result = parseSource(source, normalizePlatformName(platform));\n      if (result.platform === expectedPlatform && result.value === expectedValue) {\n        results.passed++;\n        results.details.push(`✅ ${source} → ${expectedPlatform}`);\n      } else {\n        results.failed++;\n        results.details.push(`❌ ${source} → expected ${expectedPlatform}:${expectedValue}, got ${result.platform}:${result.value}`);\n      }\n    } catch (error) {\n      if (platform === null && error.message.includes('укажите платформу')) {\n        results.passed++;\n        results.details.push(`✅ ${source} → correctly requires platform`);\n      } else {\n        results.failed++;\n        results.details.push(`❌ ${source} → error: ${error.message}`);\n      }\n    }\n  });\n  \n  Logger.log(`Platform Detection Tests: ${results.passed}/${results.totalTests} passed`);\n  return results;\n}\n\n/**\n * Тест последовательных Gemini запросов\n */\nfunction runGeminiSequentialTests() {\n  Logger.log('🤖 Running Gemini sequential tests...');\n  \n  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };\n  \n  // Тест 1: fetchGeminiWithRetry function exists\n  results.totalTests++;\n  try {\n    if (typeof fetchGeminiWithRetry === 'function') {\n      results.passed++;\n      results.details.push('✅ fetchGeminiWithRetry function exists');\n    } else {\n      results.failed++;\n      results.details.push('❌ fetchGeminiWithRetry function missing');\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ Gemini function check error: ${error.message}`);\n  }\n  \n  // Тест 2: Проверим что GM функция обновлена\n  results.totalTests++;\n  try {\n    // Этот тест проверяет только структуру без реального вызова API\n    if (typeof GM === 'function') {\n      results.passed++;\n      results.details.push('✅ GM function exists and updated');\n    } else {\n      results.failed++;\n      results.details.push('❌ GM function missing');\n    }\n  } catch (error) {\n    results.failed++;\n    results.details.push(`❌ GM function check error: ${error.message}`);\n  }\n  \n  Logger.log(`Gemini Sequential Tests: ${results.passed}/${results.totalTests} passed`);\n  return results;\n}\n\n/**\n * Запись результатов тестов в Google Sheet\n */\nfunction writeTestResultsToSheet(results) {\n  try {\n    const ss = SpreadsheetApp.getActive();\n    let sheet = ss.getSheetByName('Test Results');\n    \n    if (!sheet) {\n      sheet = ss.insertSheet('Test Results');\n    }\n    \n    // Очищаем и создаем заголовки\n    sheet.clear();\n    const headers = ['Test Suite', 'Total', 'Passed', 'Failed', 'Success Rate', 'Details'];\n    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);\n    sheet.getRange(1, 1, 1, headers.length)\n      .setBackground('#4285f4')\n      .setFontColor('white')\n      .setFontWeight('bold');\n    \n    // Добавляем результаты\n    const data = [];\n    results.suites.forEach(suite => {\n      const total = suite.totalTests || (suite.passed + suite.failed);\n      const rate = total ? Math.round((suite.passed / total) * 100) : 0;\n      data.push([\n        suite.name,\n        total,\n        suite.passed, \n        suite.failed,\n        rate + '%',\n        (suite.details || []).join('; ')\n      ]);\n    });\n    \n    // Итоговая строка\n    const totalRate = results.totalTests ? Math.round((results.passed / results.totalTests) * 100) : 0;\n    data.push([\n      'TOTAL',\n      results.totalTests,\n      results.passed,\n      results.failed, \n      totalRate + '%',\n      'Comprehensive test run completed'\n    ]);\n    \n    if (data.length > 0) {\n      sheet.getRange(2, 1, data.length, headers.length).setValues(data);\n      \n      // Форматируем итоговую строку\n      const totalRow = data.length + 1;\n      sheet.getRange(totalRow, 1, 1, headers.length)\n        .setBackground('#f0f0f0')\n        .setFontWeight('bold');\n    }\n    \n    sheet.autoResizeColumns(1, headers.length);\n    Logger.log('✅ Test results written to \"Test Results\" sheet');\n    \n  } catch (error) {\n    Logger.log('❌ Failed to write test results to sheet: ' + error.message);\n  }\n}"
+  Logger.log(`✅ Passed: ${allResults.passed}`);
+  Logger.log(`❌ Failed: ${allResults.failed}`);
+  Logger.log(`📈 Success Rate: ${Math.round((allResults.passed / allResults.totalTests) * 100)}%`);
+  
+  // Детальный отчет по каждому набору
+  Logger.log('\
+📋 Detailed Results:');
+  allResults.suites.forEach(suite => {
+    const rate = suite.totalTests ? Math.round((suite.passed / suite.totalTests) * 100) : 0;
+    Logger.log(`  ${suite.passed}/${suite.totalTests || (suite.passed + suite.failed)} ${suite.name} (${rate}%)`);
+  });
+  
+  // Сохраняем результаты в лист
+  writeTestResultsToSheet(allResults);
+  
+  return allResults;
+}
+
+/**
+ * Тест синтаксиса и структуры
+ */
+function runSyntaxTests() {
+  Logger.log('⚡ Running syntax tests...');
+  
+  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };
+  
+  // Тест 1: Основные функции существуют
+  results.totalTests++;
+  try {
+    const functionsToCheck = [
+      'importSocialPosts',
+      'parseSource', 
+      'normalizePlatformName',
+      'importInstagramPosts',
+      'importTelegramPosts', 
+      'importVkPostsAdvanced',
+      'validateAndSanitizeInputs',
+      'fetchWithRetry',
+      'createUserFriendlyError'
+    ];
+    
+    const missingFunctions = [];
+    functionsToCheck.forEach(funcName => {
+      if (typeof eval(funcName) !== 'function') {
+        missingFunctions.push(funcName);
+      }
+    });
+    
+    if (missingFunctions.length === 0) {
+      results.passed++;
+      results.details.push('✅ All core functions exist');
+    } else {
+      results.failed++;
+      results.details.push(`❌ Missing functions: ${missingFunctions.join(', ')}`);
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Function check error: ${error.message}`);
+  }
+  
+  // Тест 2: Парсинг URL работает
+  results.totalTests++;
+  try {
+    const testSource = parseSource('https://www.instagram.com/nasa/', null);
+    if (testSource.platform === 'instagram' && testSource.value === 'nasa') {
+      results.passed++;
+      results.details.push('✅ URL parsing works');
+    } else {
+      results.failed++;
+      results.details.push(`❌ URL parsing failed: got ${JSON.stringify(testSource)}`);
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ URL parsing error: ${error.message}`);
+  }
+  
+  // Тест 3: Нормализация платформ
+  results.totalTests++;
+  try {
+    const testCases = [
+      ['инста', 'instagram'],
+      ['тг', 'telegram'], 
+      ['вк', 'vk'],
+      ['instagram', 'instagram']
+    ];
+    
+    let allPassed = true;
+    for (const [input, expected] of testCases) {
+      const result = normalizePlatformName(input);
+      if (result !== expected) {
+        allPassed = false;
+        break;
+      }
+    }
+    
+    if (allPassed) {
+      results.passed++;
+      results.details.push('✅ Platform normalization works');
+    } else {
+      results.failed++;
+      results.details.push('❌ Platform normalization failed');
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Platform normalization error: ${error.message}`);
+  }
+  
+  Logger.log(`Syntax Tests: ${results.passed}/${results.totalTests} passed`);
+  return results;
+}
+
+/**
+ * Тест валидации входных данных
+ */
+function runValidationTests() {
+  Logger.log('🛡️ Running validation tests...');
+  
+  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };
+  
+  // Тест 1: Валидные данные проходят
+  results.totalTests++;
+  try {
+    const valid = validateAndSanitizeInputs('https://instagram.com/nasa', 5, 'instagram');
+    if (valid.isValid && valid.sourceUrl && valid.count === 5) {
+      results.passed++;
+      results.details.push('✅ Valid inputs pass validation');
+    } else {
+      results.failed++;
+      results.details.push('❌ Valid inputs failed validation');
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Valid input test error: ${error.message}`);
+  }
+  
+  // Тест 2: XSS блокируется
+  results.totalTests++;
+  try {
+    validateAndSanitizeInputs('javascript:alert(\"xss\")', 5, '');
+    results.failed++;
+    results.details.push('❌ XSS not blocked');
+  } catch (error) {
+    if (error.message.includes('Недопустимый протокол')) {
+      results.passed++;
+      results.details.push('✅ XSS properly blocked');
+    } else {
+      results.failed++;
+      results.details.push(`❌ XSS test unexpected error: ${error.message}`);
+    }
+  }
+  
+  // Тест 3: Невалидные count исправляются
+  results.totalTests++;
+  try {
+    const result = validateAndSanitizeInputs('test', 'invalid', '');
+    if (result.count === 20) { // default value
+      results.passed++;
+      results.details.push('✅ Invalid count fixed to default');
+    } else {
+      results.failed++;
+      results.details.push(`❌ Invalid count not fixed: got ${result.count}`);
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Count validation error: ${error.message}`);
+  }
+  
+  Logger.log(`Validation Tests: ${results.passed}/${results.totalTests} passed`);
+  return results;
+}
+
+/**
+ * Тест retry логики
+ */
+function runRetryLogicTests() {
+  Logger.log('🔄 Running retry logic tests...');
+  
+  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };
+  
+  // Тест 1: calculateBackoffDelay работает правильно
+  results.totalTests++;
+  try {
+    const delay1 = calculateBackoffDelay(1, 1000, 30000);
+    const delay2 = calculateBackoffDelay(2, 1000, 30000); 
+    const delay3 = calculateBackoffDelay(10, 1000, 5000); // должен быть ограничен 5000
+    
+    if (delay1 >= 750 && delay1 <= 1250 && // 1000 ± jitter
+        delay2 >= 1500 && delay2 <= 2500 && // 2000 ± jitter
+        delay3 <= 5000) { // max delay limit
+      results.passed++;
+      results.details.push('✅ Backoff delay calculation works');
+    } else {
+      results.failed++;
+      results.details.push(`❌ Backoff delays wrong: ${delay1}, ${delay2}, ${delay3}`);
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Backoff calculation error: ${error.message}`);
+  }
+  
+  // Тест 2: fetchWithRetry function exists and has right signature
+  results.totalTests++;
+  try {
+    if (typeof fetchWithRetry === 'function') {
+      results.passed++;
+      results.details.push('✅ fetchWithRetry function exists');
+    } else {
+      results.failed++;
+      results.details.push('❌ fetchWithRetry function missing');
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ fetchWithRetry check error: ${error.message}`);
+  }
+  
+  Logger.log(`Retry Logic Tests: ${results.passed}/${results.totalTests} passed`);
+  return results;
+}
+
+/**
+ * Тест обработки ошибок
+ */
+function runErrorHandlingTests() {
+  Logger.log('💬 Running error handling tests...');
+  
+  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };
+  
+  // Тест 1: createUserFriendlyError работает
+  results.totalTests++;
+  try {
+    const techError = new Error('HTTP 403: Forbidden');
+    const friendlyError = createUserFriendlyError(techError, {
+      platform: 'instagram',
+      username: 'test'
+    });
+    
+    if (friendlyError.message.includes('🚫') && friendlyError.originalError === techError) {
+      results.passed++;
+      results.details.push('✅ User-friendly errors work');
+    } else {
+      results.failed++;
+      results.details.push('❌ User-friendly error generation failed');
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Error handling test error: ${error.message}`);
+  }
+  
+  // Тест 2: HTTP code extraction работает
+  results.totalTests++;
+  try {
+    const httpCode = extractHttpCode('Request failed: HTTP 429 Too Many Requests');
+    if (httpCode === 429) {
+      results.passed++;
+      results.details.push('✅ HTTP code extraction works');
+    } else {
+      results.failed++;
+      results.details.push(`❌ HTTP code extraction failed: got ${httpCode}`);
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ HTTP code extraction error: ${error.message}`);
+  }
+  
+  Logger.log(`Error Handling Tests: ${results.passed}/${results.totalTests} passed`);
+  return results;
+}
+
+/**
+ * Тест определения платформ
+ */
+function runPlatformDetectionTests() {
+  Logger.log('🔍 Running platform detection tests...');
+  
+  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };
+  
+  const testCases = [
+    ['https://www.instagram.com/nasa/', null, 'instagram', 'nasa'],
+    ['https://t.me/durov', null, 'telegram', 'durov'],
+    ['https://vk.com/durov', null, 'vk', 'durov'],
+    ['durov', 'telegram', 'telegram', 'durov'],
+    ['@channel', 'telegram', 'telegram', 'channel']
+  ];
+  
+  testCases.forEach(([source, platform, expectedPlatform, expectedValue]) => {
+    results.totalTests++;
+    try {
+      const result = parseSource(source, normalizePlatformName(platform));
+      if (result.platform === expectedPlatform && result.value === expectedValue) {
+        results.passed++;
+        results.details.push(`✅ ${source} → ${expectedPlatform}`);
+      } else {
+        results.failed++;
+        results.details.push(`❌ ${source} → expected ${expectedPlatform}:${expectedValue}, got ${result.platform}:${result.value}`);
+      }
+    } catch (error) {
+      if (platform === null && error.message.includes('укажите платформу')) {
+        results.passed++;
+        results.details.push(`✅ ${source} → correctly requires platform`);
+      } else {
+        results.failed++;
+        results.details.push(`❌ ${source} → error: ${error.message}`);
+      }
+    }
+  });
+  
+  Logger.log(`Platform Detection Tests: ${results.passed}/${results.totalTests} passed`);
+  return results;
+}
+
+/**
+ * Тест последовательных Gemini запросов
+ */
+function runGeminiSequentialTests() {
+  Logger.log('🤖 Running Gemini sequential tests...');
+  
+  const results = { totalTests: 0, passed: 0, failed: 0, details: [] };
+  
+  // Тест 1: fetchGeminiWithRetry function exists
+  results.totalTests++;
+  try {
+    if (typeof fetchGeminiWithRetry === 'function') {
+      results.passed++;
+      results.details.push('✅ fetchGeminiWithRetry function exists');
+    } else {
+      results.failed++;
+      results.details.push('❌ fetchGeminiWithRetry function missing');
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ Gemini function check error: ${error.message}`);
+  }
+  
+  // Тест 2: Проверим что GM функция обновлена
+  results.totalTests++;
+  try {
+    // Этот тест проверяет только структуру без реального вызова API
+    if (typeof GM === 'function') {
+      results.passed++;
+      results.details.push('✅ GM function exists and updated');
+    } else {
+      results.failed++;
+      results.details.push('❌ GM function missing');
+    }
+  } catch (error) {
+    results.failed++;
+    results.details.push(`❌ GM function check error: ${error.message}`);
+  }
+  
+  Logger.log(`Gemini Sequential Tests: ${results.passed}/${results.totalTests} passed`);
+  return results;
+}
+
+/**
+ * Запись результатов тестов в Google Sheet
+ */
+function writeTestResultsToSheet(results) {
+  try {
+    const ss = SpreadsheetApp.getActive();
+    let sheet = ss.getSheetByName('Test Results');
+    
+    if (!sheet) {
+      sheet = ss.insertSheet('Test Results');
+    }
+    
+    // Очищаем и создаем заголовки
+    sheet.clear();
+    const headers = ['Test Suite', 'Total', 'Passed', 'Failed', 'Success Rate', 'Details'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground('#4285f4')
+      .setFontColor('white')
+      .setFontWeight('bold');
+    
+    // Добавляем результаты
+    const data = [];
+    results.suites.forEach(suite => {
+      const total = suite.totalTests || (suite.passed + suite.failed);
+      const rate = total ? Math.round((suite.passed / total) * 100) : 0;
+      data.push([
+        suite.name,
+        total,
+        suite.passed, 
+        suite.failed,
+        rate + '%',
+        (suite.details || []).join('; ')
+      ]);
+    });
+    
+    // Итоговая строка
+    const totalRate = results.totalTests ? Math.round((results.passed / results.totalTests) * 100) : 0;
+    data.push([
+      'TOTAL',
+      results.totalTests,
+      results.passed,
+      results.failed, 
+      totalRate + '%',
+      'Comprehensive test run completed'
+    ]);
+    
+    if (data.length > 0) {
+      sheet.getRange(2, 1, data.length, headers.length).setValues(data);
+      
+      // Форматируем итоговую строку
+      const totalRow = data.length + 1;
+      sheet.getRange(totalRow, 1, 1, headers.length)
+        .setBackground('#f0f0f0')
+        .setFontWeight('bold');
+    }
+    
+    sheet.autoResizeColumns(1, headers.length);
+    Logger.log('✅ Test results written to \"Test Results\" sheet');
+    
+  } catch (error) {
+    Logger.log('❌ Failed to write test results to sheet: ' + error.message);
+  }
+}"

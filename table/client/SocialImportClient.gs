@@ -27,7 +27,8 @@ function importSocialPostsClient() {
   
   try {
     // Показываем процесс
-    ui.alert('Импорт запущен', 'Импорт постов из ' + params.source + '...\\nЭто может занять до 2 минут.', ui.ButtonSet.OK);
+    ui.alert('Импорт запущен', 'Импорт постов из ' + params.source + '...\
+Это может занять до 2 минут.', ui.ButtonSet.OK);
     
     // Вызов серверного API
     var serverRequest = {
@@ -45,9 +46,13 @@ function importSocialPostsClient() {
       // Записываем результаты в лист
       writeSocialPostsToSheet(ss, result.data, result.platform);
       
-      var summary = 'Импорт завершён успешно!\\n\\n' +
-                   'Платформа: ' + (result.platform || 'unknown').toUpperCase() + '\\n' +
-                   'Импортировано: ' + result.data.length + ' постов\\n' +
+      var summary = 'Импорт завершён успешно!\
+\
+' +
+                   'Платформа: ' + (result.platform || 'unknown').toUpperCase() + '\
+' +
+                   'Импортировано: ' + result.data.length + ' постов\
+' +
                    'Источник: ' + params.source;
       
       logClient('Social import success: platform=' + result.platform + ', posts=' + result.data.length);
@@ -292,9 +297,13 @@ function testSocialImportConnection() {
     var result = callServer(testRequest);
     
     if (result.ok) {
-      var info = 'Соединение успешно!\\n\\n' +
-                'Сервер: ' + (result.data.service || 'Unknown') + '\\n' +
-                'Версия: ' + (result.data.version || 'Unknown') + '\\n' +
+      var info = 'Соединение успешно!\
+\
+' +
+                'Сервер: ' + (result.data.service || 'Unknown') + '\
+' +
+                'Версия: ' + (result.data.version || 'Unknown') + '\
+' +
                 'Timestamp: ' + (result.data.timestamp || 'Unknown');
       
       logClient('Connection test successful');

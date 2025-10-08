@@ -23,27 +23,33 @@ function runComprehensiveCodeAudit() {
   };
   
   // === PHASE 1: SYNTAX AND STRUCTURE AUDIT ===
-  Logger.log('\n📋 PHASE 1: Syntax and Structure Audit...');
+  Logger.log('
+📋 PHASE 1: Syntax and Structure Audit...');
   auditSyntaxAndStructure(auditResults);
   
   // === PHASE 2: FUNCTION DEPENDENCY ANALYSIS ===
-  Logger.log('\n🔗 PHASE 2: Function Dependency Analysis...');
+  Logger.log('
+🔗 PHASE 2: Function Dependency Analysis...');
   auditFunctionDependencies(auditResults);
   
   // === PHASE 3: CLIENT-SERVER API CONTRACTS ===
-  Logger.log('\n📡 PHASE 3: Client-Server API Contracts...');
+  Logger.log('
+📡 PHASE 3: Client-Server API Contracts...');
   auditApiContracts(auditResults);
   
   // === PHASE 4: ERROR HANDLING VALIDATION ===
-  Logger.log('\n🛡️ PHASE 4: Error Handling Validation...');
+  Logger.log('
+🛡️ PHASE 4: Error Handling Validation...');
   auditErrorHandling(auditResults);
   
   // === PHASE 5: SECURITY AND VALIDATION AUDIT ===
-  Logger.log('\n🔒 PHASE 5: Security and Validation Audit...');
+  Logger.log('
+🔒 PHASE 5: Security and Validation Audit...');
   auditSecurityAndValidation(auditResults);
   
   // === PHASE 6: INTEGRATION POINTS AUDIT ===
-  Logger.log('\n⚙️ PHASE 6: Integration Points Audit...');
+  Logger.log('
+⚙️ PHASE 6: Integration Points Audit...');
   auditIntegrationPoints(auditResults);
   
   // === FINAL RESULTS ===
@@ -436,7 +442,8 @@ function auditIntegrationPoints(results) {
  * Генерация детального отчета аудита
  */
 function generateAuditReport(results, duration) {
-  Logger.log('\n📊 ========================================');
+  Logger.log('
+📊 ========================================');
   Logger.log('   🔍 COMPREHENSIVE CODE AUDIT RESULTS');
   Logger.log('========================================');
   Logger.log(`⏱️ Duration: ${Math.round(duration / 1000)}s`);
@@ -450,7 +457,8 @@ function generateAuditReport(results, duration) {
   
   // Критические ошибки
   if (results.criticalErrors.length > 0) {
-    Logger.log('\n🚨 CRITICAL ERRORS:');
+    Logger.log('
+🚨 CRITICAL ERRORS:');
     results.criticalErrors.forEach(error => {
       Logger.log(`  ${error}`);
     });
@@ -458,7 +466,8 @@ function generateAuditReport(results, duration) {
   
   // Проблемы
   if (results.issues.length > 0) {
-    Logger.log('\n❌ ISSUES FOUND:');
+    Logger.log('
+❌ ISSUES FOUND:');
     results.issues.forEach(issue => {
       Logger.log(`  ${issue}`);
     });
@@ -466,7 +475,8 @@ function generateAuditReport(results, duration) {
   
   // Предупреждения
   if (results.warnings.length > 0) {
-    Logger.log('\n⚠️ WARNINGS:');
+    Logger.log('
+⚠️ WARNINGS:');
     results.warnings.forEach(warning => {
       Logger.log(`  ${warning}`);
     });
@@ -475,13 +485,16 @@ function generateAuditReport(results, duration) {
   // Вердикт
   const totalProblems = results.criticalErrors.length + results.issues.length;
   if (totalProblems === 0) {
-    Logger.log('\n🎯 AUDIT VERDICT: ✅ ALL SYSTEMS OPERATIONAL');
+    Logger.log('
+🎯 AUDIT VERDICT: ✅ ALL SYSTEMS OPERATIONAL');
     Logger.log('   No critical issues found, code is ready for production!');
   } else if (results.criticalErrors.length > 0) {
-    Logger.log('\n🚨 AUDIT VERDICT: ❌ CRITICAL ISSUES FOUND');
+    Logger.log('
+🚨 AUDIT VERDICT: ❌ CRITICAL ISSUES FOUND');
     Logger.log(`   ${results.criticalErrors.length} critical errors must be fixed before deployment!`);
   } else {
-    Logger.log('\n⚠️ AUDIT VERDICT: 🔄 MINOR ISSUES FOUND');
+    Logger.log('
+⚠️ AUDIT VERDICT: 🔄 MINOR ISSUES FOUND');
     Logger.log(`   ${results.issues.length} issues should be addressed, but not blocking.`);
   }
   
@@ -602,7 +615,8 @@ function runQuickAudit() {
   const total = criticalFunctions.length;
   const successRate = Math.round((passed / total) * 100);
   
-  Logger.log(`\n📊 Quick Audit Results: ${passed}/${total} (${successRate}%)`);
+  Logger.log(`
+📊 Quick Audit Results: ${passed}/${total} (${successRate}%)`);
   
   if (successRate === 100) {
     Logger.log('🎯 VERDICT: ✅ ALL CRITICAL FUNCTIONS AVAILABLE');

@@ -130,7 +130,8 @@ function runRealDataTests() {
   ];
   
   for (const testCase of testCases) {
-    Logger.log(`\n📝 Testing: ${testCase.name}`);
+    Logger.log(`
+📝 Testing: ${testCase.name}`);
     
     try {
       // Устанавливаем параметры в тестовый лист
@@ -178,13 +179,15 @@ function runRealDataTests() {
   }
   
   // Итоговый отчет
-  Logger.log('\n📊 FINAL RESULTS:');
+  Logger.log('
+📊 FINAL RESULTS:');
   Logger.log(`✅ Passed: ${results.passed}`);
   Logger.log(`❌ Failed: ${results.failed}`);
   Logger.log(`📊 Total: ${results.passed + results.failed}`);
   
   if (results.errors.length > 0) {
-    Logger.log('\n🚨 ERRORS:');
+    Logger.log('
+🚨 ERRORS:');
     results.errors.forEach(error => Logger.log(`  • ${error}`));
   }
   

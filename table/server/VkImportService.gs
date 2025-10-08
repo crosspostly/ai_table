@@ -67,7 +67,8 @@ function handleWallGet_(owner, count) {
       return {
         date: new Date(post.date * 1000).toLocaleString(),
         link: 'https://vk.com/wall' + post.owner_id + '_' + post.id,
-        text: String(post.text || '').replace(/\n/g, ' '),
+        text: String(post.text || '').replace(/
+/g, ' '),
         number: index + 1,
         comments: (post.comments && post.comments.count) || 0,
         likes: (post.likes && post.likes.count) || 0
@@ -224,8 +225,11 @@ function testStopWordsFilter() {
     var number2 = sheet.getRange(2, 7).getValue();
     var number3 = sheet.getRange(3, 7).getValue();
     
-    var message = 'Тест фильтрации:\\n\\n' +
-      'Строка 2: ' + (filtered2 ? 'показывается' : 'скрыто') + ', номер: ' + (number2 || '—') + '\\n' +
+    var message = 'Тест фильтрации:\
+\
+' +
+      'Строка 2: ' + (filtered2 ? 'показывается' : 'скрыто') + ', номер: ' + (number2 || '—') + '\
+' +
       'Строка 3: ' + (filtered3 ? 'показывается' : 'скрыто') + ', номер: ' + (number3 || '—');
     
     SpreadsheetApp.getUi().alert('Результаты теста', message, SpreadsheetApp.getUi().ButtonSet.OK);

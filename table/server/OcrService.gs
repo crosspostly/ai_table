@@ -47,5 +47,346 @@ function processOcrRequest(request) {
     var ocrResult = processImages(collectionResult.images, request.geminiApiKey, request.options || {});
     
     // 6. Объединение результатов
-    var finalTexts = collectionResult.texts.concat(ocrResult.texts);\n    
-    // 7. Постобработка (Markdown removal, cleanup)\n    finalTexts = finalTexts.map(function(text) {\n      return processMarkdownResponse(text);\n    });\n    \n    var processingTime = Date.now() - startTime;\n    logTrace(traceId, 'Processing completed in ' + processingTime + 'ms');\n    \n    return {\n      ok: true,\n      data: finalTexts,\n      traceId: traceId,\n      stats: {\n        sourceCount: sources.length,\n        imageCount: collectionResult.images.length,\n        textCount: collectionResult.texts.length,\n        processingTimeMs: processingTime\n      }\n    };\n    \n  } catch (error) {\n    logTrace(traceId, 'ERROR: ' + error.message);\n    return {\n      ok: false,\n      error: error.message,\n      traceId: traceId\n    };\n  }\n}\n\n/**\n * Валидация запроса\n */\nfunction validateOcrRequest(request) {\n  if (!request.email || !request.token) {\n    throw new Error('EMAIL_OR_TOKEN_MISSING');\n  }\n  \n  if (!request.geminiApiKey) {\n    throw new Error('GEMINI_API_KEY_MISSING');\n  }\n  \n  if (!request.cellData || typeof request.cellData !== 'string') {\n    throw new Error('CELL_DATA_INVALID');\n  }\n}\n\n/**\n * Сбор данных из всех источников\n */\nfunction collectDataFromSources(sources, options) {\n  var limit = Math.min(options.limit || 50, 100); // Защита от злоупотреблений\n  var images = [];\n  var texts = [];\n  var remainingCapacity = limit;\n  \n  for (var i = 0; i < sources.length && remainingCapacity > 0; i++) {\n    var source = sources[i];\n    \n    try {\n      var collector = createCollector(source.type);\n      var result = collector.collect(source, remainingCapacity);\n      \n      // Сначала добавляем тексты (они приоритетнее)\n      if (result.texts && result.texts.length) {\n        var textsToAdd = Math.min(result.texts.length, remainingCapacity);\n        texts = texts.concat(result.texts.slice(0, textsToAdd));\n        remainingCapacity -= textsToAdd;\n      }\n      \n      // Затем изображения, если есть место\n      if (result.images && result.images.length && remainingCapacity > 0) {\n        var imagesToAdd = Math.min(result.images.length, remainingCapacity);\n        images = images.concat(result.images.slice(0, imagesToAdd));\n        remainingCapacity -= imagesToAdd;\n      }\n      \n    } catch (e) {\n      // Логируем ошибку но продолжаем с другими источниками\n      console.log('Collection error for source ' + source.type + ': ' + e.message);\n    }\n  }\n  \n  return {images: images, texts: texts};\n}\n\n/**\n * OCR обработка изображений с батчированием\n */\nfunction processImages(images, geminiApiKey, options) {\n  if (!images.length) {\n    return {texts: [], errors: []};\n  }\n  \n  var chunkSize = 8; // Размер чанка для Gemini\n  var language = options.language || 'ru';\n  var texts = [];\n  var errors = [];\n  \n  // Обрабатываем изображения чанками\n  for (var i = 0; i < images.length; i += chunkSize) {\n    var chunk = images.slice(i, Math.min(i + chunkSize, images.length));\n    \n    try {\n      var chunkResult = processImageChunk(chunk, geminiApiKey, language);\n      texts = texts.concat(chunkResult);\n      \n    } catch (e) {\n      errors.push('Chunk ' + Math.floor(i/chunkSize) + ': ' + e.message);\n      \n      // Fallback: обрабатываем по одному изображению\n      for (var j = 0; j < chunk.length; j++) {\n        try {\n          var singleResult = processSingleImage(chunk[j], geminiApiKey, language);\n          if (singleResult && singleResult.trim()) {\n            texts.push(singleResult.trim());\n          }\n        } catch (e2) {\n          errors.push('Single image ' + (i + j) + ': ' + e2.message);\n        }\n      }\n    }\n  }\n  \n  return {texts: texts, errors: errors};\n}\n\n/**\n * Обработка чанка изображений через Gemini\n */\nfunction processImageChunk(images, geminiApiKey, language) {\n  var instruction = 'Транскрибируй текст на изображениях БЕЗ добавления от себя. ' +\n                   'Верни только чистый текст. Если изображений несколько — ' +\n                   'разделяй отзывы строкой из четырёх подчёркиваний: ____ ' +\n                   (language ? ('Язык: ' + language + '.') : '');\n  \n  var parts = [{text: instruction}];\n  \n  // Добавляем изображения в запрос\n  for (var i = 0; i < images.length; i++) {\n    parts.push({\n      inlineData: {\n        mimeType: images[i].mimeType,\n        data: images[i].data\n      }\n    });\n  }\n  \n  var requestBody = {\n    contents: [{parts: parts}],\n    generationConfig: {\n      maxOutputTokens: 4096,\n      temperature: 0\n    }\n  };\n  \n  var response = UrlFetchApp.fetch(\n    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiApiKey,\n    {\n      method: 'POST',\n      contentType: 'application/json',\n      payload: JSON.stringify(requestBody),\n      muteHttpExceptions: true\n    }\n  );\n  \n  var responseCode = response.getResponseCode();\n  var responseData = JSON.parse(response.getContentText());\n  \n  if (responseCode !== 200) {\n    var errorMsg = (responseData.error && responseData.error.message) || ('HTTP_' + responseCode);\n    throw new Error('Gemini API error: ' + errorMsg);\n  }\n  \n  var candidate = responseData.candidates && responseData.candidates[0];\n  var content = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0];\n  var text = content && content.text ? content.text : '';\n  \n  // Разделяем результат по разделителю\n  return splitByDelimiter(text);\n}\n\n/**\n * Обработка одного изображения (fallback)\n */\nfunction processSingleImage(image, geminiApiKey, language) {\n  var instruction = 'Транскрибируй текст на изображении БЕЗ добавления от себя. ' +\n                   'Верни только чистый текст.' +\n                   (language ? (' Язык: ' + language + '.') : '');\n  \n  var requestBody = {\n    contents: [{\n      parts: [\n        {text: instruction},\n        {\n          inlineData: {\n            mimeType: image.mimeType,\n            data: image.data\n          }\n        }\n      ]\n    }],\n    generationConfig: {\n      maxOutputTokens: 2048,\n      temperature: 0\n    }\n  };\n  \n  var response = UrlFetchApp.fetch(\n    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiApiKey,\n    {\n      method: 'POST',\n      contentType: 'application/json',\n      payload: JSON.stringify(requestBody),\n      muteHttpExceptions: true\n    }\n  );\n  \n  var responseCode = response.getResponseCode();\n  var responseData = JSON.parse(response.getContentText());\n  \n  if (responseCode !== 200) {\n    var errorMsg = (responseData.error && responseData.error.message) || ('HTTP_' + responseCode);\n    throw new Error('Gemini API error: ' + errorMsg);\n  }\n  \n  var candidate = responseData.candidates && responseData.candidates[0];\n  var content = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0];\n  \n  return content && content.text ? content.text : '';\n}\n\n/**\n * Разделение текста по разделителю ____\n */\nfunction splitByDelimiter(text) {\n  var cleaned = String(text || '').trim();\n  if (!cleaned) return [];\n  \n  // Основной способ: разделители ____\n  var parts = cleaned.split(/\\n?_{4,}\\n?/g)\n    .map(function(p) { return String(p || '').trim(); })\n    .filter(function(p) { return p.length > 0; });\n  \n  if (parts.length > 1) return parts;\n  \n  // Запасной способ: параграфы\n  var paragraphs = cleaned.split(/\\n{2,}/g)\n    .map(function(p) { return String(p || '').trim(); })\n    .filter(function(p) { return p.length > 0; });\n  \n  return paragraphs.length > 1 ? paragraphs : [cleaned];\n}\n\n/**\n * Постобработка Markdown (из старого кода)\n */\nfunction processMarkdownResponse(text) {\n  if (!text || typeof text !== 'string') return text;\n  \n  // Простая проверка на Markdown\n  var hasMarkdown = /\\*\\*[^*]+\\*\\*|\\*[^*]+\\*|^#{1,6}\\s+/m.test(text) ||\n                   /```[\\s\\S]*?```/.test(text) || /`[^`]+`/.test(text);\n  \n  if (!hasMarkdown) return text;\n  \n  // Конвертация Markdown в plain text\n  var cleaned = text\n    .replace(/```[\\w]*\\n?([\\s\\S]*?)\\n?```/g, function(_, code) {\n      return '\\n' + String(code || '').trim() + '\\n';\n    })\n    .replace(/`([^`]+)`/g, '$1')\n    .replace(/\\*\\*([^*]+)\\*\\*/g, function(_, content) {\n      return String(content || '').toUpperCase();\n    })\n    .replace(/\\*([^*]+)\\*/g, '$1')\n    .replace(/^#{1,6}\\s+(.+)$/gm, function(_, header) {\n      return '\\n' + String(header || '').toUpperCase() + ':\\n';\n    })\n    .replace(/\\[([^\\]]+)\\]\\([^\\)]+\\)/g, '$1')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n  \n  return cleaned;\n}\n\n/**\n * Генерация traceId для отладки\n */\nfunction generateTraceId() {\n  var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';\n  var result = '';\n  for (var i = 0; i < 8; i++) {\n    result += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return 'ocr_' + result;\n}\n\n/**\n * Логирование с traceId\n */\nfunction logTrace(traceId, message) {\n  console.log('[' + traceId + '] ' + message);\n  \n  // Дополнительно сохраняем в кэш для серверных логов\n  try {\n    var cache = CacheService.getScriptCache();\n    var logKey = 'trace_' + traceId;\n    var existingLogs = cache.get(logKey);\n    var logs = existingLogs ? JSON.parse(existingLogs) : [];\n    \n    logs.push({\n      timestamp: new Date().toISOString(),\n      message: message\n    });\n    \n    cache.put(logKey, JSON.stringify(logs), 3600); // TTL 1 час\n  } catch (e) {\n    // Игнорируем ошибки кэширования\n  }\n}\n\n/**\n * Проверка лицензии (заглушка - нужно импортировать из основного сервера)\n */\nfunction checkLicense(email, token) {\n  // TODO: Импортировать логику из server-app/Server.gs\n  return {ok: true}; // Временная заглушка\n}
+    var finalTexts = collectionResult.texts.concat(ocrResult.texts);
+    
+    // 7. Постобработка (Markdown removal, cleanup)
+    finalTexts = finalTexts.map(function(text) {
+      return processMarkdownResponse(text);
+    });
+    
+    var processingTime = Date.now() - startTime;
+    logTrace(traceId, 'Processing completed in ' + processingTime + 'ms');
+    
+    return {
+      ok: true,
+      data: finalTexts,
+      traceId: traceId,
+      stats: {
+        sourceCount: sources.length,
+        imageCount: collectionResult.images.length,
+        textCount: collectionResult.texts.length,
+        processingTimeMs: processingTime
+      }
+    };
+    
+  } catch (error) {
+    logTrace(traceId, 'ERROR: ' + error.message);
+    return {
+      ok: false,
+      error: error.message,
+      traceId: traceId
+    };
+  }
+}
+
+/**
+ * Валидация запроса
+ */
+function validateOcrRequest(request) {
+  if (!request.email || !request.token) {
+    throw new Error('EMAIL_OR_TOKEN_MISSING');
+  }
+  
+  if (!request.geminiApiKey) {
+    throw new Error('GEMINI_API_KEY_MISSING');
+  }
+  
+  if (!request.cellData || typeof request.cellData !== 'string') {
+    throw new Error('CELL_DATA_INVALID');
+  }
+}
+
+/**
+ * Сбор данных из всех источников
+ */
+function collectDataFromSources(sources, options) {
+  var limit = Math.min(options.limit || 50, 100); // Защита от злоупотреблений
+  var images = [];
+  var texts = [];
+  var remainingCapacity = limit;
+  
+  for (var i = 0; i < sources.length && remainingCapacity > 0; i++) {
+    var source = sources[i];
+    
+    try {
+      var collector = createCollector(source.type);
+      var result = collector.collect(source, remainingCapacity);
+      
+      // Сначала добавляем тексты (они приоритетнее)
+      if (result.texts && result.texts.length) {
+        var textsToAdd = Math.min(result.texts.length, remainingCapacity);
+        texts = texts.concat(result.texts.slice(0, textsToAdd));
+        remainingCapacity -= textsToAdd;
+      }
+      
+      // Затем изображения, если есть место
+      if (result.images && result.images.length && remainingCapacity > 0) {
+        var imagesToAdd = Math.min(result.images.length, remainingCapacity);
+        images = images.concat(result.images.slice(0, imagesToAdd));
+        remainingCapacity -= imagesToAdd;
+      }
+      
+    } catch (e) {
+      // Логируем ошибку но продолжаем с другими источниками
+      console.log('Collection error for source ' + source.type + ': ' + e.message);
+    }
+  }
+  
+  return {images: images, texts: texts};
+}
+
+/**
+ * OCR обработка изображений с батчированием
+ */
+function processImages(images, geminiApiKey, options) {
+  if (!images.length) {
+    return {texts: [], errors: []};
+  }
+  
+  var chunkSize = 8; // Размер чанка для Gemini
+  var language = options.language || 'ru';
+  var texts = [];
+  var errors = [];
+  
+  // Обрабатываем изображения чанками
+  for (var i = 0; i < images.length; i += chunkSize) {
+    var chunk = images.slice(i, Math.min(i + chunkSize, images.length));
+    
+    try {
+      var chunkResult = processImageChunk(chunk, geminiApiKey, language);
+      texts = texts.concat(chunkResult);
+      
+    } catch (e) {
+      errors.push('Chunk ' + Math.floor(i/chunkSize) + ': ' + e.message);
+      
+      // Fallback: обрабатываем по одному изображению
+      for (var j = 0; j < chunk.length; j++) {
+        try {
+          var singleResult = processSingleImage(chunk[j], geminiApiKey, language);
+          if (singleResult && singleResult.trim()) {
+            texts.push(singleResult.trim());
+          }
+        } catch (e2) {
+          errors.push('Single image ' + (i + j) + ': ' + e2.message);
+        }
+      }
+    }
+  }
+  
+  return {texts: texts, errors: errors};
+}
+
+/**
+ * Обработка чанка изображений через Gemini
+ */
+function processImageChunk(images, geminiApiKey, language) {
+  var instruction = 'Транскрибируй текст на изображениях БЕЗ добавления от себя. ' +
+                   'Верни только чистый текст. Если изображений несколько — ' +
+                   'разделяй отзывы строкой из четырёх подчёркиваний: ____ ' +
+                   (language ? ('Язык: ' + language + '.') : '');
+  
+  var parts = [{text: instruction}];
+  
+  // Добавляем изображения в запрос
+  for (var i = 0; i < images.length; i++) {
+    parts.push({
+      inlineData: {
+        mimeType: images[i].mimeType,
+        data: images[i].data
+      }
+    });
+  }
+  
+  var requestBody = {
+    contents: [{parts: parts}],
+    generationConfig: {
+      maxOutputTokens: 4096,
+      temperature: 0
+    }
+  };
+  
+  var response = UrlFetchApp.fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiApiKey,
+    {
+      method: 'POST',
+      contentType: 'application/json',
+      payload: JSON.stringify(requestBody),
+      muteHttpExceptions: true
+    }
+  );
+  
+  var responseCode = response.getResponseCode();
+  var responseData = JSON.parse(response.getContentText());
+  
+  if (responseCode !== 200) {
+    var errorMsg = (responseData.error && responseData.error.message) || ('HTTP_' + responseCode);
+    throw new Error('Gemini API error: ' + errorMsg);
+  }
+  
+  var candidate = responseData.candidates && responseData.candidates[0];
+  var content = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0];
+  var text = content && content.text ? content.text : '';
+  
+  // Разделяем результат по разделителю
+  return splitByDelimiter(text);
+}
+
+/**
+ * Обработка одного изображения (fallback)
+ */
+function processSingleImage(image, geminiApiKey, language) {
+  var instruction = 'Транскрибируй текст на изображении БЕЗ добавления от себя. ' +
+                   'Верни только чистый текст.' +
+                   (language ? (' Язык: ' + language + '.') : '');
+  
+  var requestBody = {
+    contents: [{
+      parts: [
+        {text: instruction},
+        {
+          inlineData: {
+            mimeType: image.mimeType,
+            data: image.data
+          }
+        }
+      ]
+    }],
+    generationConfig: {
+      maxOutputTokens: 2048,
+      temperature: 0
+    }
+  };
+  
+  var response = UrlFetchApp.fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiApiKey,
+    {
+      method: 'POST',
+      contentType: 'application/json',
+      payload: JSON.stringify(requestBody),
+      muteHttpExceptions: true
+    }
+  );
+  
+  var responseCode = response.getResponseCode();
+  var responseData = JSON.parse(response.getContentText());
+  
+  if (responseCode !== 200) {
+    var errorMsg = (responseData.error && responseData.error.message) || ('HTTP_' + responseCode);
+    throw new Error('Gemini API error: ' + errorMsg);
+  }
+  
+  var candidate = responseData.candidates && responseData.candidates[0];
+  var content = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0];
+  
+  return content && content.text ? content.text : '';
+}
+
+/**
+ * Разделение текста по разделителю ____
+ */
+function splitByDelimiter(text) {
+  var cleaned = String(text || '').trim();
+  if (!cleaned) return [];
+  
+  // Основной способ: разделители ____
+  var parts = cleaned.split(/\
+?_{4,}\
+?/g)
+    .map(function(p) { return String(p || '').trim(); })
+    .filter(function(p) { return p.length > 0; });
+  
+  if (parts.length > 1) return parts;
+  
+  // Запасной способ: параграфы
+  var paragraphs = cleaned.split(/\
+{2,}/g)
+    .map(function(p) { return String(p || '').trim(); })
+    .filter(function(p) { return p.length > 0; });
+  
+  return paragraphs.length > 1 ? paragraphs : [cleaned];
+}
+
+/**
+ * Постобработка Markdown (из старого кода)
+ */
+function processMarkdownResponse(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Простая проверка на Markdown
+  var hasMarkdown = /\\*\\*[^*]+\\*\\*|\\*[^*]+\\*|^#{1,6}\\s+/m.test(text) ||
+                   /```[\\s\\S]*?```/.test(text) || /`[^`]+`/.test(text);
+  
+  if (!hasMarkdown) return text;
+  
+  // Конвертация Markdown в plain text
+  var cleaned = text
+    .replace(/```[\\w]*\
+?([\\s\\S]*?)\
+?```/g, function(_, code) {
+      return '\
+' + String(code || '').trim() + '\
+';
+    })
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\\*\\*([^*]+)\\*\\*/g, function(_, content) {
+      return String(content || '').toUpperCase();
+    })
+    .replace(/\\*([^*]+)\\*/g, '$1')
+    .replace(/^#{1,6}\\s+(.+)$/gm, function(_, header) {
+      return '\
+' + String(header || '').toUpperCase() + ':\
+';
+    })
+    .replace(/\\[([^\\]]+)\\]\\([^\\)]+\\)/g, '$1')
+    .replace(/\
+{3,}/g, '\
+\
+')
+    .trim();
+  
+  return cleaned;
+}
+
+/**
+ * Генерация traceId для отладки
+ */
+function generateTraceId() {
+  var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  var result = '';
+  for (var i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return 'ocr_' + result;
+}
+
+/**
+ * Логирование с traceId
+ */
+function logTrace(traceId, message) {
+  console.log('[' + traceId + '] ' + message);
+  
+  // Дополнительно сохраняем в кэш для серверных логов
+  try {
+    var cache = CacheService.getScriptCache();
+    var logKey = 'trace_' + traceId;
+    var existingLogs = cache.get(logKey);
+    var logs = existingLogs ? JSON.parse(existingLogs) : [];
+    
+    logs.push({
+      timestamp: new Date().toISOString(),
+      message: message
+    });
+    
+    cache.put(logKey, JSON.stringify(logs), 3600); // TTL 1 час
+  } catch (e) {
+    // Игнорируем ошибки кэширования
+  }
+}
+
+/**
+ * Проверка лицензии (заглушка - нужно импортировать из основного сервера)
+ */
+function checkLicense(email, token) {
+  // TODO: Импортировать логику из server-app/Server.gs
+  return {ok: true}; // Временная заглушка
+}

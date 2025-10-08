@@ -5,4 +5,529 @@
 /**
  * Тонкий клиент для OCR обработки с заменой формул на статичные значения
  */
-function ocrReviewsThin() {\n  var ui = SpreadsheetApp.getUi();\n  var ss = SpreadsheetApp.getActive();\n  var sheet = ss.getSheetByName('Отзывы');\n  \n  if (!sheet) {\n    ui.alert('Лист \"Отзывы\" не найден');\n    return;\n  }\n  \n  var credentials = getClientCredentials();\n  if (!credentials.valid) {\n    ui.alert('Не настроены credentials: ' + credentials.error);\n    return;\n  }\n  \n  var lastRow = Math.max(2, sheet.getLastRow());\n  var processed = 0, errors = 0, skipped = 0;\n  var overwrite = getOcrOverwriteFlag();\n  \n  logClient('Начат OCR процесс: rows=' + lastRow + ', overwrite=' + overwrite);\n  \n  for (var r = 2; r <= lastRow; r++) {\n    try {\n      var cellRange = sheet.getRange(r, 1);\n      var cellData = String(cellRange.getDisplayValue() || '').trim();\n      var formula = String(cellRange.getFormula() || '');\n      \n      if (!cellData && !formula) {\n        continue; // Пустая ячейка\n      }\n      \n      // Проверяем, заполнен ли уже результат\n      var bValue = String(sheet.getRange(r, 2).getDisplayValue() || '').trim();\n      if (!overwrite && bValue) {\n        skipped++;\n        continue;\n      }\n      \n      // Собираем метаданные ячейки\n      var cellMeta = extractCellMetadata(cellRange);\n      \n      // Вызов серверного API\n      var serverRequest = {\n        action: 'ocr_process',\n        email: credentials.email,\n        token: credentials.token,\n        geminiApiKey: credentials.geminiApiKey,\n        cellData: cellData,\n        cellMeta: cellMeta,\n        options: {\n          limit: 50,\n          language: 'ru'\n        }\n      };\n      \n      var result = callServer(serverRequest);\n      \n      if (result.ok && result.data && result.data.length) {\n        // Записываем результаты в ячейки\n        writeOcrResults(sheet, r, result.data);\n        processed++;\n        \n        logClient('OCR успешно: row=' + r + ', items=' + result.data.length + \n                 ', traceId=' + (result.traceId || 'none'));\n      } else {\n        errors++;\n        logClient('OCR ошибка: row=' + r + ', error=' + (result.error || 'unknown'));\n      }\n      \n    } catch (e) {\n      errors++;\n      logClient('Исключение в row ' + r + ': ' + e.message);\n    }\n    \n    // Небольшая задержка для избежания rate limiting\n    if (r % 5 === 0) {\n      Utilities.sleep(100);\n    }\n  }\n  \n  var summary = 'OCR завершён:\\n' +\n                'Обработано: ' + processed + '\\n' +\n                'Пропущено: ' + skipped + '\\n' +\n                'Ошибок: ' + errors;\n  \n  logClient(summary.replace(/\\n/g, ', '));\n  ui.alert(summary);\n}\n\n/**\n * Извлечение метаданных ячейки (формула, rich text ссылки)\n */\nfunction extractCellMetadata(cellRange) {\n  var meta = {\n    formula: '',\n    richTextUrl: ''\n  };\n  \n  try {\n    // Формула\n    meta.formula = cellRange.getFormula() || '';\n    \n    // Rich text ссылки\n    var richText = cellRange.getRichTextValue();\n    if (richText) {\n      meta.richTextUrl = extractFirstLink(richText);\n    }\n  } catch (e) {\n    // Игнорируем ошибки извлечения метаданных\n  }\n  \n  return meta;\n}\n\n/**\n * Извлечение первой ссылки из rich text\n */\nfunction extractFirstLink(richText) {\n  try {\n    // Проверяем сегменты\n    var runs = richText.getRuns && richText.getRuns();\n    if (runs && runs.length) {\n      for (var i = 0; i < runs.length; i++) {\n        var style = runs[i].getTextStyle && runs[i].getTextStyle();\n        var linkUrl = style && style.getLinkUrl && style.getLinkUrl();\n        if (linkUrl) return String(linkUrl).trim();\n      }\n    }\n    \n    // Проверяем ссылку на всю ячейку\n    var cellLinkUrl = richText.getLinkUrl && richText.getLinkUrl();\n    if (cellLinkUrl) return String(cellLinkUrl).trim();\n    \n    // Проверяем через стиль\n    var textStyle = richText.getTextStyle && richText.getTextStyle();\n    var styleLinkUrl = textStyle && textStyle.getLinkUrl && textStyle.getLinkUrl();\n    if (styleLinkUrl) return String(styleLinkUrl).trim();\n    \n  } catch (e) {\n    // Игнорируем ошибки\n  }\n  \n  return '';\n}\n\n/**\n * Запись результатов OCR в ячейки\n */\nfunction writeOcrResults(sheet, startRow, results) {\n  if (!results || !results.length) return;\n  \n  // Если результатов больше одного, вставляем дополнительные строки\n  if (results.length > 1) {\n    sheet.insertRowsAfter(startRow, results.length - 1);\n  }\n  \n  // Записываем результаты\n  for (var i = 0; i < results.length; i++) {\n    var targetRow = startRow + i;\n    sheet.getRange(targetRow, 2).setValue(results[i]);\n  }\n}\n\n/**\n * Тонкий клиент для VK импорта\n */\nfunction importVkPostsThin() {\n  var ui = SpreadsheetApp.getUi();\n  var ss = SpreadsheetApp.getActive();\n  \n  var credentials = getClientCredentials();\n  if (!credentials.valid) {\n    ui.alert('Не настроены credentials: ' + credentials.error);\n    return;\n  }\n  \n  // Получаем параметры VK из листа\n  var vkParams = getVkImportParams();\n  if (!vkParams.valid) {\n    ui.alert('Не настроены параметры VK: ' + vkParams.error);\n    return;\n  }\n  \n  // Вызов серверного API\n  var serverRequest = {\n    action: 'vk_import',\n    email: credentials.email,\n    token: credentials.token,\n    owner: vkParams.owner,\n    count: vkParams.count\n  };\n  \n  logClient('VK импорт: owner=' + vkParams.owner + ', count=' + vkParams.count);\n  \n  try {\n    var result = callServer(serverRequest);\n    \n    if (result.ok && result.data && result.data.length) {\n      writeVkPosts(ss, result.data);\n      \n      var summary = 'VK импорт завершён:\\nИмпортировано: ' + result.data.length + ' постов';\n      logClient(summary.replace(/\\n/g, ', '));\n      ui.alert(summary);\n      \n    } else {\n      var error = 'VK импорт не удался: ' + (result.error || 'неизвестная ошибка');\n      logClient(error);\n      ui.alert(error);\n    }\n    \n  } catch (e) {\n    var error = 'Ошибка VK импорта: ' + e.message;\n    logClient(error);\n    ui.alert(error);\n  }\n}\n\n/**\n * Запись VK постов в лист\n */\nfunction writeVkPosts(spreadsheet, posts) {\n  var sheet = spreadsheet.getSheetByName('посты');\n  if (!sheet) {\n    sheet = spreadsheet.insertSheet('посты');\n  }\n  \n  // Заголовки\n  var headers = ['Дата', 'Ссылка на пост', 'Текст поста', 'Номер поста', 'Комментарии', 'Лайки'];\n  \n  // Данные\n  var data = [headers];\n  posts.forEach(function(post) {\n    data.push([\n      post.date || '',\n      post.link || '',\n      post.text || '',\n      post.number || '',\n      post.comments || 0,\n      post.likes || 0\n    ]);\n  });\n  \n  // Очищаем и записываем\n  sheet.clear();\n  sheet.getRange(1, 1, data.length, headers.length).setValues(data);\n  \n  // Форматирование заголовков\n  sheet.getRange(1, 1, 1, headers.length)\n       .setFontWeight('bold')\n       .setBackground('#E8F0FE');\n  \n  // Автоширина колонок\n  sheet.autoResizeColumns(1, headers.length);\n}\n\n/**\n * Новые функции GM с заменой на статичные значения\n */\nfunction GM_STATIC(prompt, maxTokens, temperature) {\n  // Получаем текущую ячейку\n  var activeRange = SpreadsheetApp.getActiveRange();\n  if (!activeRange) {\n    throw new Error('Функция должна вызываться из ячейки');\n  }\n  \n  var cell = activeRange.getCell(1, 1);\n  \n  // Проверяем, не заменена ли уже формула на статичное значение\n  var currentFormula = cell.getFormula();\n  if (!currentFormula || !currentFormula.includes('GM_STATIC')) {\n    // Формула уже заменена, возвращаем текущее значение\n    return cell.getValue();\n  }\n  \n  var credentials = getClientCredentials();\n  if (!credentials.valid) {\n    return 'Error: Credentials not configured';\n  }\n  \n  try {\n    // Вызов Gemini через сервер\n    var serverRequest = {\n      action: 'gm',\n      email: credentials.email,\n      token: credentials.token,\n      geminiApiKey: credentials.geminiApiKey,\n      prompt: prompt,\n      maxTokens: maxTokens || 25000,\n      temperature: temperature || 0.7\n    };\n    \n    var result = callServer(serverRequest);\n    \n    if (result.ok && result.data) {\n      var response = String(result.data);\n      \n      // КЛЮЧЕВАЯ ФИЧА: заменяем формулу на статичное значение\n      // Это предотвращает повторные вычисления\n      setTimeout(function() {\n        try {\n          cell.setValue(response);\n          logClient('Static value set for cell ' + cell.getA1Notation());\n        } catch (e) {\n          logClient('Failed to set static value: ' + e.message);\n        }\n      }, 100);\n      \n      return response;\n      \n    } else {\n      var error = 'GM Error: ' + (result.error || 'unknown');\n      logClient(error);\n      return error;\n    }\n    \n  } catch (e) {\n    var error = 'GM Exception: ' + e.message;\n    logClient(error);\n    return error;\n  }\n}\n\n/**\n * Обертка GM_IF с поддержкой статичных значений\n */\nfunction GM_IF_STATIC(condition, prompt, maxTokens, temperature) {\n  // Нормализуем условие\n  var conditionValue = normalizeCondition(condition);\n  \n  if (!conditionValue) {\n    return ''; // Условие не выполнено\n  }\n  \n  // Вызываем GM_STATIC если условие выполнено\n  return GM_STATIC(prompt, maxTokens, temperature);\n}\n\n/**\n * Нормализация условия для GM_IF\n */\nfunction normalizeCondition(condition) {\n  try {\n    var raw = condition;\n    \n    // Обработка массивов\n    if (Array.isArray(raw)) {\n      raw = (raw[0] && raw[0].length ? raw[0][0] : raw[0] || '');\n    }\n    \n    var type = typeof raw;\n    \n    if (type === 'boolean') {\n      return raw === true;\n    } else if (type === 'number') {\n      return raw !== 0;\n    } else if (type === 'string') {\n      var s = raw.trim().toLowerCase();\n      return (s === 'true' || s === 'истина' || s === '1' || s === 'да');\n    } else {\n      return !!raw;\n    }\n  } catch (e) {\n    return false;\n  }\n}\n\n/**\n * Получение credentials пользователя\n */\nfunction getClientCredentials() {\n  try {\n    var props = PropertiesService.getScriptProperties();\n    \n    var email = props.getProperty('LICENSE_EMAIL');\n    var token = props.getProperty('LICENSE_TOKEN');\n    var geminiApiKey = props.getProperty('GEMINI_API_KEY');\n    \n    if (!email || !token) {\n      return {\n        valid: false,\n        error: 'LICENSE_EMAIL или LICENSE_TOKEN не настроены'\n      };\n    }\n    \n    if (!geminiApiKey) {\n      return {\n        valid: false,\n        error: 'GEMINI_API_KEY не настроен'\n      };\n    }\n    \n    return {\n      valid: true,\n      email: email,\n      token: token,\n      geminiApiKey: geminiApiKey\n    };\n    \n  } catch (e) {\n    return {\n      valid: false,\n      error: 'Ошибка чтения credentials: ' + e.message\n    };\n  }\n}\n\n/**\n * Получение параметров VK импорта\n */\nfunction getVkImportParams() {\n  try {\n    var ss = SpreadsheetApp.getActive();\n    var paramsSheet = ss.getSheetByName('Параметры');\n    \n    if (!paramsSheet) {\n      return {\n        valid: false,\n        error: 'Лист \"Параметры\" не найден'\n      };\n    }\n    \n    var owner = paramsSheet.getRange('B1').getValue();\n    var count = paramsSheet.getRange('B2').getValue();\n    \n    if (!owner) {\n      return {\n        valid: false,\n        error: 'Не указан owner в Параметры!B1'\n      };\n    }\n    \n    return {\n      valid: true,\n      owner: String(owner),\n      count: Math.min(parseInt(count) || 50, 100)\n    };\n    \n  } catch (e) {\n    return {\n      valid: false,\n      error: 'Ошибка чтения параметров VK: ' + e.message\n    };\n  }\n}\n\n/**\n * Получение флага перезаписи для OCR\n */\nfunction getOcrOverwriteFlag() {\n  try {\n    var props = PropertiesService.getScriptProperties();\n    var flag = props.getProperty('OCR_OVERWRITE');\n    \n    if (!flag) return false;\n    \n    var normalized = String(flag).toLowerCase().trim();\n    return (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'да');\n  } catch (e) {\n    return false;\n  }\n}\n\n/**\n * Вызов серверного API\n */\nfunction callServer(requestData) {\n  var serverUrl = getServerUrl();\n  \n  var response = UrlFetchApp.fetch(serverUrl, {\n    method: 'POST',\n    contentType: 'application/json',\n    payload: JSON.stringify(requestData),\n    muteHttpExceptions: true\n  });\n  \n  var responseCode = response.getResponseCode();\n  var responseText = response.getContentText();\n  \n  if (responseCode >= 300) {\n    throw new Error('Server error: HTTP ' + responseCode + ' - ' + responseText);\n  }\n  \n  try {\n    return JSON.parse(responseText);\n  } catch (e) {\n    throw new Error('Invalid JSON response from server: ' + responseText);\n  }\n}\n\n/**\n * Получение URL сервера\n */\nfunction getServerUrl() {\n  // Используем константу из Constants.gs или глобальную\n  if (typeof SERVER_URL !== 'undefined' && SERVER_URL) {\n    return String(SERVER_URL).replace(/\\/$/, '');\n  }\n  throw new Error('SERVER_URL not configured');\n}\n\n/**\n * Простое логирование на клиенте\n */\nfunction logClient(message) {\n  var timestamp = new Date().toISOString();\n  console.log('[CLIENT ' + timestamp + '] ' + message);\n  \n  // Дополнительно сохраняем в кэш\n  try {\n    var cache = CacheService.getScriptCache();\n    var logKey = 'client_log_' + Date.now();\n    cache.put(logKey, JSON.stringify({\n      timestamp: timestamp,\n      message: message\n    }), 3600); // TTL 1 час\n  } catch (e) {\n    // Игнорируем ошибки кэширования\n  }\n}
+function ocrReviewsThin() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName('Отзывы');
+  
+  if (!sheet) {
+    ui.alert('Лист \"Отзывы\" не найден');
+    return;
+  }
+  
+  var credentials = getClientCredentials();
+  if (!credentials.valid) {
+    ui.alert('Не настроены credentials: ' + credentials.error);
+    return;
+  }
+  
+  var lastRow = Math.max(2, sheet.getLastRow());
+  var processed = 0, errors = 0, skipped = 0;
+  var overwrite = getOcrOverwriteFlag();
+  
+  logClient('Начат OCR процесс: rows=' + lastRow + ', overwrite=' + overwrite);
+  
+  for (var r = 2; r <= lastRow; r++) {
+    try {
+      var cellRange = sheet.getRange(r, 1);
+      var cellData = String(cellRange.getDisplayValue() || '').trim();
+      var formula = String(cellRange.getFormula() || '');
+      
+      if (!cellData && !formula) {
+        continue; // Пустая ячейка
+      }
+      
+      // Проверяем, заполнен ли уже результат
+      var bValue = String(sheet.getRange(r, 2).getDisplayValue() || '').trim();
+      if (!overwrite && bValue) {
+        skipped++;
+        continue;
+      }
+      
+      // Собираем метаданные ячейки
+      var cellMeta = extractCellMetadata(cellRange);
+      
+      // Вызов серверного API
+      var serverRequest = {
+        action: 'ocr_process',
+        email: credentials.email,
+        token: credentials.token,
+        geminiApiKey: credentials.geminiApiKey,
+        cellData: cellData,
+        cellMeta: cellMeta,
+        options: {
+          limit: 50,
+          language: 'ru'
+        }
+      };
+      
+      var result = callServer(serverRequest);
+      
+      if (result.ok && result.data && result.data.length) {
+        // Записываем результаты в ячейки
+        writeOcrResults(sheet, r, result.data);
+        processed++;
+        
+        logClient('OCR успешно: row=' + r + ', items=' + result.data.length + 
+                 ', traceId=' + (result.traceId || 'none'));
+      } else {
+        errors++;
+        logClient('OCR ошибка: row=' + r + ', error=' + (result.error || 'unknown'));
+      }
+      
+    } catch (e) {
+      errors++;
+      logClient('Исключение в row ' + r + ': ' + e.message);
+    }
+    
+    // Небольшая задержка для избежания rate limiting
+    if (r % 5 === 0) {
+      Utilities.sleep(100);
+    }
+  }
+  
+  var summary = 'OCR завершён:\
+' +
+                'Обработано: ' + processed + '\
+' +
+                'Пропущено: ' + skipped + '\
+' +
+                'Ошибок: ' + errors;
+  
+  logClient(summary.replace(/\
+/g, ', '));
+  ui.alert(summary);
+}
+
+/**
+ * Извлечение метаданных ячейки (формула, rich text ссылки)
+ */
+function extractCellMetadata(cellRange) {
+  var meta = {
+    formula: '',
+    richTextUrl: ''
+  };
+  
+  try {
+    // Формула
+    meta.formula = cellRange.getFormula() || '';
+    
+    // Rich text ссылки
+    var richText = cellRange.getRichTextValue();
+    if (richText) {
+      meta.richTextUrl = extractFirstLink(richText);
+    }
+  } catch (e) {
+    // Игнорируем ошибки извлечения метаданных
+  }
+  
+  return meta;
+}
+
+/**
+ * Извлечение первой ссылки из rich text
+ */
+function extractFirstLink(richText) {
+  try {
+    // Проверяем сегменты
+    var runs = richText.getRuns && richText.getRuns();
+    if (runs && runs.length) {
+      for (var i = 0; i < runs.length; i++) {
+        var style = runs[i].getTextStyle && runs[i].getTextStyle();
+        var linkUrl = style && style.getLinkUrl && style.getLinkUrl();
+        if (linkUrl) return String(linkUrl).trim();
+      }
+    }
+    
+    // Проверяем ссылку на всю ячейку
+    var cellLinkUrl = richText.getLinkUrl && richText.getLinkUrl();
+    if (cellLinkUrl) return String(cellLinkUrl).trim();
+    
+    // Проверяем через стиль
+    var textStyle = richText.getTextStyle && richText.getTextStyle();
+    var styleLinkUrl = textStyle && textStyle.getLinkUrl && textStyle.getLinkUrl();
+    if (styleLinkUrl) return String(styleLinkUrl).trim();
+    
+  } catch (e) {
+    // Игнорируем ошибки
+  }
+  
+  return '';
+}
+
+/**
+ * Запись результатов OCR в ячейки
+ */
+function writeOcrResults(sheet, startRow, results) {
+  if (!results || !results.length) return;
+  
+  // Если результатов больше одного, вставляем дополнительные строки
+  if (results.length > 1) {
+    sheet.insertRowsAfter(startRow, results.length - 1);
+  }
+  
+  // Записываем результаты
+  for (var i = 0; i < results.length; i++) {
+    var targetRow = startRow + i;
+    sheet.getRange(targetRow, 2).setValue(results[i]);
+  }
+}
+
+/**
+ * Тонкий клиент для VK импорта
+ */
+function importVkPostsThin() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActive();
+  
+  var credentials = getClientCredentials();
+  if (!credentials.valid) {
+    ui.alert('Не настроены credentials: ' + credentials.error);
+    return;
+  }
+  
+  // Получаем параметры VK из листа
+  var vkParams = getVkImportParams();
+  if (!vkParams.valid) {
+    ui.alert('Не настроены параметры VK: ' + vkParams.error);
+    return;
+  }
+  
+  // Вызов серверного API
+  var serverRequest = {
+    action: 'vk_import',
+    email: credentials.email,
+    token: credentials.token,
+    owner: vkParams.owner,
+    count: vkParams.count
+  };
+  
+  logClient('VK импорт: owner=' + vkParams.owner + ', count=' + vkParams.count);
+  
+  try {
+    var result = callServer(serverRequest);
+    
+    if (result.ok && result.data && result.data.length) {
+      writeVkPosts(ss, result.data);
+      
+      var summary = 'VK импорт завершён:\
+Импортировано: ' + result.data.length + ' постов';
+      logClient(summary.replace(/\
+/g, ', '));
+      ui.alert(summary);
+      
+    } else {
+      var error = 'VK импорт не удался: ' + (result.error || 'неизвестная ошибка');
+      logClient(error);
+      ui.alert(error);
+    }
+    
+  } catch (e) {
+    var error = 'Ошибка VK импорта: ' + e.message;
+    logClient(error);
+    ui.alert(error);
+  }
+}
+
+/**
+ * Запись VK постов в лист
+ */
+function writeVkPosts(spreadsheet, posts) {
+  var sheet = spreadsheet.getSheetByName('посты');
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('посты');
+  }
+  
+  // Заголовки
+  var headers = ['Дата', 'Ссылка на пост', 'Текст поста', 'Номер поста', 'Комментарии', 'Лайки'];
+  
+  // Данные
+  var data = [headers];
+  posts.forEach(function(post) {
+    data.push([
+      post.date || '',
+      post.link || '',
+      post.text || '',
+      post.number || '',
+      post.comments || 0,
+      post.likes || 0
+    ]);
+  });
+  
+  // Очищаем и записываем
+  sheet.clear();
+  sheet.getRange(1, 1, data.length, headers.length).setValues(data);
+  
+  // Форматирование заголовков
+  sheet.getRange(1, 1, 1, headers.length)
+       .setFontWeight('bold')
+       .setBackground('#E8F0FE');
+  
+  // Автоширина колонок
+  sheet.autoResizeColumns(1, headers.length);
+}
+
+/**
+ * Новые функции GM с заменой на статичные значения
+ */
+function GM_STATIC(prompt, maxTokens, temperature) {
+  // Получаем текущую ячейку
+  var activeRange = SpreadsheetApp.getActiveRange();
+  if (!activeRange) {
+    throw new Error('Функция должна вызываться из ячейки');
+  }
+  
+  var cell = activeRange.getCell(1, 1);
+  
+  // Проверяем, не заменена ли уже формула на статичное значение
+  var currentFormula = cell.getFormula();
+  if (!currentFormula || !currentFormula.includes('GM_STATIC')) {
+    // Формула уже заменена, возвращаем текущее значение
+    return cell.getValue();
+  }
+  
+  var credentials = getClientCredentials();
+  if (!credentials.valid) {
+    return 'Error: Credentials not configured';
+  }
+  
+  try {
+    // Вызов Gemini через сервер
+    var serverRequest = {
+      action: 'gm',
+      email: credentials.email,
+      token: credentials.token,
+      geminiApiKey: credentials.geminiApiKey,
+      prompt: prompt,
+      maxTokens: maxTokens || 25000,
+      temperature: temperature || 0.7
+    };
+    
+    var result = callServer(serverRequest);
+    
+    if (result.ok && result.data) {
+      var response = String(result.data);
+      
+      // КЛЮЧЕВАЯ ФИЧА: заменяем формулу на статичное значение
+      // Это предотвращает повторные вычисления
+      setTimeout(function() {
+        try {
+          cell.setValue(response);
+          logClient('Static value set for cell ' + cell.getA1Notation());
+        } catch (e) {
+          logClient('Failed to set static value: ' + e.message);
+        }
+      }, 100);
+      
+      return response;
+      
+    } else {
+      var error = 'GM Error: ' + (result.error || 'unknown');
+      logClient(error);
+      return error;
+    }
+    
+  } catch (e) {
+    var error = 'GM Exception: ' + e.message;
+    logClient(error);
+    return error;
+  }
+}
+
+/**
+ * Обертка GM_IF с поддержкой статичных значений
+ */
+function GM_IF_STATIC(condition, prompt, maxTokens, temperature) {
+  // Нормализуем условие
+  var conditionValue = normalizeCondition(condition);
+  
+  if (!conditionValue) {
+    return ''; // Условие не выполнено
+  }
+  
+  // Вызываем GM_STATIC если условие выполнено
+  return GM_STATIC(prompt, maxTokens, temperature);
+}
+
+/**
+ * Нормализация условия для GM_IF
+ */
+function normalizeCondition(condition) {
+  try {
+    var raw = condition;
+    
+    // Обработка массивов
+    if (Array.isArray(raw)) {
+      raw = (raw[0] && raw[0].length ? raw[0][0] : raw[0] || '');
+    }
+    
+    var type = typeof raw;
+    
+    if (type === 'boolean') {
+      return raw === true;
+    } else if (type === 'number') {
+      return raw !== 0;
+    } else if (type === 'string') {
+      var s = raw.trim().toLowerCase();
+      return (s === 'true' || s === 'истина' || s === '1' || s === 'да');
+    } else {
+      return !!raw;
+    }
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Получение credentials пользователя
+ */
+function getClientCredentials() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    
+    var email = props.getProperty('LICENSE_EMAIL');
+    var token = props.getProperty('LICENSE_TOKEN');
+    var geminiApiKey = props.getProperty('GEMINI_API_KEY');
+    
+    if (!email || !token) {
+      return {
+        valid: false,
+        error: 'LICENSE_EMAIL или LICENSE_TOKEN не настроены'
+      };
+    }
+    
+    if (!geminiApiKey) {
+      return {
+        valid: false,
+        error: 'GEMINI_API_KEY не настроен'
+      };
+    }
+    
+    return {
+      valid: true,
+      email: email,
+      token: token,
+      geminiApiKey: geminiApiKey
+    };
+    
+  } catch (e) {
+    return {
+      valid: false,
+      error: 'Ошибка чтения credentials: ' + e.message
+    };
+  }
+}
+
+/**
+ * Получение параметров VK импорта
+ */
+function getVkImportParams() {
+  try {
+    var ss = SpreadsheetApp.getActive();
+    var paramsSheet = ss.getSheetByName('Параметры');
+    
+    if (!paramsSheet) {
+      return {
+        valid: false,
+        error: 'Лист \"Параметры\" не найден'
+      };
+    }
+    
+    var owner = paramsSheet.getRange('B1').getValue();
+    var count = paramsSheet.getRange('B2').getValue();
+    
+    if (!owner) {
+      return {
+        valid: false,
+        error: 'Не указан owner в Параметры!B1'
+      };
+    }
+    
+    return {
+      valid: true,
+      owner: String(owner),
+      count: Math.min(parseInt(count) || 50, 100)
+    };
+    
+  } catch (e) {
+    return {
+      valid: false,
+      error: 'Ошибка чтения параметров VK: ' + e.message
+    };
+  }
+}
+
+/**
+ * Получение флага перезаписи для OCR
+ */
+function getOcrOverwriteFlag() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var flag = props.getProperty('OCR_OVERWRITE');
+    
+    if (!flag) return false;
+    
+    var normalized = String(flag).toLowerCase().trim();
+    return (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'да');
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Вызов серверного API
+ */
+function callServer(requestData) {
+  var serverUrl = getServerUrl();
+  
+  var response = UrlFetchApp.fetch(serverUrl, {
+    method: 'POST',
+    contentType: 'application/json',
+    payload: JSON.stringify(requestData),
+    muteHttpExceptions: true
+  });
+  
+  var responseCode = response.getResponseCode();
+  var responseText = response.getContentText();
+  
+  if (responseCode >= 300) {
+    throw new Error('Server error: HTTP ' + responseCode + ' - ' + responseText);
+  }
+  
+  try {
+    return JSON.parse(responseText);
+  } catch (e) {
+    throw new Error('Invalid JSON response from server: ' + responseText);
+  }
+}
+
+/**
+ * Получение URL сервера
+ */
+function getServerUrl() {
+  // Используем константу из Constants.gs или глобальную
+  if (typeof SERVER_URL !== 'undefined' && SERVER_URL) {
+    return String(SERVER_URL).replace(/\\/$/, '');
+  }
+  throw new Error('SERVER_URL not configured');
+}
+
+/**
+ * Простое логирование на клиенте
+ */
+function logClient(message) {
+  var timestamp = new Date().toISOString();
+  console.log('[CLIENT ' + timestamp + '] ' + message);
+  
+  // Дополнительно сохраняем в кэш
+  try {
+    var cache = CacheService.getScriptCache();
+    var logKey = 'client_log_' + Date.now();
+    cache.put(logKey, JSON.stringify({
+      timestamp: timestamp,
+      message: message
+    }), 3600); // TTL 1 час
+  } catch (e) {
+    // Игнорируем ошибки кэширования
+  }
+}
