@@ -201,7 +201,7 @@ jobs:
           clasp --version
           echo ""
           
-          echo "Pushing to Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
+          echo "Pushing to Script ID: 1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP"
           echo "Running: clasp push -f"
           clasp push -f 2>&1 | tee /tmp/clasp-push.log || {
             echo ""
@@ -288,5 +288,5 @@ jobs:
       - name: Summary
         run: |
           echo "🎉 All deployments completed successfully!"
-          echo "📋 Server: table/server/ + table/shared/ → Script ID 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
+          echo "📋 Server: table/server/ + table/shared/ → Script ID 1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP"
           echo "📋 Client: table/client/ + table/shared/ + table/web/ → Script ID 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
