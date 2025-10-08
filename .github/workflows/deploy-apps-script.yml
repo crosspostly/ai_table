@@ -25,6 +25,57 @@ jobs:
       - name: Install clasp
         run: npm install -g @google/clasp
 
+      - name: Refresh OAuth Token
+        run: |
+          echo "🔄 Refreshing access token using refresh_token..."
+          echo '${{ secrets.CLASPRC_JSON }}' > /tmp/clasprc_original.json
+          
+          # Extract credentials (support both old and new format)
+          if cat /tmp/clasprc_original.json | jq -e '.tokens.default' > /dev/null 2>&1; then
+            # New format
+            CLIENT_ID=$(cat /tmp/clasprc_original.json | jq -r '.tokens.default.client_id')
+            CLIENT_SECRET=$(cat /tmp/clasprc_original.json | jq -r '.tokens.default.client_secret')
+            REFRESH_TOKEN=$(cat /tmp/clasprc_original.json | jq -r '.tokens.default.refresh_token')
+          else
+            # Old format
+            CLIENT_ID=$(cat /tmp/clasprc_original.json | jq -r '.oauth2ClientSettings.clientId')
+            CLIENT_SECRET=$(cat /tmp/clasprc_original.json | jq -r '.oauth2ClientSettings.clientSecret')
+            REFRESH_TOKEN=$(cat /tmp/clasprc_original.json | jq -r '.token.refresh_token')
+          fi
+          
+          echo "Client ID: ${CLIENT_ID:0:20}..."
+          echo "Refresh token: ${REFRESH_TOKEN:0:20}..."
+          
+          # Request new access token from Google
+          RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=$CLIENT_ID" \
+            -d "client_secret=$CLIENT_SECRET" \
+            -d "refresh_token=$REFRESH_TOKEN" \
+            -d "grant_type=refresh_token")
+          
+          echo "Response: $(echo $RESPONSE | jq -c '.')"
+          
+          # Check for errors
+          if echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ Failed to refresh token:"
+            echo "$RESPONSE" | jq '.'
+            exit 1
+          fi
+          
+          # Extract new access token
+          NEW_ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+          
+          if [ -z "$NEW_ACCESS_TOKEN" ] || [ "$NEW_ACCESS_TOKEN" == "null" ]; then
+            echo "❌ No access token in response"
+            exit 1
+          fi
+          
+          echo "✅ Got new access token: ${NEW_ACCESS_TOKEN:0:20}..."
+          
+          # Save for next step
+          echo "$NEW_ACCESS_TOKEN" > /tmp/new_access_token.txt
+
       - name: Setup clasp credentials
         run: |
           echo "Setting up clasp credentials..."
