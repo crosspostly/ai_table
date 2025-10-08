@@ -64,11 +64,27 @@ jobs:
           echo "Final .clasprc.json structure:"
           cat ~/.clasprc.json | jq 'keys'
 
+      - name: Verify clasp login
+        run: |
+          echo "Verifying clasp authentication..."
+          echo "Current .clasprc.json content:"
+          cat ~/.clasprc.json | jq '.'
+          echo ""
+          echo "Testing clasp login status..."
+          if clasp login --status 2>&1 | grep -q "logged in"; then
+            echo "✅ Clasp is authenticated"
+          else
+            echo "❌ Clasp authentication failed"
+            echo "Trying to list projects to verify access..."
+            clasp list || true
+          fi
+
       - name: Deploy Server Project
         run: |
           echo "📦 Deploying Server project..."
           cp .clasp-server.json .clasp.json
           cp .claspignore-server table/.claspignore
+          echo "Pushing to Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
           clasp push -f
           echo "✅ Server deployment complete!"
 
