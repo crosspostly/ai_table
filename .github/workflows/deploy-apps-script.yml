@@ -210,8 +210,62 @@ jobs:
           echo ""
           
           echo "Pushing to Script ID: 1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP"
-          echo "Running: clasp push -f"
-          clasp push -f 2>&1 | tee /tmp/clasp-push.log || {
+          echo ""
+          echo "⚠️  Trying DIRECT API upload instead of clasp (clasp push was not working)"
+          echo ""
+          
+          # Get access token
+          ACCESS_TOKEN=$(cat ~/.clasprc.json | jq -r '.token.access_token')
+          
+          # Build files JSON for API
+          echo "Building file list for API upload..."
+          FILES_JSON='{"files": ['
+          FIRST=true
+          
+          for file in $(find table -type f \( -name "*.gs" -o -name "*.html" -o -name "appsscript.json" \)); do
+            if [ "$FIRST" = false ]; then
+              FILES_JSON+=','
+            fi
+            FIRST=false
+            
+            REL_PATH=${file#table/}
+            
+            # Determine file type
+            if [[ "$file" == *.gs ]]; then
+              FILE_TYPE="SERVER_JS"
+            elif [[ "$file" == *.html ]]; then
+              FILE_TYPE="HTML"
+            elif [[ "$file" == *appsscript.json ]]; then
+              FILE_TYPE="JSON"
+              REL_PATH="appsscript"
+            fi
+            
+            # Read and escape content
+            CONTENT=$(cat "$file" | jq -Rs .)
+            
+            FILES_JSON+="{\"name\": \"$REL_PATH\", \"type\": \"$FILE_TYPE\", \"source\": $CONTENT}"
+            echo "  Added: $REL_PATH ($FILE_TYPE)"
+          done
+          
+          FILES_JSON+=']}'
+          
+          echo ""
+          echo "Total files: $(echo "$FILES_JSON" | jq '.files | length')"
+          echo ""
+          echo "Uploading via Apps Script API..."
+          
+          RESPONSE=$(curl -s -X PUT \
+            "https://script.googleapis.com/v1/projects/1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP/content" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$FILES_JSON")
+          
+          if echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
+            echo "❌ API Upload failed:"
+            echo "$RESPONSE" | jq .
+            echo ""
+            echo "Falling back to clasp push..."
+            clasp push -f 2>&1 | tee /tmp/clasp-push.log || {
             echo ""
             echo "❌ CLASP PUSH FAILED!"
             echo "Error output:"
