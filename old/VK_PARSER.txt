@@ -1,0 +1,205 @@
+/**
+ * VK Web App: JSON endpoints for wall, album, and discussion parsing.
+ * Token is read from Script Properties: VK_TOKEN
+ */
+
+function getVkToken_() {
+  var t = PropertiesService.getScriptProperties().getProperty('VK_TOKEN');
+  if (!t) throw new Error('VK_TOKEN не задан в Script Properties');
+  return t;
+}
+
+function doGet(e) {
+  var action = (e && e.parameter && e.parameter.action) || 'wall';
+  try {
+    if (action === 'wall') return handleWallGet_(e);
+    if (action === 'parseAlbum') return handleParseAlbum_(e);
+    if (action === 'parseDiscussion') return handleParseDiscussion_(e);
+    if (action === 'parseReviews') return handleParseReviews_(e);
+    return json_({ error: 'Unknown action' });
+  } catch (err) {
+    return json_({ error: String(err && err.message || err) });
+  }
+}
+
+function handleWallGet_(e) {
+  var owner = e.parameter.owner;
+  var count = e.parameter.count || 10;
+  var token = getVkToken_();
+  var version = '5.131';
+  if (!owner) return json_({ error: 'Не указан параметр owner' });
+  var paramName = /^[-\d]+$/.test(owner) ? 'owner_id' : 'domain';
+  var url = 'https://api.vk.com/method/wall.get'
+    + '?' + paramName + '=' + encodeURIComponent(owner)
+    + '&count=' + encodeURIComponent(count)
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + encodeURIComponent(version);
+  try {
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var code = res.getResponseCode();
+    var json = JSON.parse(res.getContentText());
+    if (code !== 200 || json.error) return json_({ error: (json.error && json.error.error_msg) || ('HTTP_' + code) });
+    if (!json.response || !Array.isArray(json.response.items)) return json_({ error: 'Непредвиденный формат ответа VK API' });
+    var items = json.response.items.map(function(p, idx) {
+      return {
+        date: new Date(p.date * 1000).toLocaleString(),
+        link: 'https://vk.com/wall' + p.owner_id + '_' + p.id,
+        text: String(p.text || '').replace(/\n/g, ' '),
+        number: idx + 1,
+        comments: (p.comments && p.comments.count) || 0,
+        likes: (p.likes && p.likes.count) || 0
+      };
+    });
+    return json_(items);
+  } catch (e) {
+    return json_({ error: 'Ошибка выполнения запроса: ' + e });
+  }
+}
+
+function handleParseAlbum_(e) {
+  var url = e.parameter.url;
+  var limit = parseInt(e.parameter.limit || '100', 10);
+  var offset = parseInt(e.parameter.offset || '0', 10);
+  if (!url) return json_({ error: 'Не указан url альбома' });
+  var token = getVkToken_();
+  var v = '5.131';
+  var m = String(url).match(/vk\.com\/album(-?\d+)_([0-9]+)/i);
+  if (!m) return json_({ error: 'Неверный формат URL альбома' });
+  var ownerId = parseInt(m[1], 10);
+  var albumId = parseInt(m[2], 10);
+  var api = 'https://api.vk.com/method/photos.get'
+    + '?owner_id=' + ownerId
+    + '&album_id=' + albumId
+    + '&count=' + Math.max(1, Math.min(1000, limit))
+    + '&offset=' + Math.max(0, offset)
+    + '&photo_sizes=1'
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + v;
+  var res = UrlFetchApp.fetch(api, { muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  var js = JSON.parse(res.getContentText());
+  if (code !== 200 || js.error) return json_({ error: (js.error && js.error.error_msg) || ('HTTP_' + code) });
+  var resp = js.response;
+  var items = (resp && resp.items) || [];
+  var total = resp && resp.count || (offset + items.length);
+  var images = items.map(function(ph) {
+    var sizes = ph.sizes || [];
+    var best = null;
+    for (var i = 0; i < sizes.length; i++) {
+      if (!best || (sizes[i].width * sizes[i].height > best.width * best.height)) best = sizes[i];
+    }
+    return { url: best ? best.url : '', w: best ? best.width : 0, h: best ? best.height : 0 };
+  }).filter(function(x){ return !!x.url; });
+  var hasMore = (offset + items.length) < total;
+  var nextOffset = offset + items.length;
+  return json_({ images: images, hasMore: hasMore, nextOffset: nextOffset, total: total });
+}
+
+function handleParseDiscussion_(e) {
+  var url = e.parameter.url;
+  var limit = parseInt(e.parameter.limit || '100', 10);
+  var offset = parseInt(e.parameter.offset || '0', 10);
+  if (!url) return json_({ error: 'Не указан url темы' });
+  var token = getVkToken_();
+  var v = '5.131';
+  var m = String(url).match(/vk\.com\/topic(-?\d+)_([0-9]+)/i);
+  if (!m) return json_({ error: 'Неверный формат URL темы' });
+  var ownerId = parseInt(m[1], 10); // может быть отрицательным (группа)
+  var groupId = Math.abs(ownerId);
+  var topicId = parseInt(m[2], 10);
+  var api = 'https://api.vk.com/method/board.getComments'
+    + '?group_id=' + groupId
+    + '&topic_id=' + topicId
+    + '&count=' + Math.max(1, Math.min(100, limit))
+    + '&offset=' + Math.max(0, offset)
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + v;
+  var res = UrlFetchApp.fetch(api, { muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  var js = JSON.parse(res.getContentText());
+  if (code !== 200 || js.error) return json_({ error: (js.error && js.error.error_msg) || ('HTTP_' + code) });
+  var resp = js.response;
+  var items = (resp && resp.items) || [];
+  var total = resp && resp.count || (offset + items.length);
+  var texts = items.map(function(c) { return String(c.text || '').trim(); }).filter(function(s){ return !!s; });
+  var hasMore = (offset + items.length) < total;
+  var nextOffset = offset + items.length;
+  return json_({ texts: texts, hasMore: hasMore, nextOffset: nextOffset, total: total });
+}
+
+function handleParseReviews_(e) {
+  var url = e.parameter.url;
+  var limit = parseInt(e.parameter.limit || '100', 10);
+  var offset = parseInt(e.parameter.offset || '0', 10);
+  if (!url) return json_({ error: 'Не указан url reviews-страницы' });
+  var token = getVkToken_();
+  var v = '5.131';
+  var m = String(url).match(/vk\.com\/reviews-([0-9]+)/i);
+  if (!m) return json_({ error: 'Неверный формат URL reviews-страницы' });
+  var groupId = parseInt(m[1], 10);
+
+  // 1) Получаем темы обсуждений и фильтруем по ключевым словам "отзыв", "review", "feedback"
+  var topicsApi = 'https://api.vk.com/method/board.getTopics'
+    + '?group_id=' + groupId
+    + '&order=2&count=200'
+    + '&extended=0'
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + v;
+  var tRes = UrlFetchApp.fetch(topicsApi, { muteHttpExceptions: true });
+  var tCode = tRes.getResponseCode();
+  var tJs = JSON.parse(tRes.getContentText());
+  if (tCode !== 200 || tJs.error) return json_({ error: (tJs.error && tJs.error.error_msg) || ('HTTP_' + tCode) });
+  var topics = (tJs.response && tJs.response.items) || [];
+  var re = getReviewsRegex_();
+  topics = topics.filter(function(tp){ return re.test(String(tp.title || '')); });
+  if (!topics.length) return json_({ texts: [], hasMore: false, nextOffset: offset, total: 0 });
+
+  // 2) Глобальная пагинация: offset относится к сумме комментариев по всем подходящим темам
+  var total = 0; for (var i=0;i<topics.length;i++) total += (topics[i].comments || 0);
+  var texts = [];
+  var remain = Math.max(0, Math.min(1000, limit)); // защитный предел
+  var skip = Math.max(0, offset);
+  var idx = 0;
+  while (idx < topics.length && remain > 0) {
+    var tp = topics[idx];
+    var cCount = tp.comments || 0;
+    if (skip >= cCount) { skip -= cCount; idx++; continue; }
+    // Берём из этой темы, начиная с skip, до remain
+    var take = Math.min(remain, 100); // API limit 100
+    var commentsApi = 'https://api.vk.com/method/board.getComments'
+      + '?group_id=' + groupId
+      + '&topic_id=' + tp.id
+      + '&count=' + take
+      + '&offset=' + skip
+      + '&access_token=' + encodeURIComponent(token)
+      + '&v=' + v;
+    var cRes = UrlFetchApp.fetch(commentsApi, { muteHttpExceptions: true });
+    var cCode = cRes.getResponseCode();
+    var cJs = JSON.parse(cRes.getContentText());
+    if (cCode !== 200 || cJs.error) return json_({ error: (cJs.error && cJs.error.error_msg) || ('HTTP_' + cCode) });
+    var items = (cJs.response && cJs.response.items) || [];
+    var parts = items.map(function(c){ return String(c.text || '').trim(); }).filter(function(s){ return !!s; });
+    for (var k=0;k<parts.length && remain>0;k++) { texts.push(parts[k]); remain--; }
+    // после первого захода по теме, дальше offset=0 (мы "съели" skip)
+    skip = 0;
+    // если всё ещё есть место и комментарии закончились — двигаемся к следующей теме
+    if (parts.length < take) { idx++; }
+  }
+  var nextOffset = offset + texts.length;
+  var hasMore = nextOffset < total;
+  return json_({ texts: texts, hasMore: hasMore, nextOffset: nextOffset, total: total, topicCount: topics.length });
+}
+
+function json_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getReviewsRegex_() {
+  try {
+    var s = PropertiesService.getScriptProperties().getProperty('VK_REVIEWS_REGEX');
+    if (s && s.trim()) return new RegExp(s, 'i');
+  } catch (e) {}
+  return /(отзыв|reviews?|feedback|рейтинг|оценк|звезд)/i;
+}
