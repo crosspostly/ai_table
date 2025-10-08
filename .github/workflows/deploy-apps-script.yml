@@ -92,8 +92,21 @@ jobs:
         run: |
           echo "📦 Deploying Client project (Container-bound to Google Sheets)..."
           cp .clasp-client.json .clasp.json
-          cp .claspignore-client table/.claspignore
+          
+          # Временно скрыть server/appsscript.json
+          if [ -f table/server/appsscript.json ]; then
+            mv table/server/appsscript.json table/server/appsscript.json.bak
+            echo "Temporarily moved table/server/appsscript.json"
+          fi
+          
+          echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
           clasp push -f
+          
+          # Восстановить файл
+          if [ -f table/server/appsscript.json.bak ]; then
+            mv table/server/appsscript.json.bak table/server/appsscript.json
+          fi
+          
           echo "✅ Client deployment complete!"
 
       - name: Summary
