@@ -433,4 +433,4 @@ function createCustomError(message, details = {}) {
   error.timestamp = new Date();
   
   return error;
-}"
+}

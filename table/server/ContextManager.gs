@@ -386,4 +386,4 @@ function exportContextHistory(sessionId) {
     addSystemLog('Ошибка экспорта контекста: ' + error.message, 'ERROR', 'CONTEXT');
     return 'Ошибка экспорта: ' + error.message;
   }
-}"
+}

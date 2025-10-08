@@ -415,4 +415,4 @@ function showChatWelcome() {
   } catch (error) {
     addSystemLog('Ошибка показа приветствия чата: ' + error.message, 'ERROR', 'CHAT_MODE');
   }
-}"
+}

@@ -343,4 +343,4 @@ function testLicenseSystem() {
   addTest('Admin credentials', test5.ok && test5.type === 'admin', test5.type);
   
   return results;
-}"
+}
