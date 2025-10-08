@@ -26,7 +26,16 @@ jobs:
         run: npm install -g @google/clasp
 
       - name: Setup clasp credentials
-        run: echo "${{ secrets.CLASPRC_JSON }}" > ~/.clasprc.json
+        run: |
+          echo "Validating CLASPRC_JSON..."
+          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          if ! cat ~/.clasprc.json | jq empty 2>/dev/null; then
+            echo "❌ ERROR: Invalid JSON in CLASPRC_JSON secret!"
+            echo "First 100 chars:"
+            cat ~/.clasprc.json | head -c 100
+            exit 1
+          fi
+          echo "✅ CLASPRC_JSON is valid JSON"
 
       - name: Deploy Server Project
         run: |
