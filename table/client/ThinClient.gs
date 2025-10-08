@@ -94,8 +94,7 @@ function ocrReviewsThin() {
 ' +
                 'Ошибок: ' + errors;
   
-  logClient(summary.replace(/\
-/g, ', '));
+  logClient(summary.replace(/\n/g, ', '));
   ui.alert(summary);
 }
 
@@ -212,7 +211,7 @@ function importVkPostsThin() {
       
       var summary = 'VK импорт завершён:\
 Импортировано: ' + result.data.length + ' постов';
-      logClient(summary.replace(/\
+      logClient(summary.replace(/\n
 /g, ', '));
       ui.alert(summary);
       

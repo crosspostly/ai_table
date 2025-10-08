@@ -49,8 +49,7 @@ function showActiveTriggersDialog() {
       return;
     }
     
-    var list = triggers.map((t,i) => (i+1)+'. '+t.getHandlerFunction()+' ('+t.getEventType()+')').join('
-');
+    var list = triggers.map((t,i) => (i+1)+'. '+t.getHandlerFunction()+' ('+t.getEventType()+')').join('\\n');
     SpreadsheetApp.getUi().alert('Активные триггеры', 'Всего: '+triggers.length+'
 
 '+list, SpreadsheetApp.getUi().ButtonSet.OK);

@@ -289,9 +289,7 @@ function splitByDelimiter(text) {
   if (!cleaned) return [];
   
   // Основной способ: разделители ____
-  var parts = cleaned.split(/\
-?_{4,}\
-?/g)
+  var parts = cleaned.split(/\\n?_{4,}\\n?/g)
     .map(function(p) { return String(p || '').trim(); })
     .filter(function(p) { return p.length > 0; });
   
