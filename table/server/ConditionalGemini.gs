@@ -1,16 +1,16 @@
 /**
  * Conditional Gemini Service
- * GM_IF функции и утилиты для работы с условной обработкой
+ * GM_IF functions and utilities for conditional processing
  */
 
 /**
- * Условная функция Gemini - выполняет запрос только если условие истинно
+ * Conditional Gemini function - executes request only if condition is true
  */
 function GM_IF(condition, prompt, maxTokens, temperature, _tick) {
   try {
     var condVal = false;
     
-    // Нормализуем вход в одно скалярное значение
+    // Normalize input to scalar value
     var raw = condition;
     if (Array.isArray(raw)) {
       raw = (raw[0] && raw[0].length ? raw[0][0] : raw[0] || '');
@@ -23,27 +23,27 @@ function GM_IF(condition, prompt, maxTokens, temperature, _tick) {
       condVal = raw !== 0;
     } else if (t === 'string') {
       var s = raw.trim().toLowerCase();
-      // TRUE/FALSE в любой локали: ИСТИНА/ЛОЖЬ; также 1/0; пустая строка → false
-      condVal = (s === 'true' || s === 'истина' || s === '1' || s === 'да');
+      // TRUE FALSE in any locale; also 1 0; empty string means false
+      condVal = (s === 'true' || s === 'true' || s === '1' || s === 'да');
     } else {
       condVal = !!raw;
     }
     
-    // Если условие ложно - возвращаем пустую строку
+    // If condition is false - return empty string
     if (!condVal) return "";
     
-    // Нормализуем prompt
+    // Normalize prompt
     if (Array.isArray(prompt)) prompt = prompt[0][0];
     if (!prompt || typeof prompt !== 'string' || !prompt.trim()) return "";
     
-    // Устанавливаем дефолтные значения
+    // Set default values
     if (maxTokens == null) maxTokens = 25000;
     if (temperature == null) temperature = 0.7;
     
-    // Вызываем основную функцию GM
+    // Call main GM function
     return GM(prompt, maxTokens, temperature);
   } catch (e) {
-    logMessage('❌ GM_IF ошибка: ' + e.message, 'ERROR');
+    logMessage('❌ GM_IF error: ' + e.message, 'ERROR');
     return 'Error: ' + e.message;
   }
 }
@@ -51,7 +51,7 @@ function GM_IF(condition, prompt, maxTokens, temperature, _tick) {
 // GM_IF_STATIC removed - functionality handled by client-side version in ThinClient.gs
 
 /**
- * Преобразование номера колонки в букву (A, B, C, ...)
+ * Convert номера колонки в букву (A, B, C, ...)
  */
 function columnToLetter(column) {
   var temp, letter = '';
@@ -64,7 +64,7 @@ function columnToLetter(column) {
 }
 
 /**
- * Преобразование буквы колонки в номер (A→1, B→2, ...)
+ * Convert буквы колонки в номер (A→1, B→2, ...)
  */
 function letterToColumn(letters) {
   var s = String(letters || '').toUpperCase().trim();
@@ -76,11 +76,11 @@ function letterToColumn(letters) {
 }
 
 /**
- * Парсинг A1 нотации (например "Распаковка!B3" или "B3")
+ * Parse A1 нотации (например "Unpacking!B3" или "B3")
  */
 function parseTargetA1(a1) {
   var raw = String(a1 || '').trim();
-  if (!raw) throw new Error('Пустая ссылка на ячейку');
+  if (!raw) throw new Error('Empty cell reference');
   
   var m = raw.match(/^([^!]+)!([A-Za-z]+)(\\d+)$/);
   var sheetName, colLetters, row;
@@ -91,14 +91,14 @@ function parseTargetA1(a1) {
     row = parseInt(m[3], 10);
   } else {
     var m2 = raw.match(/^([A-Za-z]+)(\\d+)$/);
-    if (!m2) throw new Error('Неверный формат ячейки: ' + raw);
-    sheetName = 'Распаковка'; // дефолтный лист
+    if (!m2) throw new Error('Invalid cell format: ' + raw);
+    sheetName = 'Unpacking'; // default sheet
     colLetters = m2[1];
     row = parseInt(m2[2], 10);
   }
   
-  if (sheetName !== 'Распаковка') {
-    throw new Error('Ожидался лист "Распаковка", получено: ' + sheetName);
+  if (sheetName !== 'Unpacking') {
+    throw new Error('Expected sheet "Unpacking", got: ' + sheetName);
   }
   
   var col = letterToColumn(colLetters);
@@ -111,7 +111,7 @@ function parseTargetA1(a1) {
 }
 
 /**
- * Получить значение ячейки с автопреобразованием Markdown
+ * Get value ячейки с автопреобразованием Markdown
  */
 function getCellValue(sheetName, row, col) {
   try {
@@ -121,68 +121,66 @@ function getCellValue(sheetName, row, col) {
     
     var value = sheet.getRange(row, col).getValue();
     
-    // Автопреобразование Markdown для текстовых значений (кроме колонки A)
+    // Auto convert Markdown for text values (except column A)
     if (value && typeof value === 'string' && col > 1) {
       var processed = processGeminiResponse(value);
-      if (processed !== value) {
-        sheet.getRange(row, col).setValue(processed);
-        logMessage('🔄 Markdown преобразован в ' + sheet.getRange(row, col).getA1Notation(), 'INFO');
+      if (processetRange(row, col).getA1Notation(), 'INFO');
         return processed;
       }
     }
     
     return value;
   } catch (e) {
-    logMessage('❌ Ошибка чтения ячейки ' + sheetName + '(' + row + ',' + col + '): ' + e.message, 'ERROR');
+    logMessage('❌ Error reading cell ' + sheetName + '(' + row + ',' + col + '): ' + e.message, 'ERROR');
     return null;
   }
 }
 
 /**
- * Установить формулу в ячейку
+ * Set formula в ячейку
  */
 function setFormulaToCell(row, col, formula) {
   try {
     var ss = SpreadsheetApp.getActive();
-    var sheet = ss.getSheetByName('Распаковка');
+    var sheet = ss.getSheetByName('Unpacking');
     if (!sheet) {
-      logMessage('❌ Лист "Распаковка" не найден', 'ERROR');
+      logMessage('❌ Sheet "Unpacking" not found', 'ERROR');
       return false;
     }
     
     var cell = sheet.getRange(row, col);
     cell.setFormula(formula);
-    logMessage('✅ Формула установлена в ' + cell.getA1Notation() + ': ' + formula.slice(0, 80) + '...', 'INFO');
+    logMessage('✅ Formula set in ' + cell.getA1Notation() + ': ' + formula.slice(0, 80) + '...', 'INFO');
     return true;
   } catch (e) {
-    logMessage('❌ Ошибка установки формулы в (' + row + ',' + col + '): ' + e.message, 'ERROR');
+    logMessage('❌ Error setting formula in (' + row + ',' + col + '): ' + e.message, 'ERROR');
     return false;
   }
 }
 
 /**
- * Получить формулу из Prompt_box
+ * Get formula из Prompt_box
  */
 function getPromptFormula(rowIndex) {
   try {
     var ss = SpreadsheetApp.getActive();
     var promptSheet = ss.getSheetByName('Prompt_box');
     if (!promptSheet) {
-      logMessage('❌ Лист "Prompt_box" не найден', 'ERROR');
+      logMessage('❌ Sheet "Prompt_box" not found', 'ERROR');
       return null;
     }
     
     var rng = promptSheet.getRange(rowIndex, 6); // F
-    var formula = rng.getFormula(); // ВАЖНО: формула, а не значение
+    var formula = rng.getFormula(); // IMPORTANT: formula not value
     if (!formula || !formula.trim()) {
-      logMessage(`ℹ️ Формула в Prompt_box!F${rowIndex} пуста`, 'INFO');
+      logMessage(`ℹ️ Formula in Prompt_box!F${rowIndex} is empty`, 'INFO');
       return null;
     }
     
-    logMessage(`📥 Формула из Prompt_box!F${rowIndex}: ${formula.slice(0,80)}...`, 'DEBUG');
+    logMessage(`📥 Formula from Prompt_box!F${rowIndex}: ${formula.slice(0,80)}...`, 'DEBUG');
     return formula;
   } catch (e) {
-    logMessage('❌ Ошибка получения формулы из F' + rowIndex + ': ' + e.message, 'ERROR');
+    logMessage('❌ Error getting formula from F' + rowIndex + ': ' + e.message, 'ERROR');
     return null;
   }
 }
