@@ -232,15 +232,50 @@ jobs:
           echo "📦 Deploying Client project (Container-bound to Google Sheets)..."
           cp .clasp-client.json .clasp.json
           
+          echo "=== CLIENT DIAGNOSTIC BEFORE PUSH ==="
+          echo "1. Current .clasp.json:"
+          cat .clasp.json | jq .
+          echo ""
+          echo "2. Root appsscript.json exists?"
+          if [ -f table/appsscript.json ]; then
+            echo "✅ table/appsscript.json exists"
+            echo "Content:"
+            cat table/appsscript.json
+            echo ""
+            echo "Validate:"
+            cat table/appsscript.json | jq . && echo "✅ Valid JSON" || echo "❌ Invalid JSON"
+          else
+            echo "❌ table/appsscript.json NOT FOUND!"
+          fi
+          echo ""
+          
           # Временно скрыть server/appsscript.json чтобы clasp его не видел
           if [ -f table/server/appsscript.json ]; then
             mv table/server/appsscript.json table/server/appsscript.json.server-backup
             echo "Temporarily moved table/server/appsscript.json"
           fi
           
+          echo ""
+          echo "3. All appsscript files that clasp can see:"
+          find table -name "*appsscript*"
+          echo ""
+          echo "4. All JSON files in rootDir:"
+          find table -name "*.json" | head -20
+          echo ""
+          
           echo "Using root appsscript.json for client"
           echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
-          clasp push -f
+          echo "Running: clasp push -f"
+          clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
+            echo ""
+            echo "❌ CLIENT CLASP PUSH FAILED!"
+            echo "Error output:"
+            cat /tmp/clasp-client-push.log
+            echo ""
+            echo "Files that would be uploaded:"
+            find table -type f \( -name "*.gs" -o -name "*.json" -o -name "*.html" \) | sort
+            exit 1
+          }
           
           # Восстановить server/appsscript.json
           if [ -f table/server/appsscript.json.server-backup ]; then
