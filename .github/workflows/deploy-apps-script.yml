@@ -293,8 +293,17 @@ jobs:
           cp .clasp-client.json .clasp.json
           
           echo "=== PREPARING CLIENT DEPLOYMENT ==="
-          echo "Copying shared files into client directory..."
           
+          # 🚨 CRITICAL: Copy appsscript.json to client directory FIRST
+          echo "Copying appsscript.json to client directory..."
+          if [ ! -f table/appsscript.json ]; then
+            echo "❌ ERROR: table/appsscript.json not found!"
+            exit 1
+          fi
+          cp table/appsscript.json table/client/
+          echo "✅ Copied appsscript.json to table/client/"
+          
+          echo "Copying shared files into client directory..."
           # Copy shared files directly into client directory
           cp table/shared/*.gs table/client/
           echo "✅ Copied shared files to table/client/"
@@ -304,13 +313,14 @@ jobs:
           cp table/web/*.html table/client/ 2>/dev/null || true
           echo "✅ Copied web files to table/client/"
           
-          # Verify appsscript.json exists in client directory
-          # For container-bound scripts, we need appsscript.json at the root (table/appsscript.json)
-          if [ ! -f table/appsscript.json ]; then
-            echo "❌ ERROR: table/appsscript.json not found!"
+          # 🔒 SECURITY CHECK: Ensure NO server files in client!
+          echo "🔍 Security check: verifying NO server files in client..."
+          if ls table/client/server* 2>/dev/null || ls table/client/*Server*.gs 2>/dev/null | grep -v ClientUtilities 2>/dev/null; then
+            echo "❌ SECURITY ERROR: Server files found in client directory!"
+            ls -la table/client/server* table/client/*Server*.gs 2>/dev/null || true
             exit 1
           fi
-          echo "✅ Found table/appsscript.json"
+          echo "✅ Security check passed: no server files in client"
           
           echo ""
           echo "Files in CLIENT directory:"
@@ -331,6 +341,7 @@ jobs:
           echo "Cleaning up copied files..."
           rm -f table/client/Constants.gs table/client/LoggingService.gs table/client/Utils.gs
           rm -f table/client/WebInterface.gs table/client/*.html
+          rm -f table/client/appsscript.json
           echo "✅ Cleaned up"
           
           echo "✅ Client deployment complete!"
