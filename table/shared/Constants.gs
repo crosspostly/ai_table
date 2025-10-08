@@ -3,8 +3,9 @@
  * Константы используемые во всех частях приложения
  */
 
-// ====== VK Parser URL ======
-const VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbw2iV7B7Bl1bmRMy5JM5sAFU2ODyxT9IvVNEy15ewIAvNSVUWuWvZ8g8cUAJDCMgyTDvQ/exec';
+// ====== VK Parser URL (DEPRECATED - больше не используется!) ======
+// VK parsing теперь происходит через универсальный Social Import Service
+// const VK_PARSER_URL = 'DEPRECATED';
 
 // ====== Gemini API ======
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
