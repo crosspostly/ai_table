@@ -248,6 +248,68 @@ function generateTraceId(prefix) {
 }
 
 /**
+ * Fetch Gemini with retry logic (КРИТИЧНО!)
+ * Последовательные запросы к Gemini API с retry
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ!
+ */
+function fetchGeminiWithRetry(url, options, maxAttempts) {
+  maxAttempts = maxAttempts || 3;
+  var attempt = 0;
+  var lastError = null;
+  
+  while (attempt < maxAttempts) {
+    attempt++;
+    
+    try {
+      addSystemLog('→ fetchGeminiWithRetry: попытка ' + attempt + '/' + maxAttempts, 'DEBUG', 'FETCH');
+      
+      var response = UrlFetchApp.fetch(url, Object.assign({}, options, {
+        muteHttpExceptions: true
+      }));
+      
+      var code = response.getResponseCode();
+      
+      // Success
+      if (code === 200) {
+        addSystemLog('✅ fetchGeminiWithRetry: успех на попытке ' + attempt, 'INFO', 'FETCH');
+        return response;
+      }
+      
+      // Rate limit - wait and retry
+      if (code === 429) {
+        var waitTime = Math.min(2000 * attempt, 10000); // 2s, 4s, 6s... max 10s
+        addSystemLog('⏳ Rate limit (429), ждем ' + waitTime + 'ms', 'WARN', 'FETCH');
+        Utilities.sleep(waitTime);
+        continue;
+      }
+      
+      // Server error - retry
+      if (code >= 500) {
+        var waitTime = 1000 * attempt;
+        addSystemLog('⚠️ Ошибка сервера (' + code + '), retry через ' + waitTime + 'ms', 'WARN', 'FETCH');
+        Utilities.sleep(waitTime);
+        continue;
+      }
+      
+      // Client error - don't retry
+      addSystemLog('❌ Ошибка клиента (' + code + '), не retry', 'ERROR', 'FETCH');
+      return response;
+      
+    } catch (e) {
+      lastError = e;
+      addSystemLog('❌ Exception на попытке ' + attempt + ': ' + e.message, 'ERROR', 'FETCH');
+      
+      if (attempt < maxAttempts) {
+        Utilities.sleep(1000 * attempt);
+      }
+    }
+  }
+  
+  // Все попытки исчерпаны
+  throw new Error('fetchGeminiWithRetry failed after ' + maxAttempts + ' attempts: ' + (lastError ? lastError.message : 'unknown'));
+}
+
+/**
  * Задержка выполнения
  */
 function sleep(milliseconds) {
