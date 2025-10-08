@@ -1,0 +1,16 @@
+# Server Project: только server/ и shared/
+
+# Игнорировать client и web
+client/**
+web/**
+
+# Игнорировать документацию
+docs/**
+tests/**
+*.md
+**/*.md
+
+# Включить server и shared
+!server/**
+!shared/**
+!appsscript.json

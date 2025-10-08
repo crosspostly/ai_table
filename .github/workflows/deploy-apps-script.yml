@@ -6,7 +6,7 @@ on:
       - web-interface-with-design
     paths:
       - 'table/**'
-      - '.clasp.json'
+      - '.clasp-*.json'
       - '.github/workflows/deploy-apps-script.yml'
 
 jobs:
@@ -28,15 +28,24 @@ jobs:
       - name: Setup clasp credentials
         run: echo "${{ secrets.CLASPRC_JSON }}" > ~/.clasprc.json
 
-      - name: Deploy to Apps Script
+      - name: Deploy Server Project
         run: |
-          echo "📦 Deploying to Apps Script..."
-          echo "📋 Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
+          echo "📦 Deploying Server project..."
+          cp .clasp-server.json .clasp.json
+          cp .claspignore-server table/.claspignore
           clasp push -f
-          echo "✅ Deployment complete!"
+          echo "✅ Server deployment complete!"
+
+      - name: Deploy Client Project
+        run: |
+          echo "📦 Deploying Client project (Container-bound to Google Sheets)..."
+          cp .clasp-client.json .clasp.json
+          cp .claspignore-client table/.claspignore
+          clasp push -f
+          echo "✅ Client deployment complete!"
 
       - name: Summary
         run: |
-          echo "🎉 Deployment completed successfully!"
-          echo "📋 Deployed: table/server/, table/client/, table/shared/, table/web/"
-          echo "📋 Project: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
+          echo "🎉 All deployments completed successfully!"
+          echo "📋 Server: table/server/ + table/shared/ → Script ID 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
+          echo "📋 Client: table/client/ + table/shared/ + table/web/ → Script ID 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"

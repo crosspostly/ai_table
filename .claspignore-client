@@ -1,0 +1,16 @@
+# Client Project: client/, shared/, web/
+
+# Игнорировать server
+server/**
+
+# Игнорировать документацию
+docs/**
+tests/**
+*.md
+**/*.md
+
+# Включить client, shared, web
+!client/**
+!shared/**
+!web/**
+!appsscript.json
