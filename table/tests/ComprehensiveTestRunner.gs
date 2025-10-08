@@ -18,8 +18,7 @@ function runAllComprehensiveTests() {
   };
   
   // 1. SYNTAX & STRUCTURE TESTS
-  Logger.log('
-📋 === PHASE 1: SYNTAX & STRUCTURE ===');
+  Logger.log('\n📋 === PHASE 1: SYNTAX & STRUCTURE ===');
   const syntaxResults = runSyntaxTests();
   allResults.suites.push({ name: 'Syntax Tests', ...syntaxResults });
   allResults.totalTests += syntaxResults.totalTests;
@@ -27,8 +26,7 @@ function runAllComprehensiveTests() {
   allResults.failed += syntaxResults.failed;
   
   // 2. VALIDATION TESTS
-  Logger.log('
-🛡️ === PHASE 2: INPUT VALIDATION ===');
+  Logger.log('\n🛡️ === PHASE 2: INPUT VALIDATION ===');
   const validationResults = runValidationTests();
   allResults.suites.push({ name: 'Validation Tests', ...validationResults });
   allResults.totalTests += validationResults.totalTests;
@@ -36,8 +34,7 @@ function runAllComprehensiveTests() {
   allResults.failed += validationResults.failed;
   
   // 3. RETRY LOGIC TESTS
-  Logger.log('
-🔄 === PHASE 3: RETRY LOGIC ===');
+  Logger.log('\n🔄 === PHASE 3: RETRY LOGIC ===');
   const retryResults = runRetryLogicTests();
   allResults.suites.push({ name: 'Retry Logic Tests', ...retryResults });
   allResults.totalTests += retryResults.totalTests;
@@ -45,8 +42,7 @@ function runAllComprehensiveTests() {
   allResults.failed += retryResults.failed;
   
   // 4. ERROR HANDLING TESTS
-  Logger.log('
-💬 === PHASE 4: ERROR HANDLING ===');
+  Logger.log('\n💬 === PHASE 4: ERROR HANDLING ===');
   const errorResults = runErrorHandlingTests();
   allResults.suites.push({ name: 'Error Handling Tests', ...errorResults });
   allResults.totalTests += errorResults.totalTests;
@@ -54,8 +50,7 @@ function runAllComprehensiveTests() {
   allResults.failed += errorResults.failed;
   
   // 5. PLATFORM DETECTION TESTS
-  Logger.log('
-🔍 === PHASE 5: PLATFORM DETECTION ===');
+  Logger.log('\n🔍 === PHASE 5: PLATFORM DETECTION ===');
   const platformResults = runPlatformDetectionTests();
   allResults.suites.push({ name: 'Platform Detection Tests', ...platformResults });
   allResults.totalTests += platformResults.totalTests;
@@ -63,8 +58,7 @@ function runAllComprehensiveTests() {
   allResults.failed += platformResults.failed;
   
   // 6. REAL DATA TESTS (самые важные!)
-  Logger.log('
-🧪 === PHASE 6: REAL DATA TESTS ===');
+  Logger.log('\n🧪 === PHASE 6: REAL DATA TESTS ===');
   const realDataResults = runRealDataTests();
   allResults.suites.push({ name: 'Real Data Tests', ...realDataResults });
   allResults.totalTests += realDataResults.totalTests || realDataResults.passed + realDataResults.failed;
@@ -72,8 +66,7 @@ function runAllComprehensiveTests() {
   allResults.failed += realDataResults.failed;
   
   // 7. GEMINI SEQUENTIAL TESTS
-  Logger.log('
-🤖 === PHASE 7: GEMINI SEQUENTIAL TESTS ===');
+  Logger.log('\n🤖 === PHASE 7: GEMINI SEQUENTIAL TESTS ===');
   const geminiResults = runGeminiSequentialTests();
   allResults.suites.push({ name: 'Gemini Sequential Tests', ...geminiResults });
   allResults.totalTests += geminiResults.totalTests;
@@ -82,8 +75,7 @@ function runAllComprehensiveTests() {
   
   // FINAL REPORT
   const duration = Date.now() - startTime;
-  Logger.log('
-📊 ===============================');
+  Logger.log('\n📊 ===============================');
   Logger.log('   🎯 COMPREHENSIVE TEST RESULTS');
   Logger.log('===============================');
   Logger.log(`⏱️ Duration: ${Math.round(duration / 1000)}s`);

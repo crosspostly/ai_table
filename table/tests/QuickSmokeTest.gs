@@ -19,8 +19,7 @@ function runQuickSmokeTest() {
   };
   
   // === CRITICAL FUNCTION CHECKS ===
-  Logger.log('
-🔍 Testing critical function availability...');
+  Logger.log('\n🔍 Testing critical function availability...');
   
   const criticalFunctions = [
     'importSocialPosts',
@@ -53,8 +52,7 @@ function runQuickSmokeTest() {
   });
   
   // === VALIDATION SMOKE TEST ===
-  Logger.log('
-🛡️ Testing input validation...');
+  Logger.log('\n🛡️ Testing input validation...');
   
   results.totalTests++;
   try {
@@ -99,8 +97,7 @@ function runQuickSmokeTest() {
   }
   
   // === PLATFORM DETECTION SMOKE TEST ===
-  Logger.log('
-🔍 Testing platform detection...');
+  Logger.log('\n🔍 Testing platform detection...');
   
   const quickPlatformTests = [
     ['https://www.instagram.com/nasa/', 'instagram', 'nasa'],
