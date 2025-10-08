@@ -83,9 +83,30 @@ jobs:
         run: |
           echo "📦 Deploying Server project..."
           cp .clasp-server.json .clasp.json
-          cp .claspignore-server table/.claspignore
+          
+          # Сохранить оба appsscript.json
+          if [ -f table/appsscript.json ]; then
+            mv table/appsscript.json table/appsscript.json.client-backup
+            echo "Backed up client appsscript.json"
+          fi
+          mv table/server/appsscript.json table/server/appsscript.json.server-backup
+          echo "Backed up server appsscript.json"
+          
+          # Создать appsscript.json для server в корне table/
+          cp table/server/appsscript.json.server-backup table/appsscript.json
+          echo "Using server appsscript.json"
+          
           echo "Pushing to Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
           clasp push -f
+          
+          # Восстановить файлы
+          rm table/appsscript.json
+          mv table/server/appsscript.json.server-backup table/server/appsscript.json
+          if [ -f table/appsscript.json.client-backup ]; then
+            mv table/appsscript.json.client-backup table/appsscript.json
+          fi
+          echo "Restored original files"
+          
           echo "✅ Server deployment complete!"
 
       - name: Deploy Client Project
@@ -93,18 +114,20 @@ jobs:
           echo "📦 Deploying Client project (Container-bound to Google Sheets)..."
           cp .clasp-client.json .clasp.json
           
-          # Временно скрыть server/appsscript.json
+          # Временно скрыть server/appsscript.json чтобы clasp его не видел
           if [ -f table/server/appsscript.json ]; then
-            mv table/server/appsscript.json table/server/appsscript.json.bak
+            mv table/server/appsscript.json table/server/appsscript.json.server-backup
             echo "Temporarily moved table/server/appsscript.json"
           fi
           
+          echo "Using root appsscript.json for client"
           echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
           clasp push -f
           
-          # Восстановить файл
-          if [ -f table/server/appsscript.json.bak ]; then
-            mv table/server/appsscript.json.bak table/server/appsscript.json
+          # Восстановить server/appsscript.json
+          if [ -f table/server/appsscript.json.server-backup ]; then
+            mv table/server/appsscript.json.server-backup table/server/appsscript.json
+            echo "Restored server appsscript.json"
           fi
           
           echo "✅ Client deployment complete!"
