@@ -277,6 +277,17 @@ jobs:
             exit 1
           }
           
+          echo ""
+          echo "=== VERIFY CLIENT FILES UPLOADED ==="
+          echo "Running: clasp status"
+          clasp status || echo "Warning: clasp status failed"
+          echo ""
+          echo "Files that clasp reports as uploaded:"
+          cat /tmp/clasp-client-push.log | grep "└─" || echo "No file list in output"
+          echo ""
+          echo "✅ Client push completed. Files should now be in:"
+          echo "https://script.google.com/home/projects/1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs/edit"
+          
           # Восстановить server/appsscript.json
           if [ -f table/server/appsscript.json.server-backup ]; then
             mv table/server/appsscript.json.server-backup table/server/appsscript.json
@@ -289,4 +300,4 @@ jobs:
         run: |
           echo "🎉 All deployments completed successfully!"
           echo "📋 Server: table/server/ + table/shared/ → Script ID 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
-          echo "📋 Client: table/client/ + table/shared/ + table/web/ → Script ID 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
+          echo "📋 Client: table/client/ + table/shared/ + table/web/ → Script ID 1DdlYfvo0EfEA1O1n                                          
