@@ -1,0 +1,12 @@
+# Ignore everything except client, shared, and web folders
+server/**
+tests/**
+docs/**
+*.md
+**/*.md
+
+# Include only necessary folders
+!client/**
+!shared/**
+!web/**
+!appsscript.json

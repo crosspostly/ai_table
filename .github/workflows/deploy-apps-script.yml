@@ -1,0 +1,49 @@
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches:
+      - web-interface-with-design
+    paths:
+      - 'table/**'
+      - '.clasp-*.json'
+      - '.github/workflows/deploy-apps-script.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup clasp credentials
+        run: echo "${{ secrets.CLASPRC_JSON }}" > ~/.clasprc.json
+
+      - name: Deploy Server Project
+        run: |
+          echo "📦 Deploying Server project..."
+          cp .clasp-server.json .clasp.json
+          clasp push -f
+          echo "✅ Server deployment complete!"
+
+      - name: Deploy Client Project
+        run: |
+          echo "📦 Deploying Client project..."
+          cp .clasp-client.json .clasp.json
+          clasp push -f
+          echo "✅ Client deployment complete!"
+
+      - name: Summary
+        run: |
+          echo "🎉 All deployments completed successfully!"
+          echo "📋 Server: table/server/"
+          echo "📋 Client: table/client/, table/shared/, table/web/"
