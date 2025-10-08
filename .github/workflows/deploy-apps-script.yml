@@ -77,9 +77,19 @@ jobs:
           echo "$NEW_ACCESS_TOKEN" > /tmp/new_access_token.txt
 
       - name: Setup clasp credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
         run: |
           echo "Setting up clasp credentials with FRESH token..."
           echo "$CLASPRC_JSON" > ~/.clasprc.json
+          
+          # Verify file was written
+          if [ ! -s ~/.clasprc.json ]; then
+            echo "❌ ERROR: .clasprc.json is empty or does not exist!"
+            echo "File size: $(wc -c < ~/.clasprc.json 2>/dev/null || echo '0') bytes"
+            exit 1
+          fi
+          echo "✅ .clasprc.json written (size: $(wc -c < ~/.clasprc.json) bytes)"
           
           # Validate JSON
           if ! cat ~/.clasprc.json | jq empty 2>/dev/null; then
