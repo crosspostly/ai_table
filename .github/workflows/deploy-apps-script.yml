@@ -270,16 +270,20 @@ jobs:
             echo ""
             echo "Falling back to clasp push..."
             clasp push -f 2>&1 | tee /tmp/clasp-push.log || {
-            echo ""
-            echo "❌ CLASP PUSH FAILED!"
-            echo "Error output:"
-            cat /tmp/clasp-push.log
-            echo ""
-            echo "Checking what clasp tried to upload:"
-            echo "Files in rootDir:"
-            find table -type f -name "*.gs" -o -name "*.json" -o -name "*.html" | sort
-            exit 1
-          }
+              echo ""
+              echo "❌ CLASP PUSH FAILED!"
+              echo "Error output:"
+              cat /tmp/clasp-push.log
+              echo ""
+              echo "Checking what clasp tried to upload:"
+              echo "Files in rootDir:"
+              find table -type f -name "*.gs" -o -name "*.json" -o -name "*.html" | sort
+              exit 1
+            }
+          else
+            echo "✅ API Upload successful!"
+            echo "$RESPONSE" | jq .
+          fi
           
           echo ""
           echo "=== POST-PUSH VERIFICATION ==="
