@@ -49,8 +49,11 @@ function showActiveTriggersDialog() {
       return;
     }
     
-    var list = triggers.map((t,i) => (i+1)+'. '+t.getHandlerFunction()+' ('+t.getEventType()+')').join('\n');
-    SpreadsheetApp.getUi().alert('Активные триггеры', 'Всего: '+triggers.length+'\n\n'+list, SpreadsheetApp.getUi().ButtonSet.OK);
+    var list = triggers.map((t,i) => (i+1)+'. '+t.getHandlerFunction()+' ('+t.getEventType()+')').join('
+');
+    SpreadsheetApp.getUi().alert('Активные триггеры', 'Всего: '+triggers.length+'
+
+'+list, SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (e) {
     SpreadsheetApp.getUi().alert('Ошибка показа триггеров: ' + e.message);
   }

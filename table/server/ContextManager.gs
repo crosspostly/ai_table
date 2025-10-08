@@ -18,4 +18,372 @@ var CONTEXT_SETTINGS = {
   CONTEXT_TTL_HOURS: 24,          // Время жизни контекста в часах
   AUTO_CLEANUP_ENABLED: true,     // Автоматическая очистка
   CONTEXT_ENABLED_CELL: 'Параметры!C1' // Ячейка с настройкой включения контекста
-};\n\n/**\n * Проверяет, включен ли контекст\n * @return {boolean}\n */\nfunction isContextEnabled() {\n  try {\n    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();\n    var sheet = spreadsheet.getSheetByName('Параметры');\n    \n    if (!sheet) {\n      addSystemLog('⚠️ Лист \"Параметры\" не найден, контекст выключен', 'WARN', 'CONTEXT');\n      return false;\n    }\n    \n    var cellValue = sheet.getRange('C1').getValue();\n    \n    // Проверяем различные варианты \"включено\"\n    if (typeof cellValue === 'boolean') {\n      return cellValue;\n    }\n    \n    if (typeof cellValue === 'string') {\n      var lowerValue = cellValue.toLowerCase().trim();\n      return lowerValue === 'true' || lowerValue === 'да' || lowerValue === 'включен' || lowerValue === '1' || lowerValue === '✓';\n    }\n    \n    return false;\n    \n  } catch (error) {\n    addSystemLog('Ошибка проверки настройки контекста: ' + error.message, 'ERROR', 'CONTEXT');\n    return false;\n  }\n}\n\n/**\n * Получает ключ для кэша контекста\n * @param {string} sessionId - идентификатор сессии (по умолчанию 'default')\n * @return {string}\n */\nfunction getContextCacheKey(sessionId) {\n  sessionId = sessionId || 'default';\n  return 'context_history_' + sessionId;\n}\n\n/**\n * Получает историю контекста\n * @param {string} sessionId - идентификатор сессии\n * @return {Array<Object>} массив объектов {role: 'user'|'assistant', content: string, timestamp: number}\n */\nfunction getContextHistory(sessionId) {\n  try {\n    if (!isContextEnabled()) {\n      return [];\n    }\n    \n    var cache = CacheService.getScriptCache();\n    var cacheKey = getContextCacheKey(sessionId);\n    var historyJson = cache.get(cacheKey);\n    \n    if (!historyJson) {\n      return [];\n    }\n    \n    var history = JSON.parse(historyJson);\n    \n    // Фильтруем по времени жизни\n    var cutoffTime = Date.now() - (CONTEXT_SETTINGS.CONTEXT_TTL_HOURS * 60 * 60 * 1000);\n    history = history.filter(function(item) {\n      return item.timestamp > cutoffTime;\n    });\n    \n    // Ограничиваем количество элементов\n    if (history.length > CONTEXT_SETTINGS.MAX_HISTORY_ITEMS) {\n      history = history.slice(-CONTEXT_SETTINGS.MAX_HISTORY_ITEMS);\n    }\n    \n    addSystemLog('📖 Загружена история контекста: ' + history.length + ' элементов', 'INFO', 'CONTEXT');\n    return history;\n    \n  } catch (error) {\n    addSystemLog('Ошибка получения истории контекста: ' + error.message, 'ERROR', 'CONTEXT');\n    return [];\n  }\n}\n\n/**\n * Добавляет элемент в историю контекста\n * @param {string} role - роль ('user' или 'assistant')\n * @param {string} content - содержимое сообщения\n * @param {string} sessionId - идентификатор сессии\n */\nfunction addToContextHistory(role, content, sessionId) {\n  try {\n    if (!isContextEnabled()) {\n      return;\n    }\n    \n    if (!role || !content) {\n      return;\n    }\n    \n    var history = getContextHistory(sessionId);\n    \n    // Добавляем новый элемент\n    var newItem = {\n      role: role,\n      content: String(content),\n      timestamp: Date.now()\n    };\n    \n    history.push(newItem);\n    \n    // Ограничиваем размер\n    history = limitContextSize(history);\n    \n    // Сохраняем в кэш\n    var cache = CacheService.getScriptCache();\n    var cacheKey = getContextCacheKey(sessionId);\n    var ttl = CONTEXT_SETTINGS.CONTEXT_TTL_HOURS * 60 * 60; // В секундах\n    \n    cache.put(cacheKey, JSON.stringify(history), ttl);\n    \n    addSystemLog('💬 Добавлено в контекст: ' + role + ' (' + content.length + ' симв.)', 'INFO', 'CONTEXT');\n    \n  } catch (error) {\n    addSystemLog('Ошибка добавления в контекст: ' + error.message, 'ERROR', 'CONTEXT');\n  }\n}\n\n/**\n * Ограничивает размер контекста\n * @param {Array<Object>} history - история сообщений\n * @return {Array<Object>} - ограниченная история\n */\nfunction limitContextSize(history) {\n  if (!history || !Array.isArray(history)) {\n    return [];\n  }\n  \n  // Сначала ограничиваем по количеству\n  if (history.length > CONTEXT_SETTINGS.MAX_HISTORY_ITEMS) {\n    history = history.slice(-CONTEXT_SETTINGS.MAX_HISTORY_ITEMS);\n  }\n  \n  // Потом по общему размеру\n  var totalLength = 0;\n  var limitedHistory = [];\n  \n  // Идем с конца, чтобы сохранить самые новые сообщения\n  for (var i = history.length - 1; i >= 0; i--) {\n    var item = history[i];\n    var itemLength = item.content ? item.content.length : 0;\n    \n    if (totalLength + itemLength <= CONTEXT_SETTINGS.MAX_CONTEXT_LENGTH) {\n      limitedHistory.unshift(item);\n      totalLength += itemLength;\n    } else {\n      break;\n    }\n  }\n  \n  return limitedHistory;\n}\n\n/**\n * Формирует контекст для отправки в Gemini\n * @param {string} currentPrompt - текущий промпт\n * @param {string} sessionId - идентификатор сессии\n * @return {string} - промпт с контекстом\n */\nfunction buildContextualPrompt(currentPrompt, sessionId) {\n  try {\n    if (!isContextEnabled()) {\n      return currentPrompt;\n    }\n    \n    var history = getContextHistory(sessionId);\n    \n    if (history.length === 0) {\n      return currentPrompt;\n    }\n    \n    // Формируем контекстный промпт\n    var contextLines = ['=== КОНТЕКСТ ПРЕДЫДУЩЕГО ОБЩЕНИЯ ==='];\n    \n    for (var i = 0; i < history.length; i++) {\n      var item = history[i];\n      var roleLabel = item.role === 'user' ? 'ПОЛЬЗОВАТЕЛЬ' : 'АССИСТЕНТ';\n      contextLines.push(roleLabel + ': ' + item.content);\n    }\n    \n    contextLines.push('=== ТЕКУЩИЙ ЗАПРОС ===');\n    contextLines.push(currentPrompt);\n    \n    var fullPrompt = contextLines.join('\\n\\n');\n    \n    addSystemLog('🧠 Создан контекстный промпт: ' + history.length + ' элементов истории, ' + fullPrompt.length + ' символов', 'INFO', 'CONTEXT');\n    \n    return fullPrompt;\n    \n  } catch (error) {\n    addSystemLog('Ошибка создания контекстного промпта: ' + error.message, 'ERROR', 'CONTEXT');\n    return currentPrompt;\n  }\n}\n\n/**\n * Очищает историю контекста\n * @param {string} sessionId - идентификатор сессии (если не указан, очищаются все)\n */\nfunction clearContextHistory(sessionId) {\n  try {\n    var cache = CacheService.getScriptCache();\n    \n    if (sessionId) {\n      // Очищаем конкретную сессию\n      var cacheKey = getContextCacheKey(sessionId);\n      cache.remove(cacheKey);\n      addSystemLog('🧹 Очищен контекст сессии: ' + sessionId, 'INFO', 'CONTEXT');\n    } else {\n      // Очищаем все контексты (это сложнее, но можно использовать общую очистку)\n      // В Google Apps Script нет прямого способа получить все ключи,\n      // поэтому очищаем только известные\n      var commonSessionIds = ['default', 'chat', 'chain'];\n      var cleared = 0;\n      \n      for (var i = 0; i < commonSessionIds.length; i++) {\n        var key = getContextCacheKey(commonSessionIds[i]);\n        if (cache.get(key)) {\n          cache.remove(key);\n          cleared++;\n        }\n      }\n      \n      addSystemLog('🧹 Очищено контекстов: ' + cleared, 'INFO', 'CONTEXT');\n    }\n    \n  } catch (error) {\n    addSystemLog('Ошибка очистки контекста: ' + error.message, 'ERROR', 'CONTEXT');\n  }\n}\n\n/**\n * Автоматическая очистка старых контекстов\n */\nfunction autoCleanupContexts() {\n  try {\n    if (!CONTEXT_SETTINGS.AUTO_CLEANUP_ENABLED) {\n      return;\n    }\n    \n    addSystemLog('🔄 Запуск автоочистки контекстов', 'INFO', 'CONTEXT');\n    \n    // Принудительно обновляем все известные контексты\n    // (фильтрация по времени происходит автоматически при получении)\n    var commonSessionIds = ['default', 'chat', 'chain'];\n    \n    for (var i = 0; i < commonSessionIds.length; i++) {\n      var sessionId = commonSessionIds[i];\n      var history = getContextHistory(sessionId);\n      \n      if (history.length > 0) {\n        // Пересохраняем очищенную историю\n        var cache = CacheService.getScriptCache();\n        var cacheKey = getContextCacheKey(sessionId);\n        var ttl = CONTEXT_SETTINGS.CONTEXT_TTL_HOURS * 60 * 60;\n        \n        cache.put(cacheKey, JSON.stringify(history), ttl);\n      }\n    }\n    \n    addSystemLog('✅ Автоочистка контекстов завершена', 'INFO', 'CONTEXT');\n    \n  } catch (error) {\n    addSystemLog('Ошибка автоочистки контекстов: ' + error.message, 'ERROR', 'CONTEXT');\n  }\n}\n\n/**\n * Получает статистику по контекстам\n * @return {Object} - объект со статистикой\n */\nfunction getContextStatistics() {\n  try {\n    var stats = {\n      enabled: isContextEnabled(),\n      sessions: {},\n      totalItems: 0,\n      totalSize: 0\n    };\n    \n    if (!stats.enabled) {\n      return stats;\n    }\n    \n    var commonSessionIds = ['default', 'chat', 'chain'];\n    \n    for (var i = 0; i < commonSessionIds.length; i++) {\n      var sessionId = commonSessionIds[i];\n      var history = getContextHistory(sessionId);\n      \n      if (history.length > 0) {\n        var sessionSize = 0;\n        for (var j = 0; j < history.length; j++) {\n          sessionSize += history[j].content ? history[j].content.length : 0;\n        }\n        \n        stats.sessions[sessionId] = {\n          items: history.length,\n          size: sessionSize\n        };\n        \n        stats.totalItems += history.length;\n        stats.totalSize += sessionSize;\n      }\n    }\n    \n    return stats;\n    \n  } catch (error) {\n    addSystemLog('Ошибка получения статистики контекста: ' + error.message, 'ERROR', 'CONTEXT');\n    return {\n      enabled: false,\n      sessions: {},\n      totalItems: 0,\n      totalSize: 0,\n      error: error.message\n    };\n  }\n}\n\n/**\n * Экспортирует контекст в читаемом формате\n * @param {string} sessionId - идентификатор сессии\n * @return {string} - форматированная история\n */\nfunction exportContextHistory(sessionId) {\n  try {\n    var history = getContextHistory(sessionId || 'default');\n    \n    if (history.length === 0) {\n      return 'История контекста пуста.';\n    }\n    \n    var lines = ['=== ИСТОРИЯ КОНТЕКСТА ===', ''];\n    \n    for (var i = 0; i < history.length; i++) {\n      var item = history[i];\n      var date = new Date(item.timestamp);\n      var timeStr = Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');\n      var roleLabel = item.role === 'user' ? 'ПОЛЬЗОВАТЕЛЬ' : 'АССИСТЕНТ';\n      \n      lines.push('[' + timeStr + '] ' + roleLabel + ':');\n      lines.push(item.content);\n      lines.push('');\n    }\n    \n    return lines.join('\\n');\n    \n  } catch (error) {\n    addSystemLog('Ошибка экспорта контекста: ' + error.message, 'ERROR', 'CONTEXT');\n    return 'Ошибка экспорта: ' + error.message;\n  }\n}"
+};
+
+/**
+ * Проверяет, включен ли контекст
+ * @return {boolean}
+ */
+function isContextEnabled() {
+  try {
+    var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = spreadsheet.getSheetByName('Параметры');
+    
+    if (!sheet) {
+      addSystemLog('⚠️ Лист \"Параметры\" не найден, контекст выключен', 'WARN', 'CONTEXT');
+      return false;
+    }
+    
+    var cellValue = sheet.getRange('C1').getValue();
+    
+    // Проверяем различные варианты \"включено\"
+    if (typeof cellValue === 'boolean') {
+      return cellValue;
+    }
+    
+    if (typeof cellValue === 'string') {
+      var lowerValue = cellValue.toLowerCase().trim();
+      return lowerValue === 'true' || lowerValue === 'да' || lowerValue === 'включен' || lowerValue === '1' || lowerValue === '✓';
+    }
+    
+    return false;
+    
+  } catch (error) {
+    addSystemLog('Ошибка проверки настройки контекста: ' + error.message, 'ERROR', 'CONTEXT');
+    return false;
+  }
+}
+
+/**
+ * Получает ключ для кэша контекста
+ * @param {string} sessionId - идентификатор сессии (по умолчанию 'default')
+ * @return {string}
+ */
+function getContextCacheKey(sessionId) {
+  sessionId = sessionId || 'default';
+  return 'context_history_' + sessionId;
+}
+
+/**
+ * Получает историю контекста
+ * @param {string} sessionId - идентификатор сессии
+ * @return {Array<Object>} массив объектов {role: 'user'|'assistant', content: string, timestamp: number}
+ */
+function getContextHistory(sessionId) {
+  try {
+    if (!isContextEnabled()) {
+      return [];
+    }
+    
+    var cache = CacheService.getScriptCache();
+    var cacheKey = getContextCacheKey(sessionId);
+    var historyJson = cache.get(cacheKey);
+    
+    if (!historyJson) {
+      return [];
+    }
+    
+    var history = JSON.parse(historyJson);
+    
+    // Фильтруем по времени жизни
+    var cutoffTime = Date.now() - (CONTEXT_SETTINGS.CONTEXT_TTL_HOURS * 60 * 60 * 1000);
+    history = history.filter(function(item) {
+      return item.timestamp > cutoffTime;
+    });
+    
+    // Ограничиваем количество элементов
+    if (history.length > CONTEXT_SETTINGS.MAX_HISTORY_ITEMS) {
+      history = history.slice(-CONTEXT_SETTINGS.MAX_HISTORY_ITEMS);
+    }
+    
+    addSystemLog('📖 Загружена история контекста: ' + history.length + ' элементов', 'INFO', 'CONTEXT');
+    return history;
+    
+  } catch (error) {
+    addSystemLog('Ошибка получения истории контекста: ' + error.message, 'ERROR', 'CONTEXT');
+    return [];
+  }
+}
+
+/**
+ * Добавляет элемент в историю контекста
+ * @param {string} role - роль ('user' или 'assistant')
+ * @param {string} content - содержимое сообщения
+ * @param {string} sessionId - идентификатор сессии
+ */
+function addToContextHistory(role, content, sessionId) {
+  try {
+    if (!isContextEnabled()) {
+      return;
+    }
+    
+    if (!role || !content) {
+      return;
+    }
+    
+    var history = getContextHistory(sessionId);
+    
+    // Добавляем новый элемент
+    var newItem = {
+      role: role,
+      content: String(content),
+      timestamp: Date.now()
+    };
+    
+    history.push(newItem);
+    
+    // Ограничиваем размер
+    history = limitContextSize(history);
+    
+    // Сохраняем в кэш
+    var cache = CacheService.getScriptCache();
+    var cacheKey = getContextCacheKey(sessionId);
+    var ttl = CONTEXT_SETTINGS.CONTEXT_TTL_HOURS * 60 * 60; // В секундах
+    
+    cache.put(cacheKey, JSON.stringify(history), ttl);
+    
+    addSystemLog('💬 Добавлено в контекст: ' + role + ' (' + content.length + ' симв.)', 'INFO', 'CONTEXT');
+    
+  } catch (error) {
+    addSystemLog('Ошибка добавления в контекст: ' + error.message, 'ERROR', 'CONTEXT');
+  }
+}
+
+/**
+ * Ограничивает размер контекста
+ * @param {Array<Object>} history - история сообщений
+ * @return {Array<Object>} - ограниченная история
+ */
+function limitContextSize(history) {
+  if (!history || !Array.isArray(history)) {
+    return [];
+  }
+  
+  // Сначала ограничиваем по количеству
+  if (history.length > CONTEXT_SETTINGS.MAX_HISTORY_ITEMS) {
+    history = history.slice(-CONTEXT_SETTINGS.MAX_HISTORY_ITEMS);
+  }
+  
+  // Потом по общему размеру
+  var totalLength = 0;
+  var limitedHistory = [];
+  
+  // Идем с конца, чтобы сохранить самые новые сообщения
+  for (var i = history.length - 1; i >= 0; i--) {
+    var item = history[i];
+    var itemLength = item.content ? item.content.length : 0;
+    
+    if (totalLength + itemLength <= CONTEXT_SETTINGS.MAX_CONTEXT_LENGTH) {
+      limitedHistory.unshift(item);
+      totalLength += itemLength;
+    } else {
+      break;
+    }
+  }
+  
+  return limitedHistory;
+}
+
+/**
+ * Формирует контекст для отправки в Gemini
+ * @param {string} currentPrompt - текущий промпт
+ * @param {string} sessionId - идентификатор сессии
+ * @return {string} - промпт с контекстом
+ */
+function buildContextualPrompt(currentPrompt, sessionId) {
+  try {
+    if (!isContextEnabled()) {
+      return currentPrompt;
+    }
+    
+    var history = getContextHistory(sessionId);
+    
+    if (history.length === 0) {
+      return currentPrompt;
+    }
+    
+    // Формируем контекстный промпт
+    var contextLines = ['=== КОНТЕКСТ ПРЕДЫДУЩЕГО ОБЩЕНИЯ ==='];
+    
+    for (var i = 0; i < history.length; i++) {
+      var item = history[i];
+      var roleLabel = item.role === 'user' ? 'ПОЛЬЗОВАТЕЛЬ' : 'АССИСТЕНТ';
+      contextLines.push(roleLabel + ': ' + item.content);
+    }
+    
+    contextLines.push('=== ТЕКУЩИЙ ЗАПРОС ===');
+    contextLines.push(currentPrompt);
+    
+    var fullPrompt = contextLines.join('\
+\
+');
+    
+    addSystemLog('🧠 Создан контекстный промпт: ' + history.length + ' элементов истории, ' + fullPrompt.length + ' символов', 'INFO', 'CONTEXT');
+    
+    return fullPrompt;
+    
+  } catch (error) {
+    addSystemLog('Ошибка создания контекстного промпта: ' + error.message, 'ERROR', 'CONTEXT');
+    return currentPrompt;
+  }
+}
+
+/**
+ * Очищает историю контекста
+ * @param {string} sessionId - идентификатор сессии (если не указан, очищаются все)
+ */
+function clearContextHistory(sessionId) {
+  try {
+    var cache = CacheService.getScriptCache();
+    
+    if (sessionId) {
+      // Очищаем конкретную сессию
+      var cacheKey = getContextCacheKey(sessionId);
+      cache.remove(cacheKey);
+      addSystemLog('🧹 Очищен контекст сессии: ' + sessionId, 'INFO', 'CONTEXT');
+    } else {
+      // Очищаем все контексты (это сложнее, но можно использовать общую очистку)
+      // В Google Apps Script нет прямого способа получить все ключи,
+      // поэтому очищаем только известные
+      var commonSessionIds = ['default', 'chat', 'chain'];
+      var cleared = 0;
+      
+      for (var i = 0; i < commonSessionIds.length; i++) {
+        var key = getContextCacheKey(commonSessionIds[i]);
+        if (cache.get(key)) {
+          cache.remove(key);
+          cleared++;
+        }
+      }
+      
+      addSystemLog('🧹 Очищено контекстов: ' + cleared, 'INFO', 'CONTEXT');
+    }
+    
+  } catch (error) {
+    addSystemLog('Ошибка очистки контекста: ' + error.message, 'ERROR', 'CONTEXT');
+  }
+}
+
+/**
+ * Автоматическая очистка старых контекстов
+ */
+function autoCleanupContexts() {
+  try {
+    if (!CONTEXT_SETTINGS.AUTO_CLEANUP_ENABLED) {
+      return;
+    }
+    
+    addSystemLog('🔄 Запуск автоочистки контекстов', 'INFO', 'CONTEXT');
+    
+    // Принудительно обновляем все известные контексты
+    // (фильтрация по времени происходит автоматически при получении)
+    var commonSessionIds = ['default', 'chat', 'chain'];
+    
+    for (var i = 0; i < commonSessionIds.length; i++) {
+      var sessionId = commonSessionIds[i];
+      var history = getContextHistory(sessionId);
+      
+      if (history.length > 0) {
+        // Пересохраняем очищенную историю
+        var cache = CacheService.getScriptCache();
+        var cacheKey = getContextCacheKey(sessionId);
+        var ttl = CONTEXT_SETTINGS.CONTEXT_TTL_HOURS * 60 * 60;
+        
+        cache.put(cacheKey, JSON.stringify(history), ttl);
+      }
+    }
+    
+    addSystemLog('✅ Автоочистка контекстов завершена', 'INFO', 'CONTEXT');
+    
+  } catch (error) {
+    addSystemLog('Ошибка автоочистки контекстов: ' + error.message, 'ERROR', 'CONTEXT');
+  }
+}
+
+/**
+ * Получает статистику по контекстам
+ * @return {Object} - объект со статистикой
+ */
+function getContextStatistics() {
+  try {
+    var stats = {
+      enabled: isContextEnabled(),
+      sessions: {},
+      totalItems: 0,
+      totalSize: 0
+    };
+    
+    if (!stats.enabled) {
+      return stats;
+    }
+    
+    var commonSessionIds = ['default', 'chat', 'chain'];
+    
+    for (var i = 0; i < commonSessionIds.length; i++) {
+      var sessionId = commonSessionIds[i];
+      var history = getContextHistory(sessionId);
+      
+      if (history.length > 0) {
+        var sessionSize = 0;
+        for (var j = 0; j < history.length; j++) {
+          sessionSize += history[j].content ? history[j].content.length : 0;
+        }
+        
+        stats.sessions[sessionId] = {
+          items: history.length,
+          size: sessionSize
+        };
+        
+        stats.totalItems += history.length;
+        stats.totalSize += sessionSize;
+      }
+    }
+    
+    return stats;
+    
+  } catch (error) {
+    addSystemLog('Ошибка получения статистики контекста: ' + error.message, 'ERROR', 'CONTEXT');
+    return {
+      enabled: false,
+      sessions: {},
+      totalItems: 0,
+      totalSize: 0,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Экспортирует контекст в читаемом формате
+ * @param {string} sessionId - идентификатор сессии
+ * @return {string} - форматированная история
+ */
+function exportContextHistory(sessionId) {
+  try {
+    var history = getContextHistory(sessionId || 'default');
+    
+    if (history.length === 0) {
+      return 'История контекста пуста.';
+    }
+    
+    var lines = ['=== ИСТОРИЯ КОНТЕКСТА ===', ''];
+    
+    for (var i = 0; i < history.length; i++) {
+      var item = history[i];
+      var date = new Date(item.timestamp);
+      var timeStr = Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm:ss');
+      var roleLabel = item.role === 'user' ? 'ПОЛЬЗОВАТЕЛЬ' : 'АССИСТЕНТ';
+      
+      lines.push('[' + timeStr + '] ' + roleLabel + ':');
+      lines.push(item.content);
+      lines.push('');
+    }
+    
+    return lines.join('\
+');
+    
+  } catch (error) {
+    addSystemLog('Ошибка экспорта контекста: ' + error.message, 'ERROR', 'CONTEXT');
+    return 'Ошибка экспорта: ' + error.message;
+  }
+}"

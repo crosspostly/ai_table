@@ -148,4 +148,529 @@ function testLicenseSystem() {
   }
   
   return {
-    suite: testName,\n    tests: tests,\n    passed: tests.every(function(t) { return t.passed; })\n  };\n}\n\n/**\n * Тестирование детектора источников\n */\nfunction testSourceDetector() {\n  var testName = 'Source Detector';\n  var tests = [];\n  \n  try {\n    // Тест извлечения VK ссылок\n    tests.push({\n      name: 'VK URL extraction',\n      passed: testVkUrlExtraction(),\n      error: null\n    });\n    \n    // Тест извлечения Drive ссылок\n    tests.push({\n      name: 'Drive URL extraction',\n      passed: testDriveUrlExtraction(),\n      error: null\n    });\n    \n    // Тест извлечения обычных ссылок\n    tests.push({\n      name: 'Generic URL extraction',\n      passed: testGenericUrlExtraction(),\n      error: null\n    });\n    \n    // Тест дедупликации\n    tests.push({\n      name: 'URL deduplication',\n      passed: testUrlDeduplication(),\n      error: null\n    });\n    \n  } catch (error) {\n    tests.push({\n      name: 'Source detector error',\n      passed: false,\n      error: error.message\n    });\n  }\n  \n  return {\n    suite: testName,\n    tests: tests,\n    passed: tests.every(function(t) { return t.passed; })\n  };\n}\n\n/**\n * Тестирование коллекторов данных\n */\nfunction testDataCollectors() {\n  var testName = 'Data Collectors';\n  var tests = [];\n  \n  try {\n    // Тест Factory pattern\n    tests.push({\n      name: 'Collector factory',\n      passed: testCollectorFactory(),\n      error: null\n    });\n    \n    // Тест VK коллектора (mock)\n    tests.push({\n      name: 'VK collector mock',\n      passed: testVkCollectorMock(),\n      error: null\n    });\n    \n    // Тест URL коллектора\n    tests.push({\n      name: 'URL collector',\n      passed: testUrlCollector(),\n      error: null\n    });\n    \n  } catch (error) {\n    tests.push({\n      name: 'Data collectors error',\n      passed: false,\n      error: error.message\n    });\n  }\n  \n  return {\n    suite: testName,\n    tests: tests,\n    passed: tests.every(function(t) { return t.passed; })\n  };\n}\n\n/**\n * Тестирование OCR сервиса\n */\nfunction testOcrService() {\n  var testName = 'OCR Service';\n  var tests = [];\n  \n  try {\n    // Тест батчирования\n    tests.push({\n      name: 'Image batching',\n      passed: testImageBatching(),\n      error: null\n    });\n    \n    // Тест разделения по delimiter\n    tests.push({\n      name: 'Delimiter splitting',\n      passed: testDelimiterSplitting(),\n      error: null\n    });\n    \n    // Тест chunking\n    tests.push({\n      name: 'Image chunking',\n      passed: testImageChunking(),\n      error: null\n    });\n    \n  } catch (error) {\n    tests.push({\n      name: 'OCR service error',\n      passed: false,\n      error: error.message\n    });\n  }\n  \n  return {\n    suite: testName,\n    tests: tests,\n    passed: tests.every(function(t) { return t.passed; })\n  };\n}\n\n/**\n * Тестирование серверных эндпоинтов\n */\nfunction testServerEndpoints() {\n  var testName = 'Server Endpoints';\n  var tests = [];\n  \n  try {\n    // Тест парсинга запросов\n    tests.push({\n      name: 'Request parsing',\n      passed: testRequestParsing(),\n      error: null\n    });\n    \n    // Тест создания ответов\n    tests.push({\n      name: 'Response creation',\n      passed: testResponseCreation(),\n      error: null\n    });\n    \n    // Тест health check\n    tests.push({\n      name: 'Health check',\n      passed: testHealthCheck(),\n      error: null\n    });\n    \n  } catch (error) {\n    tests.push({\n      name: 'Server endpoints error',\n      passed: false,\n      error: error.message\n    });\n  }\n  \n  return {\n    suite: testName,\n    tests: tests,\n    passed: tests.every(function(t) { return t.passed; })\n  };\n}\n\n/**\n * Тестирование клиентских функций\n */\nfunction testClientFunctions() {\n  var testName = 'Client Functions';\n  var tests = [];\n  \n  try {\n    // Тест получения credentials\n    tests.push({\n      name: 'Credentials retrieval',\n      passed: testCredentialsRetrieval(),\n      error: null\n    });\n    \n    // Тест нормализации условий\n    tests.push({\n      name: 'Condition normalization',\n      passed: testConditionNormalization(),\n      error: null\n    });\n    \n    // Тест клиентского логирования\n    tests.push({\n      name: 'Client logging',\n      passed: testClientLogging(),\n      error: null\n    });\n    \n  } catch (error) {\n    tests.push({\n      name: 'Client functions error',\n      passed: false,\n      error: error.message\n    });\n  }\n  \n  return {\n    suite: testName,\n    tests: tests,\n    passed: tests.every(function(t) { return t.passed; })\n  };\n}\n\n// ============ КОНКРЕТНЫЕ ТЕСТЫ ============\n\nfunction testMarkdownConversion() {\n  var input = '# Заголовок\\n\\n**Жирный текст** и *курсив*\\n\\n```code block```';\n  var result = convertMarkdownToReadableText(input);\n  return result.includes('ЗАГОЛОВОК:') && result.includes('ЖИРНЫЙ ТЕКСТ');\n}\n\nfunction testSystemLogging() {\n  addSystemLog('Test message', 'INFO', 'TEST');\n  var logs = getSystemLogs(1);\n  return logs.includes('Test message');\n}\n\nfunction testJsonUtilities() {\n  var obj = { test: 'value' };\n  var json = safeJsonStringify(obj);\n  var parsed = safeJsonParse(json);\n  return parsed.test === 'value';\n}\n\nfunction testEmailValidation() {\n  return isValidEmail('test@example.com') && !isValidEmail('invalid-email');\n}\n\nfunction testTraceIdGeneration() {\n  var id1 = generateTraceId('test');\n  var id2 = generateTraceId('test');\n  return id1 !== id2 && id1.startsWith('test-');\n}\n\nfunction testInvalidCredentials() {\n  var result = checkUserLicense('invalid@email.com', 'invalid-token');\n  return !result.ok;\n}\n\nfunction testRateLimiting() {\n  // Простой тест - функция должна работать без ошибок\n  var result = checkRateLimit('test-token');\n  return typeof result === 'boolean';\n}\n\nfunction testEmailMasking() {\n  var masked = maskEmail('test@example.com');\n  return masked.includes('***') && masked.includes('@example.com');\n}\n\nfunction testVkUrlExtraction() {\n  var sources = extractImageSources('https://vk.com/photo123_456', '', '');\n  return sources.length > 0 && sources[0].source === IMAGE_SOURCES.VK;\n}\n\nfunction testDriveUrlExtraction() {\n  var sources = extractImageSources('https://drive.google.com/file/d/abc123', '', '');\n  return sources.length > 0 && sources[0].source === IMAGE_SOURCES.DRIVE;\n}\n\nfunction testGenericUrlExtraction() {\n  var sources = extractImageSources('https://example.com/image.jpg', '', '');\n  return sources.length > 0 && sources[0].source === IMAGE_SOURCES.URL;\n}\n\nfunction testUrlDeduplication() {\n  var sources = extractImageSources('https://example.com/image.jpg https://example.com/image.jpg', '', '');\n  return sources.length === 1;\n}\n\nfunction testCollectorFactory() {\n  var vkCollector = createDataCollector(IMAGE_SOURCES.VK);\n  var urlCollector = createDataCollector(IMAGE_SOURCES.URL);\n  return vkCollector && urlCollector;\n}\n\nfunction testVkCollectorMock() {\n  // Mock тест без реального VK API\n  try {\n    var vkCollector = createDataCollector(IMAGE_SOURCES.VK);\n    return vkCollector.type === IMAGE_SOURCES.VK;\n  } catch (e) {\n    return false;\n  }\n}\n\nfunction testUrlCollector() {\n  try {\n    var urlCollector = createDataCollector(IMAGE_SOURCES.URL);\n    return urlCollector.type === IMAGE_SOURCES.URL;\n  } catch (e) {\n    return false;\n  }\n}\n\nfunction testImageBatching() {\n  // Тест создания batch'а изображений\n  var images = ['img1', 'img2', 'img3'];\n  return createImageBatch(images, 2, 'trace').length <= 2;\n}\n\nfunction testDelimiterSplitting() {\n  var text = 'Часть 1---Часть 2---Часть 3';\n  var parts = splitTextByDelimiter(text, '---');\n  return parts.length === 3 && parts[0].trim() === 'Часть 1';\n}\n\nfunction testImageChunking() {\n  var images = new Array(10).fill('test');\n  var chunks = chunkArray(images, 3);\n  return chunks.length === 4 && chunks[0].length === 3;\n}\n\nfunction testRequestParsing() {\n  try {\n    var mockEvent = {\n      postData: {\n        contents: JSON.stringify({ action: 'test' })\n      }\n    };\n    var parsed = parseRequestBody(mockEvent);\n    return parsed.action === 'test';\n  } catch (e) {\n    return false;\n  }\n}\n\nfunction testResponseCreation() {\n  var response = createSuccessResponse({ test: 'data' }, 'trace-123');\n  var content = response.getContent();\n  var data = JSON.parse(content);\n  return data.ok === true && data.traceId === 'trace-123';\n}\n\nfunction testHealthCheck() {\n  var health = {\n    ok: true,\n    services: {\n      ocr: checkOcrServiceHealth(),\n      licensing: checkLicensingHealth()\n    }\n  };\n  return health.services.ocr.status && health.services.licensing.status;\n}\n\nfunction testCredentialsRetrieval() {\n  var creds = getClientCredentials();\n  return creds && typeof creds.valid === 'boolean';\n}\n\nfunction testConditionNormalization() {\n  return normalizeCondition(true) === true && \n         normalizeCondition('false') === false &&\n         normalizeCondition(1) === true &&\n         normalizeCondition(0) === false;\n}\n\nfunction testClientLogging() {\n  logClient('Test client message');\n  return true; // Простая проверка что функция не падает\n}\n\n// ============ УТИЛИТЫ ТЕСТИРОВАНИЯ ============\n\n/**\n * Генерация сводки результатов тестов\n */\nfunction generateTestSummary(results) {\n  var totalSuites = results.length;\n  var passedSuites = results.filter(function(r) { return r.passed; }).length;\n  var failedSuites = totalSuites - passedSuites;\n  \n  var totalTests = 0;\n  var passedTests = 0;\n  var failedTests = [];\n  \n  results.forEach(function(suite) {\n    totalTests += suite.tests.length;\n    suite.tests.forEach(function(test) {\n      if (test.passed) {\n        passedTests++;\n      } else {\n        failedTests.push(suite.suite + ': ' + test.name + (test.error ? ' (' + test.error + ')' : ''));\n      }\n    });\n  });\n  \n  var status = failedTests.length === 0 ? 'PASSED' : 'FAILED';\n  \n  var report = 'Результаты тестирования Table AI v2.0:\\n\\n' +\n               'Статус: ' + status + '\\n' +\n               'Тестовых наборов: ' + passedSuites + '/' + totalSuites + '\\n' +\n               'Тестов: ' + passedTests + '/' + totalTests + '\\n';\n  \n  if (failedTests.length > 0) {\n    report += '\\nНеудачные тесты:\\n' + failedTests.join('\\n');\n  }\n  \n  return {\n    status: status,\n    totalSuites: totalSuites,\n    passedSuites: passedSuites,\n    failedSuites: failedSuites,\n    totalTests: totalTests,\n    passedTests: passedTests,\n    failedTests: failedTests.length,\n    report: report\n  };\n}\n\n/**\n * Создание batch'а изображений для тестирования\n */\nfunction createImageBatch(images, maxSize, traceId) {\n  return images.slice(0, maxSize);\n}\n\n/**\n * Разделение текста по разделителю для тестирования\n */\nfunction splitTextByDelimiter(text, delimiter) {\n  return text.split(delimiter);\n}\n\n/**\n * Создание chunks из массива для тестирования\n */\nfunction chunkArray(array, chunkSize) {\n  var chunks = [];\n  for (var i = 0; i < array.length; i += chunkSize) {\n    chunks.push(array.slice(i, i + chunkSize));\n  }\n  return chunks;\n}\n\n/**\n * Быстрый тест отдельного компонента\n */\nfunction quickTest(componentName) {\n  var ui = SpreadsheetApp.getUi();\n  \n  try {\n    var result;\n    \n    switch (componentName) {\n      case 'utils':\n        result = testUtilities();\n        break;\n      case 'license':\n        result = testLicenseSystem();\n        break;\n      case 'source':\n        result = testSourceDetector();\n        break;\n      case 'collectors':\n        result = testDataCollectors();\n        break;\n      case 'ocr':\n        result = testOcrService();\n        break;\n      case 'endpoints':\n        result = testServerEndpoints();\n        break;\n      case 'client':\n        result = testClientFunctions();\n        break;\n      default:\n        throw new Error('Unknown component: ' + componentName);\n    }\n    \n    var summary = result.passed ? 'PASSED' : 'FAILED';\n    var details = result.tests.map(function(t) {\n      return (t.passed ? '✅' : '❌') + ' ' + t.name;\n    }).join('\\n');\n    \n    ui.alert('Тест ' + componentName, summary + '\\n\\n' + details, ui.ButtonSet.OK);\n    \n  } catch (error) {\n    ui.alert('Ошибка теста', 'Ошибка тестирования ' + componentName + ': ' + error.message, ui.ButtonSet.OK);\n  }\n}
+    suite: testName,
+    tests: tests,
+    passed: tests.every(function(t) { return t.passed; })
+  };
+}
+
+/**
+ * Тестирование детектора источников
+ */
+function testSourceDetector() {
+  var testName = 'Source Detector';
+  var tests = [];
+  
+  try {
+    // Тест извлечения VK ссылок
+    tests.push({
+      name: 'VK URL extraction',
+      passed: testVkUrlExtraction(),
+      error: null
+    });
+    
+    // Тест извлечения Drive ссылок
+    tests.push({
+      name: 'Drive URL extraction',
+      passed: testDriveUrlExtraction(),
+      error: null
+    });
+    
+    // Тест извлечения обычных ссылок
+    tests.push({
+      name: 'Generic URL extraction',
+      passed: testGenericUrlExtraction(),
+      error: null
+    });
+    
+    // Тест дедупликации
+    tests.push({
+      name: 'URL deduplication',
+      passed: testUrlDeduplication(),
+      error: null
+    });
+    
+  } catch (error) {
+    tests.push({
+      name: 'Source detector error',
+      passed: false,
+      error: error.message
+    });
+  }
+  
+  return {
+    suite: testName,
+    tests: tests,
+    passed: tests.every(function(t) { return t.passed; })
+  };
+}
+
+/**
+ * Тестирование коллекторов данных
+ */
+function testDataCollectors() {
+  var testName = 'Data Collectors';
+  var tests = [];
+  
+  try {
+    // Тест Factory pattern
+    tests.push({
+      name: 'Collector factory',
+      passed: testCollectorFactory(),
+      error: null
+    });
+    
+    // Тест VK коллектора (mock)
+    tests.push({
+      name: 'VK collector mock',
+      passed: testVkCollectorMock(),
+      error: null
+    });
+    
+    // Тест URL коллектора
+    tests.push({
+      name: 'URL collector',
+      passed: testUrlCollector(),
+      error: null
+    });
+    
+  } catch (error) {
+    tests.push({
+      name: 'Data collectors error',
+      passed: false,
+      error: error.message
+    });
+  }
+  
+  return {
+    suite: testName,
+    tests: tests,
+    passed: tests.every(function(t) { return t.passed; })
+  };
+}
+
+/**
+ * Тестирование OCR сервиса
+ */
+function testOcrService() {
+  var testName = 'OCR Service';
+  var tests = [];
+  
+  try {
+    // Тест батчирования
+    tests.push({
+      name: 'Image batching',
+      passed: testImageBatching(),
+      error: null
+    });
+    
+    // Тест разделения по delimiter
+    tests.push({
+      name: 'Delimiter splitting',
+      passed: testDelimiterSplitting(),
+      error: null
+    });
+    
+    // Тест chunking
+    tests.push({
+      name: 'Image chunking',
+      passed: testImageChunking(),
+      error: null
+    });
+    
+  } catch (error) {
+    tests.push({
+      name: 'OCR service error',
+      passed: false,
+      error: error.message
+    });
+  }
+  
+  return {
+    suite: testName,
+    tests: tests,
+    passed: tests.every(function(t) { return t.passed; })
+  };
+}
+
+/**
+ * Тестирование серверных эндпоинтов
+ */
+function testServerEndpoints() {
+  var testName = 'Server Endpoints';
+  var tests = [];
+  
+  try {
+    // Тест парсинга запросов
+    tests.push({
+      name: 'Request parsing',
+      passed: testRequestParsing(),
+      error: null
+    });
+    
+    // Тест создания ответов
+    tests.push({
+      name: 'Response creation',
+      passed: testResponseCreation(),
+      error: null
+    });
+    
+    // Тест health check
+    tests.push({
+      name: 'Health check',
+      passed: testHealthCheck(),
+      error: null
+    });
+    
+  } catch (error) {
+    tests.push({
+      name: 'Server endpoints error',
+      passed: false,
+      error: error.message
+    });
+  }
+  
+  return {
+    suite: testName,
+    tests: tests,
+    passed: tests.every(function(t) { return t.passed; })
+  };
+}
+
+/**
+ * Тестирование клиентских функций
+ */
+function testClientFunctions() {
+  var testName = 'Client Functions';
+  var tests = [];
+  
+  try {
+    // Тест получения credentials
+    tests.push({
+      name: 'Credentials retrieval',
+      passed: testCredentialsRetrieval(),
+      error: null
+    });
+    
+    // Тест нормализации условий
+    tests.push({
+      name: 'Condition normalization',
+      passed: testConditionNormalization(),
+      error: null
+    });
+    
+    // Тест клиентского логирования
+    tests.push({
+      name: 'Client logging',
+      passed: testClientLogging(),
+      error: null
+    });
+    
+  } catch (error) {
+    tests.push({
+      name: 'Client functions error',
+      passed: false,
+      error: error.message
+    });
+  }
+  
+  return {
+    suite: testName,
+    tests: tests,
+    passed: tests.every(function(t) { return t.passed; })
+  };
+}
+
+// ============ КОНКРЕТНЫЕ ТЕСТЫ ============
+
+function testMarkdownConversion() {
+  var input = '# Заголовок\
+\
+**Жирный текст** и *курсив*\
+\
+```code block```';
+  var result = convertMarkdownToReadableText(input);
+  return result.includes('ЗАГОЛОВОК:') && result.includes('ЖИРНЫЙ ТЕКСТ');
+}
+
+function testSystemLogging() {
+  addSystemLog('Test message', 'INFO', 'TEST');
+  var logs = getSystemLogs(1);
+  return logs.includes('Test message');
+}
+
+function testJsonUtilities() {
+  var obj = { test: 'value' };
+  var json = safeJsonStringify(obj);
+  var parsed = safeJsonParse(json);
+  return parsed.test === 'value';
+}
+
+function testEmailValidation() {
+  return isValidEmail('test@example.com') && !isValidEmail('invalid-email');
+}
+
+function testTraceIdGeneration() {
+  var id1 = generateTraceId('test');
+  var id2 = generateTraceId('test');
+  return id1 !== id2 && id1.startsWith('test-');
+}
+
+function testInvalidCredentials() {
+  var result = checkUserLicense('invalid@email.com', 'invalid-token');
+  return !result.ok;
+}
+
+function testRateLimiting() {
+  // Простой тест - функция должна работать без ошибок
+  var result = checkRateLimit('test-token');
+  return typeof result === 'boolean';
+}
+
+function testEmailMasking() {
+  var masked = maskEmail('test@example.com');
+  return masked.includes('***') && masked.includes('@example.com');
+}
+
+function testVkUrlExtraction() {
+  var sources = extractImageSources('https://vk.com/photo123_456', '', '');
+  return sources.length > 0 && sources[0].source === IMAGE_SOURCES.VK;
+}
+
+function testDriveUrlExtraction() {
+  var sources = extractImageSources('https://drive.google.com/file/d/abc123', '', '');
+  return sources.length > 0 && sources[0].source === IMAGE_SOURCES.DRIVE;
+}
+
+function testGenericUrlExtraction() {
+  var sources = extractImageSources('https://example.com/image.jpg', '', '');
+  return sources.length > 0 && sources[0].source === IMAGE_SOURCES.URL;
+}
+
+function testUrlDeduplication() {
+  var sources = extractImageSources('https://example.com/image.jpg https://example.com/image.jpg', '', '');
+  return sources.length === 1;
+}
+
+function testCollectorFactory() {
+  var vkCollector = createDataCollector(IMAGE_SOURCES.VK);
+  var urlCollector = createDataCollector(IMAGE_SOURCES.URL);
+  return vkCollector && urlCollector;
+}
+
+function testVkCollectorMock() {
+  // Mock тест без реального VK API
+  try {
+    var vkCollector = createDataCollector(IMAGE_SOURCES.VK);
+    return vkCollector.type === IMAGE_SOURCES.VK;
+  } catch (e) {
+    return false;
+  }
+}
+
+function testUrlCollector() {
+  try {
+    var urlCollector = createDataCollector(IMAGE_SOURCES.URL);
+    return urlCollector.type === IMAGE_SOURCES.URL;
+  } catch (e) {
+    return false;
+  }
+}
+
+function testImageBatching() {
+  // Тест создания batch'а изображений
+  var images = ['img1', 'img2', 'img3'];
+  return createImageBatch(images, 2, 'trace').length <= 2;
+}
+
+function testDelimiterSplitting() {
+  var text = 'Часть 1---Часть 2---Часть 3';
+  var parts = splitTextByDelimiter(text, '---');
+  return parts.length === 3 && parts[0].trim() === 'Часть 1';
+}
+
+function testImageChunking() {
+  var images = new Array(10).fill('test');
+  var chunks = chunkArray(images, 3);
+  return chunks.length === 4 && chunks[0].length === 3;
+}
+
+function testRequestParsing() {
+  try {
+    var mockEvent = {
+      postData: {
+        contents: JSON.stringify({ action: 'test' })
+      }
+    };
+    var parsed = parseRequestBody(mockEvent);
+    return parsed.action === 'test';
+  } catch (e) {
+    return false;
+  }
+}
+
+function testResponseCreation() {
+  var response = createSuccessResponse({ test: 'data' }, 'trace-123');
+  var content = response.getContent();
+  var data = JSON.parse(content);
+  return data.ok === true && data.traceId === 'trace-123';
+}
+
+function testHealthCheck() {
+  var health = {
+    ok: true,
+    services: {
+      ocr: checkOcrServiceHealth(),
+      licensing: checkLicensingHealth()
+    }
+  };
+  return health.services.ocr.status && health.services.licensing.status;
+}
+
+function testCredentialsRetrieval() {
+  var creds = getClientCredentials();
+  return creds && typeof creds.valid === 'boolean';
+}
+
+function testConditionNormalization() {
+  return normalizeCondition(true) === true && 
+         normalizeCondition('false') === false &&
+         normalizeCondition(1) === true &&
+         normalizeCondition(0) === false;
+}
+
+function testClientLogging() {
+  logClient('Test client message');
+  return true; // Простая проверка что функция не падает
+}
+
+// ============ УТИЛИТЫ ТЕСТИРОВАНИЯ ============
+
+/**
+ * Генерация сводки результатов тестов
+ */
+function generateTestSummary(results) {
+  var totalSuites = results.length;
+  var passedSuites = results.filter(function(r) { return r.passed; }).length;
+  var failedSuites = totalSuites - passedSuites;
+  
+  var totalTests = 0;
+  var passedTests = 0;
+  var failedTests = [];
+  
+  results.forEach(function(suite) {
+    totalTests += suite.tests.length;
+    suite.tests.forEach(function(test) {
+      if (test.passed) {
+        passedTests++;
+      } else {
+        failedTests.push(suite.suite + ': ' + test.name + (test.error ? ' (' + test.error + ')' : ''));
+      }
+    });
+  });
+  
+  var status = failedTests.length === 0 ? 'PASSED' : 'FAILED';
+  
+  var report = 'Результаты тестирования Table AI v2.0:\
+\
+' +
+               'Статус: ' + status + '\
+' +
+               'Тестовых наборов: ' + passedSuites + '/' + totalSuites + '\
+' +
+               'Тестов: ' + passedTests + '/' + totalTests + '\
+';
+  
+  if (failedTests.length > 0) {
+    report += '\
+Неудачные тесты:\
+' + failedTests.join('\
+');
+  }
+  
+  return {
+    status: status,
+    totalSuites: totalSuites,
+    passedSuites: passedSuites,
+    failedSuites: failedSuites,
+    totalTests: totalTests,
+    passedTests: passedTests,
+    failedTests: failedTests.length,
+    report: report
+  };
+}
+
+/**
+ * Создание batch'а изображений для тестирования
+ */
+function createImageBatch(images, maxSize, traceId) {
+  return images.slice(0, maxSize);
+}
+
+/**
+ * Разделение текста по разделителю для тестирования
+ */
+function splitTextByDelimiter(text, delimiter) {
+  return text.split(delimiter);
+}
+
+/**
+ * Создание chunks из массива для тестирования
+ */
+function chunkArray(array, chunkSize) {
+  var chunks = [];
+  for (var i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+/**
+ * Быстрый тест отдельного компонента
+ */
+function quickTest(componentName) {
+  var ui = SpreadsheetApp.getUi();
+  
+  try {
+    var result;
+    
+    switch (componentName) {
+      case 'utils':
+        result = testUtilities();
+        break;
+      case 'license':
+        result = testLicenseSystem();
+        break;
+      case 'source':
+        result = testSourceDetector();
+        break;
+      case 'collectors':
+        result = testDataCollectors();
+        break;
+      case 'ocr':
+        result = testOcrService();
+        break;
+      case 'endpoints':
+        result = testServerEndpoints();
+        break;
+      case 'client':
+        result = testClientFunctions();
+        break;
+      default:
+        throw new Error('Unknown component: ' + componentName);
+    }
+    
+    var summary = result.passed ? 'PASSED' : 'FAILED';
+    var details = result.tests.map(function(t) {
+      return (t.passed ? '✅' : '❌') + ' ' + t.name;
+    }).join('\
+');
+    
+    ui.alert('Тест ' + componentName, summary + '\
+\
+' + details, ui.ButtonSet.OK);
+    
+  } catch (error) {
+    ui.alert('Ошибка теста', 'Ошибка тестирования ' + componentName + ': ' + error.message, ui.ButtonSet.OK);
+  }
+}

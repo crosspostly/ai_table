@@ -37,4 +37,400 @@ function generateFriendlyMessage(error, context) {
   const lowerError = errorMessage.toLowerCase();
   
   // HTTP ошибки
-  const httpCode = extractHttpCode(errorMessage);\n  if (httpCode) {\n    return generateHttpErrorMessage(httpCode, context);\n  }\n  \n  // Платформо-специфичные ошибки\n  if (context.platform) {\n    const platformError = generatePlatformErrorMessage(lowerError, context.platform, context);\n    if (platformError) {\n      return platformError;\n    }\n  }\n  \n  // Общие ошибки приложения\n  const commonError = generateCommonErrorMessage(lowerError, context);\n  if (commonError) {\n    return commonError;\n  }\n  \n  // Если не удалось определить тип ошибки - возвращаем базовое сообщение\n  return generateGenericErrorMessage(error, context);\n}\n\n/**\n * Извлечение HTTP кода из сообщения об ошибке\n * @param {string} message - сообщение об ошибке\n * @return {number|null} - HTTP код или null\n */\nfunction extractHttpCode(message) {\n  const httpMatch = message.match(/HTTP\\s+(\\d+)/i);\n  return httpMatch ? parseInt(httpMatch[1]) : null;\n}\n\n/**\n * Сообщения для HTTP ошибок\n * @param {number} httpCode - код ошибки HTTP\n * @param {Object} context - контекст\n * @return {string} - сообщение\n */\nfunction generateHttpErrorMessage(httpCode, context) {\n  const baseMessages = {\n    400: '❌ Неправильный запрос. Проверьте параметры.',\n    401: '🔐 Ошибка авторизации.',\n    403: '🚫 Доступ запрещен.',\n    404: '🔍 Ресурс не найден.',\n    429: '⏰ Слишком много запросов.',\n    500: '🔧 Внутренняя ошибка сервера.',\n    502: '🌐 Проблемы с подключением к серверу.',\n    503: '⚠️ Сервис временно недоступен.',\n    504: '⏳ Превышено время ожидания ответа.'\n  };\n  \n  let message = baseMessages[httpCode] || `❌ Ошибка HTTP ${httpCode}.`;\n  \n  // Платформо-специфичные уточнения\n  if (context.platform === 'instagram' && httpCode === 403) {\n    message = '📷 Instagram заблокировал запрос. Возможные причины:\\n' +\n              '  • Слишком частые запросы\\n' +\n              '  • Аккаунт приватный или заблокированный\\n' +\n              '  • Временная блокировка IP адреса';\n              \n  } else if (context.platform === 'instagram' && httpCode === 429) {\n    message = '📷 Instagram ограничил скорость запросов.\\n' +\n              '⏰ Подождите 15-30 минут перед повторной попыткой.';\n              \n  } else if (context.platform === 'vk' && httpCode === 403) {\n    message = '📘 VK заблокировал доступ. Возможные причины:\\n' +\n              '  • Группа/профиль приватный\\n' +\n              '  • Требуется авторизация\\n' +\n              '  • Контент заблокирован';\n              \n  } else if (context.platform === 'telegram' && httpCode === 404) {\n    message = '✈️ Telegram канал не найден.\\n' +\n              '  • Проверьте правильность имени канала\\n' +\n              '  • Убедитесь что канал публичный';\n              \n  } else if (httpCode === 429) {\n    message += '\\n\\n💡 Советы:\\n' +\n               '  • Подождите 5-15 минут\\n' +\n               '  • Уменьшите количество запрашиваемых постов\\n' +\n               '  • Попробуйте в менее активное время';\n  }\n  \n  // Добавляем контекстную информацию\n  if (context.username) {\n    message += `\\n\\n👤 Пользователь: ${context.username}`;\n  }\n  if (context.url) {\n    message += `\\n🔗 URL: ${context.url}`;\n  }\n  \n  return message;\n}\n\n/**\n * Платформо-специфичные сообщения об ошибках\n * @param {string} lowerError - ошибка в нижнем регистре\n * @param {string} platform - платформа\n * @param {Object} context - контекст\n * @return {string|null} - сообщение или null\n */\nfunction generatePlatformErrorMessage(lowerError, platform, context) {\n  // Instagram ошибки\n  if (platform === 'instagram') {\n    if (lowerError.includes('user') && lowerError.includes('not found')) {\n      return `📷 Instagram пользователь \"${context.username || 'неизвестен'}\" не найден.\\n` +\n             '💡 Проверьте правильность написания имени пользователя.';\n    }\n    \n    if (lowerError.includes('private') || lowerError.includes('blocked')) {\n      return `🔒 Аккаунт Instagram \"${context.username || 'неизвестен'}\" приватный или заблокированный.\\n` +\n             '💡 Импорт возможен только из публичных аккаунтов.';\n    }\n    \n    if (lowerError.includes('rate limit') || lowerError.includes('too many requests')) {\n      return '📷 Instagram ограничил количество запросов.\\n' +\n             '⏰ Подождите 30 минут и попробуйте снова.';\n    }\n  }\n  \n  // VK ошибки\n  if (platform === 'vk') {\n    if (lowerError.includes('access denied') || lowerError.includes('доступ запрещен')) {\n      return `📘 Нет доступа к VK источнику \"${context.username || 'неизвестен'}\".\\n` +\n             '💡 Проверьте что группа/профиль публичные.';\n    }\n    \n    if (lowerError.includes('not found') || lowerError.includes('не найден')) {\n      return `📘 VK источник \"${context.username || 'неизвестен'}\" не найден.\\n` +\n             '💡 Проверьте правильность ID или имени группы.';\n    }\n    \n    if (lowerError.includes('parser') && lowerError.includes('unavailable')) {\n      return '🔧 VK Parser временно недоступен.\\n' +\n             '⏰ Попробуйте через 1-2 часа.';\n    }\n  }\n  \n  // Telegram ошибки\n  if (platform === 'telegram') {\n    if (lowerError.includes('channel') && lowerError.includes('not found')) {\n      return `✈️ Telegram канал \"${context.username || 'неизвестен'}\" не найден.\\n` +\n             '💡 Убедитесь что канал существует и является публичным.';\n    }\n    \n    if (lowerError.includes('private') || lowerError.includes('blocked')) {\n      return `🔒 Telegram канал \"${context.username || 'неизвестен'}\" приватный.\\n` +\n             '💡 Импорт возможен только из публичных каналов.';\n    }\n    \n    if (lowerError.includes('rss') && lowerError.includes('failed')) {\n      return '📡 RSS канал недоступен. Пробуем альтернативные методы...\\n' +\n             '⏳ Это может занять больше времени.';\n    }\n  }\n  \n  // Gemini ошибки\n  if (platform === 'gemini') {\n    if (lowerError.includes('quota') || lowerError.includes('limit')) {\n      return '🤖 Превышен лимит запросов к Gemini AI.\\n' +\n             '⏰ Попробуйте через несколько часов.';\n    }\n    \n    if (lowerError.includes('invalid') && lowerError.includes('request')) {\n      return '🤖 Некорректный запрос к Gemini AI.\\n' +\n             '💡 Попробуйте уменьшить количество постов для анализа.';\n    }\n  }\n  \n  return null;\n}\n\n/**\n * Общие сообщения об ошибках приложения\n * @param {string} lowerError - ошибка в нижнем регистре\n * @param {Object} context - контекст\n * @return {string|null} - сообщение или null\n */\nfunction generateCommonErrorMessage(lowerError, context) {\n  // Валидация входных данных\n  if (lowerError.includes('validation') || lowerError.includes('invalid input')) {\n    return '❌ Неверные входные данные.\\n' +\n           '💡 Проверьте правильность заполнения всех полей.';\n  }\n  \n  if (lowerError.includes('url') && lowerError.includes('invalid')) {\n    return '❌ Неверный формат URL.\\n' +\n           '💡 Используйте полные ссылки, например: https://instagram.com/username';\n  }\n  \n  if (lowerError.includes('username') && lowerError.includes('invalid')) {\n    return '❌ Неверное имя пользователя.\\n' +\n           '💡 Используйте только буквы, цифры и подчеркивание.';\n  }\n  \n  // Проблемы с подключением\n  if (lowerError.includes('network') || lowerError.includes('connection')) {\n    return '🌐 Проблема с подключением к интернету.\\n' +\n           '💡 Проверьте соединение и попробуйте позже.';\n  }\n  \n  if (lowerError.includes('timeout') || lowerError.includes('timed out')) {\n    return '⏳ Превышено время ожидания ответа.\\n' +\n           '💡 Попробуйте уменьшить количество постов или повторите позже.';\n  }\n  \n  // Проблемы с парсингом\n  if (lowerError.includes('parse') || lowerError.includes('parsing')) {\n    return '📄 Ошибка обработки данных.\\n' +\n           '💡 Возможно, формат данных изменился. Попробуйте позже.';\n  }\n  \n  // Проблемы с лицензией\n  if (lowerError.includes('license') || lowerError.includes('лицензия')) {\n    return '🎫 Проблема с лицензией.\\n' +\n           '💡 Проверьте настройки лицензирования в таблице.';\n  }\n  \n  // Проблемы с Gemini\n  if (lowerError.includes('gemini') && lowerError.includes('error')) {\n    return '🤖 Ошибка AI анализа.\\n' +\n           '💡 Попробуйте повторить анализ через несколько минут.';\n  }\n  \n  return null;\n}\n\n/**\n * Универсальное сообщение для неопределенных ошибок\n * @param {Error} error - ошибка\n * @param {Object} context - контекст\n * @return {string} - сообщение\n */\nfunction generateGenericErrorMessage(error, context) {\n  let message = '❌ Произошла неожиданная ошибка.';\n  \n  // Добавляем контекст операции\n  if (context.operation) {\n    const operationNames = {\n      'social_import': 'импорте из социальных сетей',\n      'gemini_analysis': 'AI анализе постов',\n      'license_check': 'проверке лицензии',\n      'data_validation': 'проверке данных',\n      'api_request': 'API запросе'\n    };\n    \n    const operationName = operationNames[context.operation] || context.operation;\n    message = `❌ Ошибка при ${operationName}.`;\n  }\n  \n  // Добавляем общие советы\n  message += '\\n\\n💡 Что можно попробовать:\\n' +\n             '  • Проверьте интернет-соединение\\n' +\n             '  • Попробуйте через несколько минут\\n' +\n             '  • Уменьшите количество запрашиваемых данных\\n' +\n             '  • Проверьте правильность введенных параметров';\n  \n  // Добавляем информацию для поддержки\n  if (context.supportInfo !== false) {\n    message += '\\n\\n🆘 При повторных проблемах сохраните эту информацию:\\n' +\n               `  • Время: ${new Date().toLocaleString()}\\n` +\n               `  • Операция: ${context.operation || 'неизвестно'}\\n` +\n               `  • Платформа: ${context.platform || 'неизвестно'}`;\n  }\n  \n  return message;\n}\n\n/**\n * Обертка для выполнения операций с обработкой ошибок\n * @param {Function} operation - операция для выполнения\n * @param {Object} context - контекст операции\n * @return {*} - результат операции\n */\nfunction executeWithErrorHandling(operation, context = {}) {\n  try {\n    return operation();\n  } catch (error) {\n    const friendlyError = createUserFriendlyError(error, context);\n    throw friendlyError;\n  }\n}\n\n/**\n * Обертка для асинхронных операций с обработкой ошибок\n * @param {Function} asyncOperation - асинхронная операция\n * @param {Object} context - контекст\n * @return {Promise} - промис с результатом\n */\nfunction executeAsyncWithErrorHandling(asyncOperation, context = {}) {\n  return new Promise((resolve, reject) => {\n    try {\n      const result = asyncOperation();\n      resolve(result);\n    } catch (error) {\n      const friendlyError = createUserFriendlyError(error, context);\n      reject(friendlyError);\n    }\n  });\n}\n\n/**\n * Логирование ошибки с полным контекстом\n * @param {Error} error - ошибка\n * @param {Object} context - контекст\n */\nfunction logErrorWithContext(error, context = {}) {\n  // Создаем детальный лог для разработчиков\n  const errorInfo = {\n    message: error.message,\n    stack: error.stack,\n    timestamp: new Date().toISOString(),\n    context: context,\n    userAgent: context.userAgent || 'unknown',\n    sessionId: context.sessionId || 'unknown'\n  };\n  \n  // Логируем в системный лог\n  addSystemLog(\n    `🔍 Error Details: ${JSON.stringify(errorInfo, null, 2)}`,\n    'ERROR',\n    'ERROR_HANDLER'\n  );\n  \n  // Опционально сохраняем в PropertiesService для анализа\n  if (context.saveForAnalysis) {\n    try {\n      const cache = PropertiesService.getScriptProperties();\n      const key = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n      cache.setProperty(key, JSON.stringify(errorInfo));\n    } catch (e) {\n      addSystemLog('⚠️ Failed to save error for analysis: ' + e.message, 'WARN', 'ERROR_HANDLER');\n    }\n  }\n}\n\n/**\n * Создание ошибки с пользовательскими данными\n * @param {string} message - сообщение\n * @param {Object} details - дополнительные данные\n * @return {Error} - кастомная ошибка\n */\nfunction createCustomError(message, details = {}) {\n  const error = new Error(message);\n  error.isCustom = true;\n  error.details = details;\n  error.timestamp = new Date();\n  \n  return error;\n}"
+  const httpCode = extractHttpCode(errorMessage);
+  if (httpCode) {
+    return generateHttpErrorMessage(httpCode, context);
+  }
+  
+  // Платформо-специфичные ошибки
+  if (context.platform) {
+    const platformError = generatePlatformErrorMessage(lowerError, context.platform, context);
+    if (platformError) {
+      return platformError;
+    }
+  }
+  
+  // Общие ошибки приложения
+  const commonError = generateCommonErrorMessage(lowerError, context);
+  if (commonError) {
+    return commonError;
+  }
+  
+  // Если не удалось определить тип ошибки - возвращаем базовое сообщение
+  return generateGenericErrorMessage(error, context);
+}
+
+/**
+ * Извлечение HTTP кода из сообщения об ошибке
+ * @param {string} message - сообщение об ошибке
+ * @return {number|null} - HTTP код или null
+ */
+function extractHttpCode(message) {
+  const httpMatch = message.match(/HTTP\\s+(\\d+)/i);
+  return httpMatch ? parseInt(httpMatch[1]) : null;
+}
+
+/**
+ * Сообщения для HTTP ошибок
+ * @param {number} httpCode - код ошибки HTTP
+ * @param {Object} context - контекст
+ * @return {string} - сообщение
+ */
+function generateHttpErrorMessage(httpCode, context) {
+  const baseMessages = {
+    400: '❌ Неправильный запрос. Проверьте параметры.',
+    401: '🔐 Ошибка авторизации.',
+    403: '🚫 Доступ запрещен.',
+    404: '🔍 Ресурс не найден.',
+    429: '⏰ Слишком много запросов.',
+    500: '🔧 Внутренняя ошибка сервера.',
+    502: '🌐 Проблемы с подключением к серверу.',
+    503: '⚠️ Сервис временно недоступен.',
+    504: '⏳ Превышено время ожидания ответа.'
+  };
+  
+  let message = baseMessages[httpCode] || `❌ Ошибка HTTP ${httpCode}.`;
+  
+  // Платформо-специфичные уточнения
+  if (context.platform === 'instagram' && httpCode === 403) {
+    message = '📷 Instagram заблокировал запрос. Возможные причины:\
+' +
+              '  • Слишком частые запросы\
+' +
+              '  • Аккаунт приватный или заблокированный\
+' +
+              '  • Временная блокировка IP адреса';
+              
+  } else if (context.platform === 'instagram' && httpCode === 429) {
+    message = '📷 Instagram ограничил скорость запросов.\
+' +
+              '⏰ Подождите 15-30 минут перед повторной попыткой.';
+              
+  } else if (context.platform === 'vk' && httpCode === 403) {
+    message = '📘 VK заблокировал доступ. Возможные причины:\
+' +
+              '  • Группа/профиль приватный\
+' +
+              '  • Требуется авторизация\
+' +
+              '  • Контент заблокирован';
+              
+  } else if (context.platform === 'telegram' && httpCode === 404) {
+    message = '✈️ Telegram канал не найден.\
+' +
+              '  • Проверьте правильность имени канала\
+' +
+              '  • Убедитесь что канал публичный';
+              
+  } else if (httpCode === 429) {
+    message += '\
+\
+💡 Советы:\
+' +
+               '  • Подождите 5-15 минут\
+' +
+               '  • Уменьшите количество запрашиваемых постов\
+' +
+               '  • Попробуйте в менее активное время';
+  }
+  
+  // Добавляем контекстную информацию
+  if (context.username) {
+    message += `\
+\
+👤 Пользователь: ${context.username}`;
+  }
+  if (context.url) {
+    message += `\
+🔗 URL: ${context.url}`;
+  }
+  
+  return message;
+}
+
+/**
+ * Платформо-специфичные сообщения об ошибках
+ * @param {string} lowerError - ошибка в нижнем регистре
+ * @param {string} platform - платформа
+ * @param {Object} context - контекст
+ * @return {string|null} - сообщение или null
+ */
+function generatePlatformErrorMessage(lowerError, platform, context) {
+  // Instagram ошибки
+  if (platform === 'instagram') {
+    if (lowerError.includes('user') && lowerError.includes('not found')) {
+      return `📷 Instagram пользователь \"${context.username || 'неизвестен'}\" не найден.\
+` +
+             '💡 Проверьте правильность написания имени пользователя.';
+    }
+    
+    if (lowerError.includes('private') || lowerError.includes('blocked')) {
+      return `🔒 Аккаунт Instagram \"${context.username || 'неизвестен'}\" приватный или заблокированный.\
+` +
+             '💡 Импорт возможен только из публичных аккаунтов.';
+    }
+    
+    if (lowerError.includes('rate limit') || lowerError.includes('too many requests')) {
+      return '📷 Instagram ограничил количество запросов.\
+' +
+             '⏰ Подождите 30 минут и попробуйте снова.';
+    }
+  }
+  
+  // VK ошибки
+  if (platform === 'vk') {
+    if (lowerError.includes('access denied') || lowerError.includes('доступ запрещен')) {
+      return `📘 Нет доступа к VK источнику \"${context.username || 'неизвестен'}\".\
+` +
+             '💡 Проверьте что группа/профиль публичные.';
+    }
+    
+    if (lowerError.includes('not found') || lowerError.includes('не найден')) {
+      return `📘 VK источник \"${context.username || 'неизвестен'}\" не найден.\
+` +
+             '💡 Проверьте правильность ID или имени группы.';
+    }
+    
+    if (lowerError.includes('parser') && lowerError.includes('unavailable')) {
+      return '🔧 VK Parser временно недоступен.\
+' +
+             '⏰ Попробуйте через 1-2 часа.';
+    }
+  }
+  
+  // Telegram ошибки
+  if (platform === 'telegram') {
+    if (lowerError.includes('channel') && lowerError.includes('not found')) {
+      return `✈️ Telegram канал \"${context.username || 'неизвестен'}\" не найден.\
+` +
+             '💡 Убедитесь что канал существует и является публичным.';
+    }
+    
+    if (lowerError.includes('private') || lowerError.includes('blocked')) {
+      return `🔒 Telegram канал \"${context.username || 'неизвестен'}\" приватный.\
+` +
+             '💡 Импорт возможен только из публичных каналов.';
+    }
+    
+    if (lowerError.includes('rss') && lowerError.includes('failed')) {
+      return '📡 RSS канал недоступен. Пробуем альтернативные методы...\
+' +
+             '⏳ Это может занять больше времени.';
+    }
+  }
+  
+  // Gemini ошибки
+  if (platform === 'gemini') {
+    if (lowerError.includes('quota') || lowerError.includes('limit')) {
+      return '🤖 Превышен лимит запросов к Gemini AI.\
+' +
+             '⏰ Попробуйте через несколько часов.';
+    }
+    
+    if (lowerError.includes('invalid') && lowerError.includes('request')) {
+      return '🤖 Некорректный запрос к Gemini AI.\
+' +
+             '💡 Попробуйте уменьшить количество постов для анализа.';
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Общие сообщения об ошибках приложения
+ * @param {string} lowerError - ошибка в нижнем регистре
+ * @param {Object} context - контекст
+ * @return {string|null} - сообщение или null
+ */
+function generateCommonErrorMessage(lowerError, context) {
+  // Валидация входных данных
+  if (lowerError.includes('validation') || lowerError.includes('invalid input')) {
+    return '❌ Неверные входные данные.\
+' +
+           '💡 Проверьте правильность заполнения всех полей.';
+  }
+  
+  if (lowerError.includes('url') && lowerError.includes('invalid')) {
+    return '❌ Неверный формат URL.\
+' +
+           '💡 Используйте полные ссылки, например: https://instagram.com/username';
+  }
+  
+  if (lowerError.includes('username') && lowerError.includes('invalid')) {
+    return '❌ Неверное имя пользователя.\
+' +
+           '💡 Используйте только буквы, цифры и подчеркивание.';
+  }
+  
+  // Проблемы с подключением
+  if (lowerError.includes('network') || lowerError.includes('connection')) {
+    return '🌐 Проблема с подключением к интернету.\
+' +
+           '💡 Проверьте соединение и попробуйте позже.';
+  }
+  
+  if (lowerError.includes('timeout') || lowerError.includes('timed out')) {
+    return '⏳ Превышено время ожидания ответа.\
+' +
+           '💡 Попробуйте уменьшить количество постов или повторите позже.';
+  }
+  
+  // Проблемы с парсингом
+  if (lowerError.includes('parse') || lowerError.includes('parsing')) {
+    return '📄 Ошибка обработки данных.\
+' +
+           '💡 Возможно, формат данных изменился. Попробуйте позже.';
+  }
+  
+  // Проблемы с лицензией
+  if (lowerError.includes('license') || lowerError.includes('лицензия')) {
+    return '🎫 Проблема с лицензией.\
+' +
+           '💡 Проверьте настройки лицензирования в таблице.';
+  }
+  
+  // Проблемы с Gemini
+  if (lowerError.includes('gemini') && lowerError.includes('error')) {
+    return '🤖 Ошибка AI анализа.\
+' +
+           '💡 Попробуйте повторить анализ через несколько минут.';
+  }
+  
+  return null;
+}
+
+/**
+ * Универсальное сообщение для неопределенных ошибок
+ * @param {Error} error - ошибка
+ * @param {Object} context - контекст
+ * @return {string} - сообщение
+ */
+function generateGenericErrorMessage(error, context) {
+  let message = '❌ Произошла неожиданная ошибка.';
+  
+  // Добавляем контекст операции
+  if (context.operation) {
+    const operationNames = {
+      'social_import': 'импорте из социальных сетей',
+      'gemini_analysis': 'AI анализе постов',
+      'license_check': 'проверке лицензии',
+      'data_validation': 'проверке данных',
+      'api_request': 'API запросе'
+    };
+    
+    const operationName = operationNames[context.operation] || context.operation;
+    message = `❌ Ошибка при ${operationName}.`;
+  }
+  
+  // Добавляем общие советы
+  message += '\
+\
+💡 Что можно попробовать:\
+' +
+             '  • Проверьте интернет-соединение\
+' +
+             '  • Попробуйте через несколько минут\
+' +
+             '  • Уменьшите количество запрашиваемых данных\
+' +
+             '  • Проверьте правильность введенных параметров';
+  
+  // Добавляем информацию для поддержки
+  if (context.supportInfo !== false) {
+    message += '\
+\
+🆘 При повторных проблемах сохраните эту информацию:\
+' +
+               `  • Время: ${new Date().toLocaleString()}\
+` +
+               `  • Операция: ${context.operation || 'неизвестно'}\
+` +
+               `  • Платформа: ${context.platform || 'неизвестно'}`;
+  }
+  
+  return message;
+}
+
+/**
+ * Обертка для выполнения операций с обработкой ошибок
+ * @param {Function} operation - операция для выполнения
+ * @param {Object} context - контекст операции
+ * @return {*} - результат операции
+ */
+function executeWithErrorHandling(operation, context = {}) {
+  try {
+    return operation();
+  } catch (error) {
+    const friendlyError = createUserFriendlyError(error, context);
+    throw friendlyError;
+  }
+}
+
+/**
+ * Обертка для асинхронных операций с обработкой ошибок
+ * @param {Function} asyncOperation - асинхронная операция
+ * @param {Object} context - контекст
+ * @return {Promise} - промис с результатом
+ */
+function executeAsyncWithErrorHandling(asyncOperation, context = {}) {
+  return new Promise((resolve, reject) => {
+    try {
+      const result = asyncOperation();
+      resolve(result);
+    } catch (error) {
+      const friendlyError = createUserFriendlyError(error, context);
+      reject(friendlyError);
+    }
+  });
+}
+
+/**
+ * Логирование ошибки с полным контекстом
+ * @param {Error} error - ошибка
+ * @param {Object} context - контекст
+ */
+function logErrorWithContext(error, context = {}) {
+  // Создаем детальный лог для разработчиков
+  const errorInfo = {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString(),
+    context: context,
+    userAgent: context.userAgent || 'unknown',
+    sessionId: context.sessionId || 'unknown'
+  };
+  
+  // Логируем в системный лог
+  addSystemLog(
+    `🔍 Error Details: ${JSON.stringify(errorInfo, null, 2)}`,
+    'ERROR',
+    'ERROR_HANDLER'
+  );
+  
+  // Опционально сохраняем в PropertiesService для анализа
+  if (context.saveForAnalysis) {
+    try {
+      const cache = PropertiesService.getScriptProperties();
+      const key = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cache.setProperty(key, JSON.stringify(errorInfo));
+    } catch (e) {
+      addSystemLog('⚠️ Failed to save error for analysis: ' + e.message, 'WARN', 'ERROR_HANDLER');
+    }
+  }
+}
+
+/**
+ * Создание ошибки с пользовательскими данными
+ * @param {string} message - сообщение
+ * @param {Object} details - дополнительные данные
+ * @return {Error} - кастомная ошибка
+ */
+function createCustomError(message, details = {}) {
+  const error = new Error(message);
+  error.isCustom = true;
+  error.details = details;
+  error.timestamp = new Date();
+  
+  return error;
+}"

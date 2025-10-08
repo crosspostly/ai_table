@@ -66,11 +66,13 @@ function validateSourceUrl(sourceUrl) {
   for (const scheme of dangerousSchemes) {
     if (lowerUrl.startsWith(scheme)) {
       throw new Error('❌ Недопустимый протокол URL. Используйте только https:// или http://');
-    }\n  }
+    }
+  }
   
   // Проверка на HTML/JS инъекции
   if (cleanUrl.includes('<') || cleanUrl.includes('>') || cleanUrl.includes('\"') || cleanUrl.includes(\"'\")) {
-    throw new Error('❌ URL содержит недопустимые символы (<, >, \", \\')');\n  }
+    throw new Error('❌ URL содержит недопустимые символы (<, >, \", \\')');
+  }
   
   // Валидация URL если это полная ссылка
   if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {

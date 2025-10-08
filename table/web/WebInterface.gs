@@ -24,7 +24,9 @@ function openWebInterface() {
     var ui = SpreadsheetApp.getUi();
     ui.alert('Ошибка веб-интерфейса', 
              'Не удалось открыть веб-интерфейс: ' + error.message + 
-             '\n\nИспользуйте стандартное меню для работы с ботом.', 
+             '
+
+Используйте стандартное меню для работы с ботом.', 
              ui.ButtonSet.OK);
     
     addSystemLog('Web interface error: ' + error.message, 'ERROR', 'WEB_INTERFACE');

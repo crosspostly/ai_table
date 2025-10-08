@@ -130,7 +130,8 @@ function extractUrlsFromText(text) {
     urls = urls.concat(httpMatches);
     
     // Домены без протокола
-    var domainMatches = text.match(/(?:^|\\s)(?:vk\\.com|drive\\.google\\.com|yadi\\.sk|disk\\.yandex\\.(?:ru|com)|dropbox\\.com)\\/[^\\n\\s<>\\)\\]\"]+/gi) || [];
+    var domainMatches = text.match(/(?:^|\\s)(?:vk\\.com|drive\\.google\\.com|yadi\\.sk|disk\\.yandex\\.(?:ru|com)|dropbox\\.com)\\/[^\
+\\s<>\\)\\]\"]+/gi) || [];
     urls = urls.concat(domainMatches.map(function(m) { return m.trim(); }));
     
   } catch (e) {

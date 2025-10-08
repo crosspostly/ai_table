@@ -276,8 +276,8 @@ jobs:
               REL_PATH="appsscript"
             fi
             
-            # Read and escape content
-            CONTENT=$(cat "$file" | jq -Rs .)
+            # Read and escape content (use -s NOT -Rs to preserve actual newlines)
+            CONTENT=$(cat "$file" | jq -R -s .)
             
             FILES_JSON+="{\"name\": \"$REL_PATH\", \"type\": \"$FILE_TYPE\", \"source\": $CONTENT}"
             echo "  Added: $REL_PATH ($FILE_TYPE)"

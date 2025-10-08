@@ -166,4 +166,232 @@ function fetchSocialApiWithRetry(platform, url, options = {}) {
         ...options.headers
       }
     }
-  };\n  \n  const config = platformConfigs[platform.toLowerCase()] || platformConfigs.vk;\n  const mergedOptions = {\n    ...options,\n    headers: config.headers\n  };\n  \n  return fetchWithRetry(url, mergedOptions, config);\n}\n\n/**\n * Retry для Gemini API запросов с учетом лимитов\n * ВАЖНО: Gemini запросы должны идти СТРОГО последовательно!\n * @param {string} url - Gemini API URL\n * @param {Object} options - опции запроса\n * @return {HTTPResponse} - ответ\n */\nfunction fetchGeminiWithRetry(url, options = {}) {\n  // Обеспечиваем последовательность запросов к Gemini\n  const lockKey = 'gemini_request_lock';\n  const cache = PropertiesService.getScriptProperties();\n  \n  // Ждем освобождения блокировки (максимум 30 секунд)\n  let waitTime = 0;\n  const maxWaitTime = 30000;\n  \n  while (cache.getProperty(lockKey) && waitTime < maxWaitTime) {\n    Utilities.sleep(500);\n    waitTime += 500;\n  }\n  \n  try {\n    // Устанавливаем блокировку\n    cache.setProperty(lockKey, String(Date.now()));\n    \n    const config = {\n      maxRetries: 2, // Gemini обычно стабилен\n      baseDelay: 2000,\n      maxDelay: 10000,\n      retryOnStatus: [429, 500, 502, 503],\n      logEnabled: true\n    };\n    \n    const mergedOptions = {\n      ...options,\n      headers: {\n        'Content-Type': 'application/json',\n        ...options.headers\n      }\n    };\n    \n    addSystemLog('🤖 Gemini запрос (последовательный)', 'INFO', 'RETRY_SERVICE');\n    \n    const response = fetchWithRetry(url, mergedOptions, config);\n    \n    // Дополнительная пауза после Gemini запроса\n    Utilities.sleep(1000);\n    \n    return response;\n    \n  } finally {\n    // Всегда освобождаем блокировку\n    cache.deleteProperty(lockKey);\n  }\n}\n\n/**\n * Batch запросы с контролем нагрузки\n * @param {Array} requests - массив объектов {url, options, platform}\n * @param {Object} batchConfig - конфигурация batch\n * @return {Array} - массив результатов\n */\nfunction fetchBatchWithRetry(requests, batchConfig = {}) {\n  const config = {\n    maxConcurrent: batchConfig.maxConcurrent || 3, // Максимум 3 одновременных запроса\n    delayBetweenBatches: batchConfig.delayBetweenBatches || 2000,\n    failFast: batchConfig.failFast || false,\n    ...batchConfig\n  };\n  \n  const results = [];\n  const errors = [];\n  \n  // Разбиваем на батчи\n  for (let i = 0; i < requests.length; i += config.maxConcurrent) {\n    const batch = requests.slice(i, i + config.maxConcurrent);\n    \n    addSystemLog(`📦 Batch ${Math.floor(i / config.maxConcurrent) + 1}: ${batch.length} запросов`, 'INFO', 'RETRY_SERVICE');\n    \n    // Выполняем батч\n    for (const request of batch) {\n      try {\n        let response;\n        \n        if (request.platform === 'gemini') {\n          response = fetchGeminiWithRetry(request.url, request.options || {});\n        } else if (request.platform) {\n          response = fetchSocialApiWithRetry(request.platform, request.url, request.options || {});\n        } else {\n          response = fetchWithRetry(request.url, request.options || {});\n        }\n        \n        results.push({\n          success: true,\n          response: response,\n          request: request\n        });\n        \n      } catch (error) {\n        errors.push({\n          error: error.message,\n          request: request\n        });\n        \n        results.push({\n          success: false,\n          error: error.message,\n          request: request\n        });\n        \n        // Fail fast если включено\n        if (config.failFast) {\n          throw new Error(`Batch failed fast: ${error.message}`);\n        }\n      }\n      \n      // Небольшая пауза между запросами в батче\n      if (batch.indexOf(request) < batch.length - 1) {\n        Utilities.sleep(1000);\n      }\n    }\n    \n    // Пауза между батчами\n    if (i + config.maxConcurrent < requests.length) {\n      addSystemLog(`⏳ Пауза ${config.delayBetweenBatches}мс перед следующим батчем`, 'DEBUG', 'RETRY_SERVICE');\n      Utilities.sleep(config.delayBetweenBatches);\n    }\n  }\n  \n  addSystemLog(`📊 Batch завершен: ${results.filter(r => r.success).length} успешных, ${errors.length} ошибок`, 'INFO', 'RETRY_SERVICE');\n  \n  return {\n    results: results,\n    errors: errors,\n    successCount: results.filter(r => r.success).length,\n    errorCount: errors.length\n  };\n}\n\n/**\n * Проверка доступности API endpoint\n * @param {string} url - URL для проверки\n * @param {Object} options - опции запроса\n * @return {Object} - результат проверки\n */\nfunction checkApiHealth(url, options = {}) {\n  const startTime = Date.now();\n  \n  try {\n    const response = UrlFetchApp.fetch(url, {\n      method: 'HEAD', // Только заголовки\n      muteHttpExceptions: true,\n      ...options\n    });\n    \n    const responseTime = Date.now() - startTime;\n    const statusCode = response.getResponseCode();\n    \n    return {\n      available: statusCode >= 200 && statusCode < 400,\n      statusCode: statusCode,\n      responseTime: responseTime,\n      healthy: statusCode === 200 && responseTime < 5000,\n      url: url\n    };\n    \n  } catch (error) {\n    return {\n      available: false,\n      error: error.message,\n      responseTime: Date.now() - startTime,\n      healthy: false,\n      url: url\n    };\n  }\n}\n\n/**\n * Мониторинг здоровья всех API\n * @return {Object} - статус всех сервисов\n */\nfunction checkAllApisHealth() {\n  const apis = [\n    { name: 'Instagram', url: 'https://www.instagram.com/', platform: 'instagram' },\n    { name: 'VK', url: 'https://vk.com/', platform: 'vk' },\n    { name: 'Telegram', url: 'https://t.me/', platform: 'telegram' },\n    { name: 'VK Parser', url: VK_PARSER_URL, platform: 'vk' },\n    { name: 'Gemini API', url: GEMINI_API_URL, platform: 'gemini' }\n  ];\n  \n  const results = {};\n  \n  for (const api of apis) {\n    try {\n      results[api.name] = checkApiHealth(api.url);\n      Utilities.sleep(500); // Пауза между проверками\n    } catch (error) {\n      results[api.name] = {\n        available: false,\n        error: error.message,\n        healthy: false,\n        url: api.url\n      };\n    }\n  }\n  \n  const healthyCount = Object.values(results).filter(r => r.healthy).length;\n  \n  addSystemLog(`🏥 API Health Check: ${healthyCount}/${apis.length} сервисов работают нормально`, 'INFO', 'RETRY_SERVICE');\n  \n  return {\n    overall: healthyCount === apis.length,\n    healthyCount: healthyCount,\n    totalCount: apis.length,\n    details: results,\n    timestamp: new Date()\n  };\n}"
+  };
+  
+  const config = platformConfigs[platform.toLowerCase()] || platformConfigs.vk;
+  const mergedOptions = {
+    ...options,
+    headers: config.headers
+  };
+  
+  return fetchWithRetry(url, mergedOptions, config);
+}
+
+/**
+ * Retry для Gemini API запросов с учетом лимитов
+ * ВАЖНО: Gemini запросы должны идти СТРОГО последовательно!
+ * @param {string} url - Gemini API URL
+ * @param {Object} options - опции запроса
+ * @return {HTTPResponse} - ответ
+ */
+function fetchGeminiWithRetry(url, options = {}) {
+  // Обеспечиваем последовательность запросов к Gemini
+  const lockKey = 'gemini_request_lock';
+  const cache = PropertiesService.getScriptProperties();
+  
+  // Ждем освобождения блокировки (максимум 30 секунд)
+  let waitTime = 0;
+  const maxWaitTime = 30000;
+  
+  while (cache.getProperty(lockKey) && waitTime < maxWaitTime) {
+    Utilities.sleep(500);
+    waitTime += 500;
+  }
+  
+  try {
+    // Устанавливаем блокировку
+    cache.setProperty(lockKey, String(Date.now()));
+    
+    const config = {
+      maxRetries: 2, // Gemini обычно стабилен
+      baseDelay: 2000,
+      maxDelay: 10000,
+      retryOnStatus: [429, 500, 502, 503],
+      logEnabled: true
+    };
+    
+    const mergedOptions = {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    };
+    
+    addSystemLog('🤖 Gemini запрос (последовательный)', 'INFO', 'RETRY_SERVICE');
+    
+    const response = fetchWithRetry(url, mergedOptions, config);
+    
+    // Дополнительная пауза после Gemini запроса
+    Utilities.sleep(1000);
+    
+    return response;
+    
+  } finally {
+    // Всегда освобождаем блокировку
+    cache.deleteProperty(lockKey);
+  }
+}
+
+/**
+ * Batch запросы с контролем нагрузки
+ * @param {Array} requests - массив объектов {url, options, platform}
+ * @param {Object} batchConfig - конфигурация batch
+ * @return {Array} - массив результатов
+ */
+function fetchBatchWithRetry(requests, batchConfig = {}) {
+  const config = {
+    maxConcurrent: batchConfig.maxConcurrent || 3, // Максимум 3 одновременных запроса
+    delayBetweenBatches: batchConfig.delayBetweenBatches || 2000,
+    failFast: batchConfig.failFast || false,
+    ...batchConfig
+  };
+  
+  const results = [];
+  const errors = [];
+  
+  // Разбиваем на батчи
+  for (let i = 0; i < requests.length; i += config.maxConcurrent) {
+    const batch = requests.slice(i, i + config.maxConcurrent);
+    
+    addSystemLog(`📦 Batch ${Math.floor(i / config.maxConcurrent) + 1}: ${batch.length} запросов`, 'INFO', 'RETRY_SERVICE');
+    
+    // Выполняем батч
+    for (const request of batch) {
+      try {
+        let response;
+        
+        if (request.platform === 'gemini') {
+          response = fetchGeminiWithRetry(request.url, request.options || {});
+        } else if (request.platform) {
+          response = fetchSocialApiWithRetry(request.platform, request.url, request.options || {});
+        } else {
+          response = fetchWithRetry(request.url, request.options || {});
+        }
+        
+        results.push({
+          success: true,
+          response: response,
+          request: request
+        });
+        
+      } catch (error) {
+        errors.push({
+          error: error.message,
+          request: request
+        });
+        
+        results.push({
+          success: false,
+          error: error.message,
+          request: request
+        });
+        
+        // Fail fast если включено
+        if (config.failFast) {
+          throw new Error(`Batch failed fast: ${error.message}`);
+        }
+      }
+      
+      // Небольшая пауза между запросами в батче
+      if (batch.indexOf(request) < batch.length - 1) {
+        Utilities.sleep(1000);
+      }
+    }
+    
+    // Пауза между батчами
+    if (i + config.maxConcurrent < requests.length) {
+      addSystemLog(`⏳ Пауза ${config.delayBetweenBatches}мс перед следующим батчем`, 'DEBUG', 'RETRY_SERVICE');
+      Utilities.sleep(config.delayBetweenBatches);
+    }
+  }
+  
+  addSystemLog(`📊 Batch завершен: ${results.filter(r => r.success).length} успешных, ${errors.length} ошибок`, 'INFO', 'RETRY_SERVICE');
+  
+  return {
+    results: results,
+    errors: errors,
+    successCount: results.filter(r => r.success).length,
+    errorCount: errors.length
+  };
+}
+
+/**
+ * Проверка доступности API endpoint
+ * @param {string} url - URL для проверки
+ * @param {Object} options - опции запроса
+ * @return {Object} - результат проверки
+ */
+function checkApiHealth(url, options = {}) {
+  const startTime = Date.now();
+  
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      method: 'HEAD', // Только заголовки
+      muteHttpExceptions: true,
+      ...options
+    });
+    
+    const responseTime = Date.now() - startTime;
+    const statusCode = response.getResponseCode();
+    
+    return {
+      available: statusCode >= 200 && statusCode < 400,
+      statusCode: statusCode,
+      responseTime: responseTime,
+      healthy: statusCode === 200 && responseTime < 5000,
+      url: url
+    };
+    
+  } catch (error) {
+    return {
+      available: false,
+      error: error.message,
+      responseTime: Date.now() - startTime,
+      healthy: false,
+      url: url
+    };
+  }
+}
+
+/**
+ * Мониторинг здоровья всех API
+ * @return {Object} - статус всех сервисов
+ */
+function checkAllApisHealth() {
+  const apis = [
+    { name: 'Instagram', url: 'https://www.instagram.com/', platform: 'instagram' },
+    { name: 'VK', url: 'https://vk.com/', platform: 'vk' },
+    { name: 'Telegram', url: 'https://t.me/', platform: 'telegram' },
+    { name: 'VK Parser', url: VK_PARSER_URL, platform: 'vk' },
+    { name: 'Gemini API', url: GEMINI_API_URL, platform: 'gemini' }
+  ];
+  
+  const results = {};
+  
+  for (const api of apis) {
+    try {
+      results[api.name] = checkApiHealth(api.url);
+      Utilities.sleep(500); // Пауза между проверками
+    } catch (error) {
+      results[api.name] = {
+        available: false,
+        error: error.message,
+        healthy: false,
+        url: api.url
+      };
+    }
+  }
+  
+  const healthyCount = Object.values(results).filter(r => r.healthy).length;
+  
+  addSystemLog(`🏥 API Health Check: ${healthyCount}/${apis.length} сервисов работают нормально`, 'INFO', 'RETRY_SERVICE');
+  
+  return {
+    overall: healthyCount === apis.length,
+    healthyCount: healthyCount,
+    totalCount: apis.length,
+    details: results,
+    timestamp: new Date()
+  };
+}"

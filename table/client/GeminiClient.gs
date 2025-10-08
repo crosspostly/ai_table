@@ -126,10 +126,15 @@ function getGeminiApiKey() {
  */
 function initGeminiKey() {
   var ui = SpreadsheetApp.getUi();
-  var help = 'Где взять ключ (коротко):\\n' +
-             '1) Откройте: https://aistudio.google.com/app/apikey\\n' +
-             '2) Нажмите "Create API key"\\n' +
-             '3) Скопируйте ключ\\n\\n' +
+  var help = 'Где взять ключ (коротко):\
+' +
+             '1) Откройте: https://aistudio.google.com/app/apikey\
+' +
+             '2) Нажмите "Create API key"\
+' +
+             '3) Скопируйте ключ\
+\
+' +
              'Вставьте ключ в поле ниже и нажмите OK';
   
   var res = ui.prompt('🔑 Введите ваш Gemini API ключ', help, ui.ButtonSet.OK_CANCEL);
@@ -153,11 +158,18 @@ function initGeminiKey() {
 function showGeminiKeyHelp() {
   var ui = SpreadsheetApp.getUi();
   var msg =
-    'Как получить API ключ Gemini:\\n\\n' +
-    '1) Откройте Google AI Studio: https://aistudio.google.com/app/apikey\\n' +
-    '2) Нажмите "Create API key" (создать ключ)\\n' +
-    '3) Скопируйте ключ\\n' +
-    '4) Меню: 🔑 Gemini → "Установить API ключ" → вставьте ключ\\n\\n' +
+    'Как получить API ключ Gemini:\
+\
+' +
+    '1) Откройте Google AI Studio: https://aistudio.google.com/app/apikey\
+' +
+    '2) Нажмите "Create API key" (создать ключ)\
+' +
+    '3) Скопируйте ключ\
+' +
+    '4) Меню: 🔑 Gemini → "Установить API ключ" → вставьте ключ\
+\
+' +
     'Документация: https://ai.google.dev/gemini-api/docs/api-key?hl=ru';
   ui.alert('❓ Как получить API ключ Gemini', msg, ui.ButtonSet.OK);
 }
@@ -271,11 +283,15 @@ ${cellData}
     }
   }
   
-  var summary = 'OCR завершён:\\n' +
-                'Обработано: ' + processed + '\\n' +
-                'Пропущено: ' + skipped + '\\n' +
+  var summary = 'OCR завершён:\
+' +
+                'Обработано: ' + processed + '\
+' +
+                'Пропущено: ' + skipped + '\
+' +
                 'Ошибок: ' + errors;
   
-  logMessage(summary.replace(/\\n/g, ', '), 'INFO');
+  logMessage(summary.replace(/\
+/g, ', '), 'INFO');
   ui.alert(summary);
 }
