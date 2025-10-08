@@ -1,12 +1,10 @@
-# Ignore everything except client, shared, and web folders
-server/**
-tests/**
+# Ignore documentation and tests
 docs/**
+tests/**
 *.md
 **/*.md
 
-# Include only necessary folders
-!client/**
-!shared/**
-!web/**
+# Include all Apps Script code
+!**/*.gs
+!**/*.html
 !appsscript.json

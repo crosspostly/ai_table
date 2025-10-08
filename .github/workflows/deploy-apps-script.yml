@@ -6,7 +6,7 @@ on:
       - web-interface-with-design
     paths:
       - 'table/**'
-      - '.clasp-*.json'
+      - '.clasp.json'
       - '.github/workflows/deploy-apps-script.yml'
 
 jobs:
@@ -28,22 +28,15 @@ jobs:
       - name: Setup clasp credentials
         run: echo "${{ secrets.CLASPRC_JSON }}" > ~/.clasprc.json
 
-      - name: Deploy Server Project
+      - name: Deploy to Apps Script
         run: |
-          echo "📦 Deploying Server project..."
-          cp .clasp-server.json .clasp.json
+          echo "📦 Deploying to Apps Script..."
+          echo "📋 Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
           clasp push -f
-          echo "✅ Server deployment complete!"
-
-      - name: Deploy Client Project
-        run: |
-          echo "📦 Deploying Client project..."
-          cp .clasp-client.json .clasp.json
-          clasp push -f
-          echo "✅ Client deployment complete!"
+          echo "✅ Deployment complete!"
 
       - name: Summary
         run: |
-          echo "🎉 All deployments completed successfully!"
-          echo "📋 Server: table/server/"
-          echo "📋 Client: table/client/, table/shared/, table/web/"
+          echo "🎉 Deployment completed successfully!"
+          echo "📋 Deployed: table/server/, table/client/, table/shared/, table/web/"
+          echo "📋 Project: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
