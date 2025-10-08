@@ -1,0 +1,85 @@
+name: Debug Clasp Setup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install clasp
+        run: |
+          npm install -g @google/clasp
+          echo "Clasp version:"
+          clasp --version
+
+      - name: Test old format
+        run: |
+          echo "Testing OLD format..."
+          cat > ~/.clasprc.json << 'EOF'
+{
+  "token": {
+    "access_token": "test_access",
+    "refresh_token": "test_refresh",
+    "scope": "https://www.googleapis.com/auth/script.projects",
+    "token_type": "Bearer",
+    "expiry_date": 9999999999999
+  },
+  "oauth2ClientSettings": {
+    "clientId": "test_client_id",
+    "clientSecret": "test_secret",
+    "redirectUri": "http://localhost"
+  },
+  "isLocalCreds": false
+}
+EOF
+          echo "Old format content:"
+          cat ~/.clasprc.json
+          echo ""
+          if node -e "require(require('os').homedir() + '/.clasprc.json')"; then
+            echo "✅ Old format is valid Node.js JSON"
+          else
+            echo "❌ Old format is NOT valid"
+          fi
+
+      - name: Test new format
+        run: |
+          echo "Testing NEW format..."
+          cat > ~/.clasprc.json << 'EOF'
+{
+  "tokens": {
+    "default": {
+      "client_id": "test_client_id",
+      "client_secret": "test_secret",
+      "type": "authorized_user",
+      "refresh_token": "test_refresh",
+      "access_token": "test_access"
+    }
+  }
+}
+EOF
+          echo "New format content:"
+          cat ~/.clasprc.json
+          echo ""
+          if node -e "require(require('os').homedir() + '/.clasprc.json')"; then
+            echo "✅ New format is valid Node.js JSON"
+          else
+            echo "❌ New format is NOT valid"
+          fi
+
+      - name: Test your secret format
+        run: |
+          echo "Testing YOUR secret..."
+          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          echo "Your secret first 200 chars:"
+          cat ~/.clasprc.json | head -c 200
+          echo ""
+          echo "JSON validation:"
+          if cat ~/.clasprc.json | jq empty 2>/dev/null; then
+            echo "✅ Valid JSON syntax"
+            echo "Structure:"
+            cat ~/.clasprc.json | jq 'keys'
+          else
+            echo "❌ Invalid JSON syntax"
+          fi
