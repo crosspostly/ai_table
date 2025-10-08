@@ -360,7 +360,7 @@ function refreshCurrentGMCell() {
   
   var formula = range.getFormula();
   
-  if (!formula || !formula.match(/^=GM(_STATIC|_IF)?\(/i)) {
+  if (!formula || !formula.match(/^=GM(_STATIC|_IF)?\\(/i)) {
     SpreadsheetApp.getUi().alert('Выбранная ячейка не содержит формулу GM');
     return;
   }

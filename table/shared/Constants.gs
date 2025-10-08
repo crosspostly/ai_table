@@ -31,3 +31,6 @@ const SERVER_API_URL = 'https://script.google.com/macros/s/AKfycby_YOUR_SERVER_I
 // ====== Rate Limiting ======
 const RATE_LIMIT_WINDOW = 3600; // 1 час в секундах
 const MAX_REQUESTS_PER_HOUR = 100; // Максимум запросов в час
+
+// ====== DEBUG MODE ======
+const DEV_MODE = true; // Включить меню разработчика и расширенное логирование
