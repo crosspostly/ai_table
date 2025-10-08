@@ -142,30 +142,45 @@ jobs:
         run: |
           echo "📦 Deploying Server project..."
           
-          echo "DEBUG: Checking .clasprc.json before deploy..."
-          ls -la ~/.clasprc.json
-          echo "Token (first 40 chars):"
-          cat ~/.clasprc.json | jq -r '.token.access_token' | head -c 40
-          echo "..."
-          echo ""
-          
           cp .clasp-server.json .clasp.json
+          
+          echo "BEFORE moving - table/ contents:"
+          find table -name "appsscript.json" -o -type d | grep -E "(client|web|server)" | head -20
           
           # Переместить ВСЁ что НЕ нужно ВНЕ table/ (чтобы clasp их не видел)
           if [ -f table/appsscript.json ]; then
+            echo "Moving root appsscript.json..."
             mv table/appsscript.json /tmp/appsscript.json.backup
           fi
-          mv table/server/appsscript.json /tmp/server-appsscript.json.backup
-          mv table/client /tmp/client.backup
-          mv table/web /tmp/web.backup
-          echo "Moved client/, web/, and appsscript files OUTSIDE table/"
+          if [ -f table/server/appsscript.json ]; then
+            echo "Moving server/appsscript.json..."
+            mv table/server/appsscript.json /tmp/server-appsscript.json.backup
+          fi
+          if [ -d table/client ]; then
+            echo "Moving client/ directory..."
+            mv table/client /tmp/client.backup
+          fi
+          if [ -d table/web ]; then
+            echo "Moving web/ directory..."
+            mv table/web /tmp/web.backup
+          fi
           
           # Создать server appsscript.json в корне table/
-          cp /tmp/server-appsscript.json.backup table/appsscript.json
-          echo "Using server appsscript.json"
+          if [ -f /tmp/server-appsscript.json.backup ]; then
+            cp /tmp/server-appsscript.json.backup table/appsscript.json
+            echo "✅ Copied server appsscript.json to root"
+          else
+            echo "❌ ERROR: /tmp/server-appsscript.json.backup not found!"
+            exit 1
+          fi
           
-          echo "Current table/ structure (only server + shared):"
-          ls -la table/
+          echo ""
+          echo "AFTER moving - table/ structure:"
+          ls -laR table/ | head -50
+          echo ""
+          echo "Looking for appsscript files:"
+          find table -name "*appsscript*"
+          echo ""
           
           echo "Pushing to Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
           clasp push -f
