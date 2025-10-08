@@ -230,11 +230,13 @@ jobs:
             
             REL_PATH=${file#table/}
             
-            # Determine file type
+            # Determine file type and REMOVE extension for API
             if [[ "$file" == *.gs ]]; then
               FILE_TYPE="SERVER_JS"
+              REL_PATH="${REL_PATH%.gs}"  # Remove .gs extension!
             elif [[ "$file" == *.html ]]; then
               FILE_TYPE="HTML"
+              REL_PATH="${REL_PATH%.html}"  # Remove .html extension!
             elif [[ "$file" == *appsscript.json ]]; then
               FILE_TYPE="JSON"
               REL_PATH="appsscript"
