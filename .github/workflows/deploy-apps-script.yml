@@ -27,15 +27,42 @@ jobs:
 
       - name: Setup clasp credentials
         run: |
-          echo "Validating CLASPRC_JSON..."
+          echo "Setting up clasp credentials..."
           echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          
+          # Validate JSON
           if ! cat ~/.clasprc.json | jq empty 2>/dev/null; then
-            echo "❌ ERROR: Invalid JSON in CLASPRC_JSON secret!"
-            echo "First 100 chars:"
-            cat ~/.clasprc.json | head -c 100
+            echo "❌ ERROR: Invalid JSON!"
+            cat ~/.clasprc.json | head -c 200
             exit 1
           fi
-          echo "✅ CLASPRC_JSON is valid JSON"
+          
+          # Check format and convert if needed (new format -> old format)
+          if cat ~/.clasprc.json | jq -e '.tokens.default' > /dev/null 2>&1; then
+            echo "🔄 Detected new clasp format, converting to old format..."
+            cat ~/.clasprc.json | jq '{
+              token: {
+                access_token: .tokens.default.access_token,
+                refresh_token: .tokens.default.refresh_token,
+                scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/script.projects https://www.googleapis.com/auth/script.webapp.deploy https://www.googleapis.com/auth/script.deployments",
+                token_type: (.tokens.default.type // "Bearer"),
+                expiry_date: 9999999999999
+              },
+              oauth2ClientSettings: {
+                clientId: .tokens.default.client_id,
+                clientSecret: .tokens.default.client_secret,
+                redirectUri: "http://localhost"
+              },
+              isLocalCreds: false
+            }' > ~/.clasprc.json.new
+            mv ~/.clasprc.json.new ~/.clasprc.json
+            echo "✅ Converted to old format"
+          else
+            echo "✅ Already in old format"
+          fi
+          
+          echo "Final .clasprc.json structure:"
+          cat ~/.clasprc.json | jq 'keys'
 
       - name: Deploy Server Project
         run: |
