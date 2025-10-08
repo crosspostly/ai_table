@@ -133,6 +133,14 @@ jobs:
       - name: Deploy Server Project
         run: |
           echo "📦 Deploying Server project..."
+          
+          echo "DEBUG: Checking .clasprc.json before deploy..."
+          ls -la ~/.clasprc.json
+          echo "Token (first 40 chars):"
+          cat ~/.clasprc.json | jq -r '.token.access_token' | head -c 40
+          echo "..."
+          echo ""
+          
           cp .clasp-server.json .clasp.json
           
           # Переместить ВСЁ что НЕ нужно ВНЕ table/ (чтобы clasp их не видел)
