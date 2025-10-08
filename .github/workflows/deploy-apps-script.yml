@@ -182,8 +182,38 @@ jobs:
           find table -name "*appsscript*"
           echo ""
           
+          echo "=== FINAL DIAGNOSTIC BEFORE PUSH ==="
+          echo "1. Current .clasp.json:"
+          cat .clasp.json | jq .
+          echo ""
+          echo "2. Validate table/appsscript.json:"
+          if [ -f table/appsscript.json ]; then
+            cat table/appsscript.json | jq . && echo "✅ Valid JSON"
+          else
+            echo "❌ table/appsscript.json not found!"
+            exit 1
+          fi
+          echo ""
+          echo "3. Check for OTHER appsscript files that clasp might see:"
+          find table -name "*.json" | grep -i app
+          echo ""
+          echo "4. Test clasp status before push:"
+          clasp --version
+          echo ""
+          
           echo "Pushing to Script ID: 15tMLr3G3kbBKjMVi7r2XqPR3kBSWO0jCDYHijIhy9ko2rsIceG8tLoYa"
-          clasp push -f
+          echo "Running: clasp push -f"
+          clasp push -f 2>&1 | tee /tmp/clasp-push.log || {
+            echo ""
+            echo "❌ CLASP PUSH FAILED!"
+            echo "Error output:"
+            cat /tmp/clasp-push.log
+            echo ""
+            echo "Checking what clasp tried to upload:"
+            echo "Files in rootDir:"
+            find table -type f -name "*.gs" -o -name "*.json" -o -name "*.html" | sort
+            exit 1
+          }
           
           # Восстановить всё обратно
           rm table/appsscript.json
