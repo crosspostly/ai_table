@@ -320,7 +320,7 @@ function createCollector(sourceType) {
 function getVkParserBaseUrl() {
   // Используем константу из Constants.gs или глобальную
   if (typeof VK_PARSER_URL !== 'undefined' && VK_PARSER_URL) {
-    return String(VK_PARSER_URL).replace(/\\/$/, '');
+    return String(VK_PARSER_URL).replace(/\/$/, '');
   }
   throw new Error('VK_PARSER_URL not configured');
 }

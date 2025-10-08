@@ -291,7 +291,6 @@ ${cellData}
 ' +
                 'Ошибок: ' + errors;
   
-  logMessage(summary.replace(/\
-/g, ', '), 'INFO');
+  logMessage(summary.replace(/\\n/g, ', '), 'INFO');
   ui.alert(summary);
 }

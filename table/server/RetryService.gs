@@ -394,4 +394,4 @@ function checkAllApisHealth() {
     details: results,
     timestamp: new Date()
   };
-}"
+}
