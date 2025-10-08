@@ -201,6 +201,14 @@ jobs:
           clasp --version
           echo ""
           
+          echo "=== FINAL CHECK: What clasp will actually push ==="
+          echo "Current working directory: $(pwd)"
+          echo "Files in rootDir (table/):"
+          find table -type f \( -name "*.gs" -o -name "*.html" -o -name "appsscript.json" \) | sort
+          echo ""
+          echo "Total .gs files: $(find table -name "*.gs" | wc -l)"
+          echo ""
+          
           echo "Pushing to Script ID: 1ncX8FGqT7QP-LxqrRJu0_z_FmUTGsbqmbWDCRePLfHgW8x85bX_Yu9uP"
           echo "Running: clasp push -f"
           clasp push -f 2>&1 | tee /tmp/clasp-push.log || {
