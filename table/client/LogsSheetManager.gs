@@ -45,6 +45,46 @@ function ensureLogsSheet() {
 }
 
 /**
+ * Открыть лист логов с автоматическим созданием
+ */
+function openLogsSheetWithCreation() {
+  try {
+    addSystemLog('📊 Открываем лист логов...', 'INFO', 'LOGS_MANAGER');
+    
+    // Сначала убеждаемся что лист существует
+    var wasCreated = ensureLogsSheet();
+    
+    var ui = SpreadsheetApp.getUi();
+    var ss = SpreadsheetApp.openById(SHEETS_LOGGER_CONFIG.spreadsheetId);
+    var logsSheet = ss.getSheetByName(SHEETS_LOGGER_CONFIG.sheetName);
+    
+    if (logsSheet) {
+      var url = ss.getUrl() + '#gid=' + logsSheet.getSheetId();
+      
+      var message = '📊 ЛИСТ ЛОГОВ ' + (wasCreated ? '(СОЗДАН!)' : '(СУЩЕСТВУЕТ)') + '\n\n';
+      message += '🔗 Ссылка:\n' + url + '\n\n';
+      message += '📋 В листе "Логи" вы найдете:\n';
+      message += '• Все системные события\n';
+      message += '• Ошибки и предупреждения\n';
+      message += '• Результаты тестов\n';
+      message += '• Performance метрики\n\n';
+      message += '📈 Логи обновляются в реальном времени!';
+      
+      ui.alert('📊 Лист логов', message, ui.ButtonSet.OK);
+      addSystemLog('✅ Лист логов открыт пользователем', 'INFO', 'LOGS_MANAGER');
+    } else {
+      throw new Error('Не удалось создать или найти лист логов');
+    }
+    
+  } catch (error) {
+    addSystemLog('❌ Ошибка открытия листа логов: ' + error.message, 'ERROR', 'LOGS_MANAGER');
+    SpreadsheetApp.getUi().alert('❌ Ошибка', 
+      'Не удалось открыть лист логов:\n\n' + error.message, 
+      SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
  * Показать статистику логов с автоматическим созданием листа
  */
 function showLogsSheetStatus() {

@@ -77,7 +77,7 @@ function checkSystemStatus() {
         statusReport.push('   Function: ❌ GM function not available');
       }
     } catch (e) {
-      statusReport.push('   Connection: ❌ Error: ' + e.message);
+      statusReport.push('   Connection: ❌ Error: ' + (e.message || String(e)));
     }
   } else {
     statusReport.push('🤖 Gemini API: ❌ Not configured');
@@ -102,6 +102,17 @@ function checkSystemStatus() {
   }
   
   statusReport.push('');
+  
+  // VK API Status
+  var vkToken = props.getProperty('VK_TOKEN');
+  if (vkToken) {
+    statusReport.push('📱 VK API: ✅ Configured');
+    statusReport.push('   Token: ' + vkToken.substring(0, 10) + '...');
+  } else {
+    statusReport.push('📱 VK API: ❌ Not configured');
+  }
+  statusReport.push('');
+  
   statusReport.push('🔧 Для настройки недостающих компонентов:');
   statusReport.push('🤖 Table AI → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ');
   
