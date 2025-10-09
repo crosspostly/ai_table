@@ -1,0 +1,58 @@
+name: Deploy to Drive Folder
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'table/client/**'
+      - 'table/shared/**'
+      - 'deploy-to-folder.js'
+      - '.github/workflows/deploy-to-drive-folder.yml'
+  
+  workflow_dispatch:
+    inputs:
+      folder_id:
+        description: 'Google Drive Folder ID (optional, uses default if not provided)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy to all sheets in folder
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          npm install googleapis@latest
+      
+      - name: Deploy to Drive folder
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          DRIVE_FOLDER_ID: ${{ inputs.folder_id || secrets.DRIVE_FOLDER_ID }}
+        run: |
+          node deploy-to-folder.js
+      
+      - name: Create deployment summary
+        if: always()
+        run: |
+          echo "## 📊 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment completed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Folder ID:** \`${DRIVE_FOLDER_ID}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+concurrency:
+  group: deploy-drive-folder
+  cancel-in-progress: false
