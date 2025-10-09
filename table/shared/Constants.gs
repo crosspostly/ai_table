@@ -3,30 +3,30 @@
  * Константы используемые во всех частях приложения
  */
 
-// ====== SERVER URLs (из старой рабочей версии) ======
-const SERVER_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHniTv_12cAHlqjYfra7fQ3m3Vri5XvZTQ_uUZZovCYeTo2_u6gQw/exec';
+// ====== ГЛАВНЫЙ СЕРВЕР API ======
+// ИСПРАВЛЕНО: Единый URL сервера без дублирования
+const SERVER_API_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHniTv_12cAHlqjYfra7fQ3m3Vri5XvZTQ_uUZZovCYeTo2_u6gQw/exec';
+
+// ====== ДОПОЛНИТЕЛЬНЫЕ СЕРВИСЫ ======
 const VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbzttbqz16EmmcXbEYCuYhNlXkCxAnCG77phspFL1_rTCi4xVqoorByJAPa4dI4iwT8/exec';
 
-// ====== Gemini API ======
+// ====== ВНЕШНИЕ API ======
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // ====== COMPLETION PHRASE (фраза готовности) ======
 const COMPLETION_PHRASE = 'Отчёт готов'; // Фраза для проверки готовности результата
 
-// ====== КОНСТАНТЫ ДЛЯ АВТОМАТИЗАЦИИ ======
+// ====== АВТОМАТИЗАЦИЯ ======
 const AUTO_PROCESSING_DELAY = 20000; // 20 секунд - базовая задержка
 const LONG_PROCESSING_DELAY = 45000; // 45 секунд - для долгих ответов
 const PROCESSING_STATUS_KEY = 'AUTO_PROCESSING_STATUS'; // Ключ для кеша
 const MAX_RETRY_ATTEMPTS = 5; // Максимум попыток проверки готовности
 const RETRY_DELAY_INCREMENT = 10000; // Увеличение задержки с каждой попыткой (10 сек)
 
-// ====== КОНСТАНТЫ ДЛЯ ЛОГИРОВАНИЯ ======
+// ====== ЛОГИРОВАНИЕ ======
 const LOGS_CACHE_KEY = 'SYSTEM_LOGS'; // Ключ для логов
 const MAX_LOGS = 200; // Максимум логов в памяти
 const LOGS_TTL = 86400; // TTL логов: 24 часа
-
-// ====== SERVER URL ======
-const SERVER_API_URL = 'https://script.google.com/macros/s/AKfycby_YOUR_SERVER_ID/exec';
 
 // ====== Rate Limiting ======
 const RATE_LIMIT_WINDOW = 3600; // 1 час в секундах
