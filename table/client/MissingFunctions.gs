@@ -455,7 +455,15 @@ function callServerDevFunction() {
     }
     
     diagnostic.push('');
-    diagnostic.push('⏱️ Memory usage: ' + Math.round(DriveApp.getStorageUsed() / 1024 / 1024) + ' MB');
+    
+    // Memory usage (безопасно - без Drive API)
+    try {
+      var memoryInfo = 'N/A (Google Apps Script sandbox)';
+      diagnostic.push('⏱️ Memory usage: ' + memoryInfo);
+    } catch (e) {
+      diagnostic.push('⏱️ Memory usage: Unable to access');
+    }
+    
     diagnostic.push('📅 Current time: ' + new Date().toLocaleString('ru-RU'));
     
     ui.alert('🔍 Диагностика системы', diagnostic.join('\n'), ui.ButtonSet.OK);

@@ -76,19 +76,42 @@ function getLastUpdateDate() {
 
 /**
  * Получение информации для отображения в меню (короткая версия)
- * @return {string} Версия и дата для отображения
+ * @return {string} Версия, дата и время для отображения
  */
 function getVersionDisplayInfo() {
   try {
     var versionInfo = getVersionInfo();
     var version = versionInfo.version.current;
-    var date = versionInfo.version.releaseDate;
+    var timestamp = versionInfo.version.updateTimestamp;
     
-    // Форматируем дату для краткого отображения (dd.mm)
-    var shortDate = date.substring(8, 10) + '.' + date.substring(5, 7);
+    // Парсим ISO timestamp для получения даты и времени
+    var updateDate = new Date(timestamp);
     
-    return 'v' + version + ' от ' + shortDate;
+    // Форматируем дату и время для краткого отображения (dd.mm HH:MM)
+    var shortDate = updateDate.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+    
+    var shortTime = updateDate.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    return 'v' + version + ' от ' + shortDate + ' ' + shortTime;
   } catch (e) {
-    return 'v2.0.1';
+    // Fallback с текущим временем
+    var now = new Date();
+    var shortDate = now.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+    var shortTime = now.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    return 'v2.0.1 от ' + shortDate + ' ' + shortTime;
   }
 }
