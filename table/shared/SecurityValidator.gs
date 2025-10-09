@@ -252,6 +252,52 @@ var SecurityValidator = {
   },
   
   /**
+   * 🔒 ВАЛИДАЦИЯ ПАРАМЕТРОВ GM функций
+   * Восстановлена из коммита a3dae18
+   */
+  validateGMParams: function(maxTokens, temperature) {
+    var result = {
+      isValid: false,
+      sanitized: {},
+      errors: []
+    };
+
+    // Валидация maxTokens
+    if (maxTokens !== undefined && maxTokens !== null) {
+      if (typeof maxTokens !== 'number' || isNaN(maxTokens)) {
+        result.errors.push('maxTokens must be a number, got: ' + typeof maxTokens);
+      } else if (maxTokens < 1) {
+        result.errors.push('maxTokens must be positive, got: ' + maxTokens);
+      } else if (maxTokens > 1000000) { // 1M токенов - разумный лимит
+        result.errors.push('maxTokens too large: ' + maxTokens + ' (max: 1000000)');
+      } else {
+        result.sanitized.maxTokens = Math.floor(maxTokens);
+      }
+    } else {
+      result.sanitized.maxTokens = 250000; // Default
+    }
+
+    // Валидация temperature
+    if (temperature !== undefined && temperature !== null) {
+      if (typeof temperature !== 'number' || isNaN(temperature)) {
+        result.errors.push('temperature must be a number, got: ' + typeof temperature);
+      } else if (temperature < 0) {
+        result.errors.push('temperature must be non-negative, got: ' + temperature);
+      } else if (temperature > 2) {
+        result.errors.push('temperature too high: ' + temperature + ' (max: 2)');
+      } else {
+        result.sanitized.temperature = temperature;
+      }
+    } else {
+      result.sanitized.temperature = 0.5; // Default
+    }
+
+    // Результат валиден, если нет ошибок
+    result.isValid = result.errors.length === 0;
+    return result;
+  },
+  
+  /**
    * Безопасное логирование (маскирует sensitive данные)
    */
   safeLog: function(message, data) {
@@ -280,50 +326,7 @@ var SecurityValidator = {
     Logger.log('[SECURITY] ' + message + ': ' + JSON.stringify(safeData));
   },
   
-  /**
-   * Валидация параметров GM функций
-   */
-  validateGMParams: function(maxTokens, temperature) {
-    var result = {
-      isValid: false,
-      sanitized: {},
-      errors: []
-    };
-    
-    // Валидация maxTokens
-    if (maxTokens !== undefined && maxTokens !== null) {
-      if (typeof maxTokens !== 'number' || isNaN(maxTokens)) {
-        result.errors.push('maxTokens must be a number, got: ' + typeof maxTokens);
-      } else if (maxTokens < 1) {
-        result.errors.push('maxTokens must be positive, got: ' + maxTokens);
-      } else if (maxTokens > 1000000) {
-        result.errors.push('maxTokens too large: ' + maxTokens + ' (max: 1000000)');
-      } else {
-        result.sanitized.maxTokens = Math.floor(maxTokens);
-      }
-    } else {
-      result.sanitized.maxTokens = 250000; // Default
-    }
-    
-    // Валидация temperature
-    if (temperature !== undefined && temperature !== null) {
-      if (typeof temperature !== 'number' || isNaN(temperature)) {
-        result.errors.push('temperature must be a number, got: ' + typeof temperature);
-      } else if (temperature < 0) {
-        result.errors.push('temperature must be non-negative, got: ' + temperature);
-      } else if (temperature > 2) {
-        result.errors.push('temperature too high: ' + temperature + ' (max: 2)');
-      } else {
-        result.sanitized.temperature = temperature;
-      }
-    } else {
-      result.sanitized.temperature = 0.5; // Default
-    }
-    
-    // Результат валиден, если нет ошибок
-    result.isValid = result.errors.length === 0;
-    return result;
-  },
+
 
   /**
    * Тест граничных значений архитектуры credentials
