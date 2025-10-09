@@ -1,0 +1,321 @@
+{
+  "total": 60,
+  "passed": 53,
+  "failed": 7,
+  "details": [
+    {
+      "file": "table/client/ButtonFunctions.gs",
+      "status": "OK",
+      "functions": 7
+    },
+    {
+      "file": "table/client/ChatMode.gs",
+      "status": "OK",
+      "functions": 14
+    },
+    {
+      "file": "table/client/ClientUtilities.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (340) vs ) (339)"
+      ]
+    },
+    {
+      "file": "table/client/ComprehensiveTest.gs",
+      "status": "OK",
+      "functions": 26
+    },
+    {
+      "file": "table/client/ComprehensiveTestSuite.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (213) vs ) (210)"
+      ]
+    },
+    {
+      "file": "table/client/CredentialsManager.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/client/GeminiClient.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (203) vs ) (210)"
+      ]
+    },
+    {
+      "file": "table/client/LogsSheetManager.gs",
+      "status": "OK",
+      "functions": 5
+    },
+    {
+      "file": "table/client/MasterCheck.gs",
+      "status": "OK",
+      "functions": 17
+    },
+    {
+      "file": "table/client/Menu.gs",
+      "status": "OK",
+      "functions": 10
+    },
+    {
+      "file": "table/client/MissingFunctions.gs",
+      "status": "OK",
+      "functions": 33
+    },
+    {
+      "file": "table/client/NetworkRetry.gs",
+      "status": "OK",
+      "functions": 5
+    },
+    {
+      "file": "table/client/OcrHelpers.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (363) vs ) (364)"
+      ]
+    },
+    {
+      "file": "table/client/OcrRunner.gs",
+      "status": "OK",
+      "functions": 3
+    },
+    {
+      "file": "table/client/SmartPromptProcessor.gs",
+      "status": "OK",
+      "functions": 11
+    },
+    {
+      "file": "table/client/SocialImportClient.gs",
+      "status": "OK",
+      "functions": 6
+    },
+    {
+      "file": "table/client/SystemFunctionValidator.gs",
+      "status": "OK",
+      "functions": 10
+    },
+    {
+      "file": "table/client/TestSuite.gs",
+      "status": "OK",
+      "functions": 11
+    },
+    {
+      "file": "table/client/ThinClient.gs",
+      "status": "OK",
+      "functions": 16
+    },
+    {
+      "file": "table/server/CompletionPhraseService.gs",
+      "status": "OK",
+      "functions": 4
+    },
+    {
+      "file": "table/server/ConditionalGemini.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/server/ContextManager.gs",
+      "status": "OK",
+      "functions": 10
+    },
+    {
+      "file": "table/server/DataCollectors.gs",
+      "status": "OK",
+      "functions": 3
+    },
+    {
+      "file": "table/server/ErrorHandlingService.gs",
+      "status": "OK",
+      "functions": 11
+    },
+    {
+      "file": "table/server/LicenseService.gs",
+      "status": "OK",
+      "functions": 6
+    },
+    {
+      "file": "table/server/OcrService.gs",
+      "status": "OK",
+      "functions": 5
+    },
+    {
+      "file": "table/server/RetryService.gs",
+      "status": "OK",
+      "functions": 7
+    },
+    {
+      "file": "table/server/RulesEngine.gs",
+      "status": "OK",
+      "functions": 11
+    },
+    {
+      "file": "table/server/ServerEndpoints.gs",
+      "status": "OK",
+      "functions": 17
+    },
+    {
+      "file": "table/server/SimpleLicenseService.gs",
+      "status": "OK",
+      "functions": 7
+    },
+    {
+      "file": "table/server/SmartChainService.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (173) vs ) (170)"
+      ]
+    },
+    {
+      "file": "table/server/SocialImportService.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/server/SourceDetector.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (63) vs ) (62)"
+      ]
+    },
+    {
+      "file": "table/server/TableLicenseService.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/server/TelegramImportService.gs",
+      "status": "OK",
+      "functions": 12
+    },
+    {
+      "file": "table/server/TriggerManager.gs",
+      "status": "OK",
+      "functions": 5
+    },
+    {
+      "file": "table/server/ValidationService.gs",
+      "status": "OK",
+      "functions": 3
+    },
+    {
+      "file": "table/server/VkImportService.gs",
+      "status": "OK",
+      "functions": 7
+    },
+    {
+      "file": "table/shared/Constants.gs",
+      "status": "OK",
+      "functions": 0
+    },
+    {
+      "file": "table/shared/DetailedLogger.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/shared/GoogleSheetsLogger.gs",
+      "status": "OK",
+      "functions": 16
+    },
+    {
+      "file": "table/shared/LoggingService.gs",
+      "status": "OK",
+      "functions": 11
+    },
+    {
+      "file": "table/shared/SecurityValidator.gs",
+      "status": "OK",
+      "functions": 1
+    },
+    {
+      "file": "table/shared/Utils.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (275) vs ) (276)"
+      ]
+    },
+    {
+      "file": "table/shared/VersionInfo.gs",
+      "status": "OK",
+      "functions": 4
+    },
+    {
+      "file": "table/tests/ComprehensiveCodeAudit.gs",
+      "status": "OK",
+      "functions": 16
+    },
+    {
+      "file": "table/tests/ComprehensiveTestRunner.gs",
+      "status": "OK",
+      "functions": 18
+    },
+    {
+      "file": "table/tests/CriticalIssueTests.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/tests/ManualTestRunner.gs",
+      "status": "OK",
+      "functions": 9
+    },
+    {
+      "file": "table/tests/MockFixValidationTest.gs",
+      "status": "OK",
+      "functions": 9
+    },
+    {
+      "file": "table/tests/QuickSmokeTest.gs",
+      "status": "OK",
+      "functions": 5
+    },
+    {
+      "file": "table/tests/RealDataTester.gs",
+      "status": "OK",
+      "functions": 9
+    },
+    {
+      "file": "table/tests/SocialImportTests.gs",
+      "status": "OK",
+      "functions": 8
+    },
+    {
+      "file": "table/tests/SystemCheck.gs",
+      "status": "OK",
+      "functions": 6
+    },
+    {
+      "file": "table/tests/TestSuite.gs",
+      "status": "OK",
+      "functions": 37
+    },
+    {
+      "file": "table/tests/VkBaselineTests.gs",
+      "status": "OK",
+      "functions": 10
+    },
+    {
+      "file": "table/tests/VkIntegrationTest.gs",
+      "status": "OK",
+      "functions": 9
+    },
+    {
+      "file": "table/tests/WebInterfaceValidationTest.gs",
+      "status": "OK",
+      "functions": 12
+    },
+    {
+      "file": "table/web/WebInterface.gs",
+      "status": "OK",
+      "functions": 10
+    },
+    {
+      "file": "table/web/WebInterfaceExtensions.gs",
+      "status": "OK",
+      "functions": 7
+    }
+  ]
+}
