@@ -683,42 +683,23 @@ function importVkPosts() {
 }
 
 /**
- * Настройки соцсетей
+ * Импорт Instagram постов (заглушка)
  */
-function configureSocialImport() {
+function importInstagramPosts() {
   var ui = SpreadsheetApp.getUi();
-  var props = PropertiesService.getScriptProperties();
-  
-  var config = [];
-  config.push('⚙️ НАСТРОЙКИ СОЦИАЛЬНЫХ СЕТЕЙ');
-  config.push('='.repeat(35));
-  config.push('');
-  
-  // VK настройки
-  var vkToken = props.getProperty('VK_TOKEN');
-  config.push('📱 VK (ВКонтакте):');
-  config.push('• API Token: ' + (vkToken ? '✅ Настроен' : '❌ Не настроен'));
-  config.push('• Статус: ' + (vkToken ? 'Готов к импорту' : 'Требует настройки'));
-  config.push('');
-  
-  // Instagram (заглушка)
-  config.push('📷 Instagram:');
-  config.push('• Статус: 🚧 В разработке');
-  config.push('• Планируется: API интеграция');
-  config.push('');
-  
-  // Telegram (заглушка)
-  config.push('💬 Telegram:');
-  config.push('• Статус: 🚧 В разработке');
-  config.push('• Планируется: Бот интеграция');
-  config.push('');
-  
-  config.push('🔧 ДЛЯ НАСТРОЙКИ VK:');
-  config.push('1. Получите VK API токен');
-  config.push('2. ⚙️ Настройки → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ');
-  config.push('3. Введите VK_TOKEN в дополнительных настройках');
-  
-  ui.alert('Настройки соцсетей', config.join('\n'), ui.ButtonSet.OK);
+  ui.alert('🚧 В разработке', 
+    'Instagram импорт планируется в следующих версиях\\n\\nТекущие возможности:\\n• VK импорт (📱 Получить VK посты)\\n• Telegram каналы (скоро)',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * Импорт Telegram постов (заглушка)
+ */
+function importTelegramPosts() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('🚧 В разработке', 
+    'Telegram импорт планируется в следующих версиях\\n\\nТекущие возможности:\\n• VK импорт (📱 Получить VK посты)\\n• Instagram (скоро)',
+    ui.ButtonSet.OK);
 }
 
 /**
@@ -866,5 +847,241 @@ function clearChainForA3() {
   } catch (error) {
     addSystemLog('❌ Ошибка очистки ячеек: ' + error.message, 'ERROR', 'CLEAR_CHAIN');
     SpreadsheetApp.getUi().alert('Ошибка очистки', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+// ============================================================================
+// ВОССТАНОВЛЕННЫЕ ФУНКЦИИ ИЗ ОРИГИНАЛЬНОГО МЕНЮ
+// ============================================================================
+
+/**
+ * Настройка Gemini API ключа с инструкциями
+ */
+function initGeminiKeyWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = '🔑 НАСТРОЙКА GEMINI API КЛЮЧА\\n\\n' +
+    'Google Gemini AI - основа работы бота\\n\\n' +
+    '📝 КАК ПОЛУЧИТЬ КЛЮЧ:\\n' +
+    '1. Откройте https://aistudio.google.com/app/apikey\\n' +
+    '2. Войдите в Google аккаунт\\n' +
+    '3. Нажмите \"Create API Key\"\\n' +
+    '4. Скопируйте ключ\\n\\n' +
+    '💡 ВАЖНО:\\n' +
+    '• Ключ бесплатный (лимит 15 запросов/мин)\\n' +
+    '• Не делитесь ключом с другими\\n' +
+    '• При ошибках получите новый ключ\\n\\n' +
+    'Продолжить настройку?';
+
+  var result = ui.alert('🔑 Gemini API Key', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    var keyResult = ui.prompt('Введите Gemini API Key', 'Вставьте ваш API ключ:', ui.ButtonSet.OK_CANCEL);
+    if (keyResult.getSelectedButton() === ui.Button.OK) {
+      var key = keyResult.getResponseText().trim();
+      if (key) {
+        PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', key);
+        ui.alert('✅ Готово', 'API ключ Gemini сохранен!\\n\\nТеперь можно использовать GM() функции.', ui.ButtonSet.OK);
+        addSystemLog('Gemini API key configured', 'INFO', 'SETUP');
+      }
+    }
+  }
+}
+
+/**
+ * Настройка фразы готовности с инструкциями
+ */
+function setCompletionPhraseUIWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = '📝 ФРАЗА ГОТОВНОСТИ ЦЕПОЧКИ\\n\\n' +
+    'Эта фраза появляется когда цепочка завершена\\n\\n' +
+    '💡 ПРИМЕРЫ ФРАЗ:\\n' +
+    '• \"ГОТОВО\" (по умолчанию)\\n' +
+    '• \"ЗАВЕРШЕНО\"\\n' +
+    '• \"DONE\"\\n' +
+    '• \"✅ ГОТОВО\"\\n\\n' +
+    '⚙️ КАК РАБОТАЕТ:\\n' +
+    'Когда все этапы цепочки выполнены,\\n' +
+    'в последней ячейке появится эта фраза\\n\\n' +
+    'Настроить фразу?';
+
+  var result = ui.alert('📝 Completion Phrase', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    var current = PropertiesService.getScriptProperties().getProperty('COMPLETION_PHRASE') || 'ГОТОВО';
+    var phraseResult = ui.prompt('Фраза готовности', 'Текущая: \"' + current + '\"\\n\\nВведите новую фразу:', ui.ButtonSet.OK_CANCEL);
+    if (phraseResult.getSelectedButton() === ui.Button.OK) {
+      var phrase = phraseResult.getResponseText().trim();
+      if (phrase) {
+        PropertiesService.getScriptProperties().setProperty('COMPLETION_PHRASE', phrase);
+        ui.alert('✅ Готово', 'Фраза готовности: \"' + phrase + '\"', ui.ButtonSet.OK);
+        addSystemLog('Completion phrase updated: ' + phrase, 'INFO', 'SETUP');
+      }
+    }
+  }
+}
+
+/**
+ * Настройка лицензии с инструкциями
+ */
+function setLicenseCredentialsUIWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = '🔐 НАСТРОЙКА ЛИЦЕНЗИИ\\n\\n' +
+    'Email + Token для доступа к серверу\\n\\n' +
+    '📧 ГДЕ ВЗЯТЬ:\\n' +
+    '• Обратитесь к администратору системы\\n' +
+    '• Укажите ваши потребности\\n' +
+    '• Получите email и token\\n\\n' +
+    '⚙️ ЧТО ДАЕТ ЛИЦЕНЗИЯ:\\n' +
+    '• Доступ к серверным функциям\\n' +
+    '• OCR обработка изображений\\n' +
+    '• VK API интеграция\\n' +
+    '• Приоритетная поддержка\\n\\n' +
+    'Настроить лицензию?';
+
+  var result = ui.alert('🔐 License Setup', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    setupAllCredentialsUI(); // Используем unified credentials
+  }
+}
+
+/**
+ * Проверка статуса лицензии с инструкциями
+ */
+function checkLicenseStatusUIWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = '📊 ПРОВЕРКА СТАТУСА ЛИЦЕНЗИИ\\n\\n' +
+    'Проверим состояние вашей лицензии:\\n\\n' +
+    '✅ ЧТО ПРОВЕРЯЕТСЯ:\\n' +
+    '• Действительность email + token\\n' +
+    '• Оставшееся время лицензии\\n' +
+    '• Лимиты запросов\\n' +
+    '• Статус сервера\\n\\n' +
+    '📊 Также можно использовать:\\n' +
+    '⚙️ Настройки → 📊 Статус системы\\n\\n' +
+    'Проверить сейчас?';
+
+  var result = ui.alert('📊 License Status', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    checkSystemStatus(); // Используем unified status check
+  }
+}
+
+/**
+ * Очистка старых триггеров с инструкциями
+ */
+function cleanupOldTriggersWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = '🔧 ОЧИСТКА СТАРЫХ ТРИГГЕРОВ\\n\\n' +
+    'Удаляем неиспользуемые триггеры\\n\\n' +
+    '❓ ЧТО ТАКОЕ ТРИГГЕРЫ:\\n' +
+    '• Автоматические обработчики событий\\n' +
+    '• Реагируют на изменения в листах\\n' +
+    '• Могут накапливаться и тормозить\\n\\n' +
+    '🧹 ЧТО БУДЕТ УДАЛЕНО:\\n' +
+    '• Дубликаты триггеров\\n' +
+    '• Триггеры от удаленных функций\\n' +
+    '• Неактивные обработчики\\n\\n' +
+    '⚠️ ВАЖНО: Активные триггеры сохранятся\\n\\n' +
+    'Очистить триггеры?';
+
+  var result = ui.alert('🔧 Cleanup Triggers', instruction, ui.ButtonSet.YES_NO);
+  if (result === ui.Button.YES) {
+    try {
+      var triggers = ScriptApp.getProjectTriggers();
+      var deleted = 0;
+      var kept = 0;
+      
+      // Список функций которые должны остаться
+      var validFunctions = ['onEdit', 'onOpen', 'onFormSubmit', 'onSmartPromptEdit'];
+      
+      for (var i = 0; i < triggers.length; i++) {
+        var trigger = triggers[i];
+        var funcName = trigger.getHandlerFunction();
+        
+        // Проверяем если функция существует и валидна
+        try {
+          var func = eval(funcName);
+          if (typeof func === 'function' && validFunctions.indexOf(funcName) >= 0) {
+            kept++;
+          } else {
+            ScriptApp.deleteTrigger(trigger);
+            deleted++;
+          }
+        } catch (e) {
+          // Функция не существует, удаляем триггер
+          ScriptApp.deleteTrigger(trigger);
+          deleted++;
+        }
+      }
+      
+      ui.alert('🧹 Очистка завершена', 
+        'Результаты очистки триггеров:\\n\\n' +
+        '🗑️ Удалено: ' + deleted + '\\n' +
+        '✅ Сохранено: ' + kept + '\\n\\n' +
+        (deleted > 0 ? 'Система должна работать быстрее!' : 'Система уже оптимизирована'),
+        ui.ButtonSet.OK);
+      
+      addSystemLog('Triggers cleanup: deleted=' + deleted + ', kept=' + kept, 'INFO', 'MAINTENANCE');
+      
+    } catch (error) {
+      ui.alert('Ошибка очистки', 'Не удалось очистить триггеры: ' + error.message, ui.ButtonSet.OK);
+    }
+  }
+}
+
+/**
+ * Показать активные триггеры с инструкциями
+ */
+function showActiveTriggersDialogWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = '👀 АКТИВНЫЕ ТРИГГЕРЫ\\n\\n' +
+    'Показывает все текущие триггеры\\n\\n' +
+    '📋 ЧТО УВИДИТЕ:\\n' +
+    '• Список всех активных триггеров\\n' +
+    '• Функции которые они вызывают\\n' +
+    '• Типы событий (onEdit, onOpen...)\\n\\n' +
+    '💡 ПОЛЕЗНО ДЛЯ:\\n' +
+    '• Диагностики проблем\\n' +
+    '• Понимания автоматики\\n' +
+    '• Отладки системы\\n\\n' +
+    'Показать триггеры?';
+
+  var result = ui.alert('👀 Active Triggers', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    try {
+      var triggers = ScriptApp.getProjectTriggers();
+      var triggerInfo = [];
+      
+      triggerInfo.push('👀 АКТИВНЫЕ ТРИГГЕРЫ (' + triggers.length + ')');
+      triggerInfo.push('='.repeat(35));
+      triggerInfo.push('');
+      
+      if (triggers.length === 0) {
+        triggerInfo.push('📋 Активных триггеров нет');
+        triggerInfo.push('');
+        triggerInfo.push('💡 Это нормально если вы не используете:');
+        triggerInfo.push('• Умные промпты');
+        triggerInfo.push('• Автоматические цепочки');
+        triggerInfo.push('• Обработку форм');
+      } else {
+        for (var i = 0; i < triggers.length; i++) {
+          var trigger = triggers[i];
+          var eventType = trigger.getEventType().toString();
+          var funcName = trigger.getHandlerFunction();
+          
+          triggerInfo.push((i + 1) + '. ' + funcName + '()');
+          triggerInfo.push('   Event: ' + eventType);
+          triggerInfo.push('   Source: ' + trigger.getTriggerSource().toString());
+          triggerInfo.push('');
+        }
+        
+        triggerInfo.push('🔧 Для очистки используйте:');
+        triggerInfo.push('⚙️ Настройки → 🔧 Очистить старые триггеры');
+      }
+      
+      ui.alert('👀 Active Triggers', triggerInfo.join('\\n'), ui.ButtonSet.OK);
+      addSystemLog('Active triggers displayed: ' + triggers.length + ' total', 'INFO', 'DIAGNOSTICS');
+      
+    } catch (error) {
+      ui.alert('Ошибка', 'Не удалось получить информацию о триггерах: ' + error.message, ui.ButtonSet.OK);
+    }
   }
 }

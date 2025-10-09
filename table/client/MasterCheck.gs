@@ -49,70 +49,7 @@ function masterSystemCheck() {
     var reviews = readTestReviews();
     results.details.push('✅ Отзывы загружены: ' + reviews.length + ' шт.');
     
-    // 4. Проверяем все системные функции (улучшенная проверка)
-    var functionReport = validateAllSystemFunctions();
-    results.details.push('✅ Функции проверены: ' + functionReport.summary.existing + '/' + functionReport.summary.total + ' работают');
-    if (functionReport.summary.missing > 0) {
-      results.details.push('⚠️ Отсутствуют: ' + functionReport.summary.missing + ' функций');
-    }
-    
-    // 5. Тестируем GM функции с реальными данными
-    if (typeof GM === 'function' && reviews.length > 0) {
-      try {
-        var testReview = reviews[0].substring(0, 200); // Берем первый отзыв
-        var gmResult = GM('Определи тональность отзыва одним словом: ' + testReview, 20, 0.3);
-        results.details.push('✅ GM тест: "' + (gmResult || 'нет ответа').substring(0, 30) + '..."');
-        results.passed++;
-      } catch (e) {
-        results.details.push('❌ GM тест: ошибка - ' + e.message);
-        results.failed++;
-        results.errors.push('GM function error: ' + e.message);
-      }
-      results.total++;
-    }
-    
-    // 6. Тестируем VK API если настроен
-    var props = PropertiesService.getScriptProperties();
-    var vkToken = props.getProperty('VK_TOKEN');
-    if (vkToken) {
-      try {
-        var vkResult = testVkApi(vkToken);
-        results.details.push('✅ VK API: ' + (vkResult.success ? 'работает' : 'ошибка - ' + vkResult.error));
-        if (vkResult.success) results.passed++; else results.failed++;
-      } catch (e) {
-        results.details.push('❌ VK API: критическая ошибка - ' + e.message);
-        results.failed++;
-        results.errors.push('VK API error: ' + e.message);
-      }
-      results.total++;
-    } else {
-      results.details.push('⚠️ VK API: не настроен (пропущен)');
-    }
-    
-    // 7. Тестируем логирование
-    try {
-      var logTest = 'Тест логирования ' + new Date().getTime();
-      addSystemLog(logTest, 'INFO', 'MASTER_CHECK_TEST');
-      results.details.push('✅ Логирование: работает');
-      results.passed++;
-    } catch (e) {
-      results.details.push('❌ Логирование: ошибка - ' + e.message);
-      results.failed++;
-      results.errors.push('Logging error: ' + e.message);
-    }
-    results.total++;
-    
-    // 8. Записываем результаты в лист тест
-    writeTestResults(testSheet, results);
-    
-    // 4. Проверяем все функции системы
-    var functionsResult = checkAllSystemFunctions();
-    results.total += functionsResult.total;
-    results.passed += functionsResult.passed;
-    results.failed += functionsResult.failed;
-    results.details.push('🔍 Функции: ' + functionsResult.passed + '/' + functionsResult.total + ' (' + Math.round(functionsResult.passed/functionsResult.total*100) + '%)');
-    
-    // 5. Боевые тесты с реальными данными
+    // 4. Боевые тесты с реальными данными
     if (params.apiKey && reviews.length > 0) {
       var battleResults = runBattleTests(params, reviews, testSheet);
       results.total += battleResults.total;
@@ -122,6 +59,13 @@ function masterSystemCheck() {
     } else {
       results.details.push('⚠️ Боевые тесты пропущены (нет API ключа или отзывов)');
     }
+    
+    // 5. Проверяем все функции системы
+    var functionsResult = checkAllSystemFunctions();
+    results.total += functionsResult.total;
+    results.passed += functionsResult.passed;
+    results.failed += functionsResult.failed;
+    results.details.push('🔍 Функции: ' + functionsResult.passed + '/' + functionsResult.total + ' (' + Math.round(functionsResult.passed/functionsResult.total*100) + '%)');
     
     // 6. Записываем итоговый отчет
     var endTime = new Date();
