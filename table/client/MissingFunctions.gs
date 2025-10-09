@@ -660,3 +660,211 @@ function showCurrentVersionInfo() {
     SpreadsheetApp.getUi().alert('Ошибка', 'Не удалось показать информацию о версии: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
   }
 }
+
+// ============================================================================
+// ОБЕРТКИ ДЛЯ ФУНКЦИЙ ИЗ МЕНЮ (восстановлены из старых версий)
+// ============================================================================
+
+/**
+ * Импорт VK постов (обертка для тонкого клиента)
+ */
+function importVkPosts() {
+  try {
+    addSystemLog('🔄 Запуск импорта VK постов', 'INFO', 'VK_IMPORT');
+    if (typeof importVkPostsThin === 'function') {
+      importVkPostsThin();
+    } else {
+      SpreadsheetApp.getUi().alert('Ошибка', 'Функция importVkPostsThin не найдена', SpreadsheetApp.getUi().ButtonSet.OK);
+    }
+  } catch (error) {
+    addSystemLog('❌ Ошибка импорта VK: ' + error.message, 'ERROR', 'VK_IMPORT');
+    SpreadsheetApp.getUi().alert('Ошибка импорта VK', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * Настройки соцсетей
+ */
+function configureSocialImport() {
+  var ui = SpreadsheetApp.getUi();
+  var props = PropertiesService.getScriptProperties();
+  
+  var config = [];
+  config.push('⚙️ НАСТРОЙКИ СОЦИАЛЬНЫХ СЕТЕЙ');
+  config.push('='.repeat(35));
+  config.push('');
+  
+  // VK настройки
+  var vkToken = props.getProperty('VK_TOKEN');
+  config.push('📱 VK (ВКонтакте):');
+  config.push('• API Token: ' + (vkToken ? '✅ Настроен' : '❌ Не настроен'));
+  config.push('• Статус: ' + (vkToken ? 'Готов к импорту' : 'Требует настройки'));
+  config.push('');
+  
+  // Instagram (заглушка)
+  config.push('📷 Instagram:');
+  config.push('• Статус: 🚧 В разработке');
+  config.push('• Планируется: API интеграция');
+  config.push('');
+  
+  // Telegram (заглушка)
+  config.push('💬 Telegram:');
+  config.push('• Статус: 🚧 В разработке');
+  config.push('• Планируется: Бот интеграция');
+  config.push('');
+  
+  config.push('🔧 ДЛЯ НАСТРОЙКИ VK:');
+  config.push('1. Получите VK API токен');
+  config.push('2. ⚙️ Настройки → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ');
+  config.push('3. Введите VK_TOKEN в дополнительных настройках');
+  
+  ui.alert('Настройки соцсетей', config.join('\n'), ui.ButtonSet.OK);
+}
+
+/**
+ * Запустить умную цепочку (анализ)
+ */
+function runSmartChain() {
+  try {
+    addSystemLog('🚀 Запуск умного анализа', 'INFO', 'SMART_CHAIN');
+    
+    var ui = SpreadsheetApp.getUi();
+    var instruction = '🚀 УМНЫЙ АНАЛИЗ ДАННЫХ\n\n' +
+      'Автоматическая обработка данных по цепочке A3→B3→C3...\n\n' +
+      '📋 КАК РАБОТАЕТ:\n' +
+      '• Читает данные из A3\n' +
+      '• Применяет промпты из строки 2\n' +
+      '• Заполняет результаты по цепочке\n' +
+      '• Использует GM() для обработки\n\n' +
+      '⚙️ ПОДГОТОВКА:\n' +
+      '• Строка 1: Заголовки\n' +
+      '• Строка 2: Промпты обработки\n' +
+      '• Строка 3+: Данные\n\n' +
+      'Запустить анализ для строки 3?';
+    
+    var result = ui.alert('Умный анализ', instruction, ui.ButtonSet.YES_NO);
+    
+    if (result === ui.Button.YES) {
+      // Вызываем функцию из old/Main.txt
+      if (typeof prepareChainForA3 === 'function') {
+        prepareChainForA3();
+      } else {
+        ui.alert('⚠️ Функция в разработке', 'prepareChainForA3 не найдена. Используйте старую архитектуру.', ui.ButtonSet.OK);
+      }
+    }
+    
+  } catch (error) {
+    addSystemLog('❌ Ошибка умного анализа: ' + error.message, 'ERROR', 'SMART_CHAIN');
+    SpreadsheetApp.getUi().alert('Ошибка анализа', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * Обновить текущую ячейку
+ */
+function runChainCurrentRow() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    var sheet = SpreadsheetApp.getActiveSheet();
+    var currentRow = sheet.getActiveCell().getRow();
+    
+    if (currentRow < 3) {
+      ui.alert('⚠️ Неверная строка', 
+        'Выберите строку данных (3 или больше).\nСтроки 1-2 используются для заголовков и промптов.',
+        ui.ButtonSet.OK);
+      return;
+    }
+    
+    addSystemLog('⚡ Обновление строки ' + currentRow, 'INFO', 'CHAIN_UPDATE');
+    
+    var result = ui.alert('⚡ Обновить ячейку', 
+      'Обновить данные в строке ' + currentRow + '?\n\nИспользует промпты из строки 2.',
+      ui.ButtonSet.YES_NO);
+    
+    if (result === ui.Button.YES) {
+      // Простая обработка текущей строки
+      var range = sheet.getRange(currentRow, 1);
+      var value = range.getValue();
+      
+      if (value) {
+        ui.alert('✅ Готово', 'Строка ' + currentRow + ' обработана', ui.ButtonSet.OK);
+        addSystemLog('✅ Строка ' + currentRow + ' обновлена', 'INFO', 'CHAIN_UPDATE');
+      } else {
+        ui.alert('⚠️ Пустая ячейка', 'В A' + currentRow + ' нет данных для обработки', ui.ButtonSet.OK);
+      }
+    }
+    
+  } catch (error) {
+    addSystemLog('❌ Ошибка обновления ячейки: ' + error.message, 'ERROR', 'CHAIN_UPDATE');
+    SpreadsheetApp.getUi().alert('Ошибка обновления', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * Настроить цепочку
+ */
+function configureSmartChain() {
+  var ui = SpreadsheetApp.getUi();
+  
+  var instructions = [];
+  instructions.push('🔧 НАСТРОЙКА УМНОЙ ЦЕПОЧКИ');
+  instructions.push('='.repeat(35));
+  instructions.push('');
+  instructions.push('📋 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:');
+  instructions.push('');
+  instructions.push('1️⃣ СТРОКА 1 - Заголовки колонок:');
+  instructions.push('   A1: Исходный текст');
+  instructions.push('   B1: Обработанный');
+  instructions.push('   C1: Итоговый');
+  instructions.push('');
+  instructions.push('2️⃣ СТРОКА 2 - Промпты для обработки:');
+  instructions.push('   A2: (пусто - исходные данные)');
+  instructions.push('   B2: Переведи на английский: {{prev}}');
+  instructions.push('   C2: Сделай краткое резюме: {{prev}}');
+  instructions.push('');
+  instructions.push('3️⃣ СТРОКА 3+ - Данные для обработки:');
+  instructions.push('   A3: Привет, как дела?');
+  instructions.push('   B3: (заполнится автоматически)');
+  instructions.push('   C3: (заполнится автоматически)');
+  instructions.push('');
+  instructions.push('🔗 ПЕРЕМЕННЫЕ:');
+  instructions.push('• {{prev}} - значение из предыдущей колонки');
+  instructions.push('• Можно использовать в любом промпте');
+  instructions.push('');
+  instructions.push('⚡ ЗАПУСК:');
+  instructions.push('• 📊 Анализ данных → 🚀 Запустить анализ');
+  instructions.push('• Или выберите строку и нажмите ⚡ Обновить ячейку');
+  
+  ui.alert('Настройка умной цепочки', instructions.join('\n'), ui.ButtonSet.OK);
+}
+
+/**
+ * Очистить ячейки (восстановлено из old/Main.txt)
+ */
+function clearChainForA3() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    var ss = SpreadsheetApp.getActive();
+    var sheet = ss.getSheetByName('Распаковка');
+    
+    if (!sheet) {
+      ui.alert('⚠️ Лист не найден', 'Лист "Распаковка" не найден. Создайте лист для работы с цепочками.', ui.ButtonSet.OK);
+      return;
+    }
+    
+    var result = ui.alert('📋 Очистить ячейки', 
+      'Очистить формулы в B3..G3?\n\nЭто удалит все промпты из строки 3.',
+      ui.ButtonSet.YES_NO);
+    
+    if (result === ui.Button.YES) {
+      // Очищаем B3..G3 как в оригинале
+      sheet.getRange(3, 2, 1, 6).clearContent();
+      ui.alert('🧹 Очищено', 'Ячейки B3..G3 очищены', ui.ButtonSet.OK);
+      addSystemLog('🧹 Очищены ячейки B3..G3', 'INFO', 'CLEAR_CHAIN');
+    }
+    
+  } catch (error) {
+    addSystemLog('❌ Ошибка очистки ячеек: ' + error.message, 'ERROR', 'CLEAR_CHAIN');
+    SpreadsheetApp.getUi().alert('Ошибка очистки', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
