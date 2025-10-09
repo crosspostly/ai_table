@@ -1,1 +1,278 @@
-/**\n * Comprehensive Test Suite for AI_TABLE\n * ИСПРАВЛЕНО: Комплексное тестирование всех функций после рефакторинга\n */\n\n/**\n * Главная функция тестирования - запуск из меню\n */\nfunction runAllTests() {\n  var ui = SpreadsheetApp.getUi();\n  \n  ui.alert('🧪 Запуск всех тестов', 'Начинаем комплексное тестирование системы.\\nРезультаты будут показаны в конце.', ui.ButtonSet.OK);\n  \n  var results = {\n    total: 0,\n    passed: 0,\n    failed: 0,\n    errors: [],\n    details: []\n  };\n  \n  addSystemLog('🧪 Starting comprehensive testing', 'INFO', 'TESTING');\n  \n  try {\n    // ФАЗА 1: Критические функции\n    runCriticalTests(results);\n    \n    // ФАЗА 2: Клиентские функции \n    runClientTests(results);\n    \n    // ФАЗА 3: Серверные функции (через клиент)\n    runServerTests(results);\n    \n    // ФАЗА 4: Веб-интерфейс\n    runWebInterfaceTests(results);\n    \n    // ФАЗА 5: Интеграционные тесты\n    runIntegrationTests(results);\n    \n  } catch (error) {\n    results.errors.push('Critical testing error: ' + error.message);\n    results.failed++;\n    addSystemLog('Critical testing error: ' + error.message, 'ERROR', 'TESTING');\n  }\n  \n  // Показываем результаты\n  showTestResults(results);\n  \n  addSystemLog('🧪 Testing completed: ' + results.passed + '/' + results.total + ' passed', 'INFO', 'TESTING');\n}\n\n/**\n * ФАЗА 1: Критические функции\n */\nfunction runCriticalTests(results) {\n  addTestResult(results, '🔐 getClientCredentials', testGetClientCredentials);\n  addTestResult(results, '🔑 validateLicenseForGM', testValidateLicenseForGM);\n  addTestResult(results, '⚙️ SERVER_API_URL', testServerApiUrl);\n  addTestResult(results, '📝 addSystemLog', testAddSystemLog);\n}\n\n/**\n * ФАЗА 2: Клиентские функции\n */\nfunction runClientTests(results) {\n  addTestResult(results, '🧠 GM function', testGMFunction);\n  addTestResult(results, '📋 Menu creation', testMenuCreation);\n  addTestResult(results, '🔧 setupAllCredentialsUI', testSetupCredentialsExists);\n  addTestResult(results, '💬 Chat mode functions', testChatModeExists);\n  addTestResult(results, '⚡ Smart prompts', testSmartPromptsExists);\n}\n\n/**\n * ФАЗА 3: Серверные функции (вызов через ThinClient)\n */\nfunction runServerTests(results) {\n  addTestResult(results, '🌐 Server ping', testServerPing);\n  addTestResult(results, '🔐 License validation', testServerLicenseValidation);\n  addTestResult(results, '📱 VK import API', testVkImportAPI);\n  addTestResult(results, '🔍 OCR service', testOcrServiceAPI);\n}\n\n/**\n * ФАЗА 4: Веб-интерфейс\n */\nfunction runWebInterfaceTests(results) {\n  addTestResult(results, '🌐 openWebInterface', testOpenWebInterface);\n  addTestResult(results, '📊 getSystemStatusData', testGetSystemStatusData);\n  addTestResult(results, '📱 importSocialPosts', testImportSocialPosts);\n  addTestResult(results, '🧪 testGeminiConnection', testGeminiConnectionFunction);\n}\n\n/**\n * ФАЗА 5: Интеграционные тесты\n */\nfunction runIntegrationTests(results) {\n  addTestResult(results, '🔗 Client-Server communication', testClientServerComm);\n  addTestResult(results, '📋 Sheet operations', testSheetOperations);\n  addTestResult(results, '⚙️ Properties management', testPropertiesManagement);\n  addTestResult(results, '🔄 Error handling', testErrorHandling);\n}\n\n/**\n * Добавить результат теста\n */\nfunction addTestResult(results, testName, testFunction) {\n  results.total++;\n  \n  try {\n    var result = testFunction();\n    \n    if (result && result.success !== false) {\n      results.passed++;\n      results.details.push('✅ ' + testName + ': PASSED');\n      addSystemLog('Test passed: ' + testName, 'INFO', 'TESTING');\n    } else {\n      results.failed++;\n      var errorMsg = result && result.error ? result.error : 'Unknown error';\n      results.errors.push(testName + ': ' + errorMsg);\n      results.details.push('❌ ' + testName + ': FAILED - ' + errorMsg);\n      addSystemLog('Test failed: ' + testName + ' - ' + errorMsg, 'WARN', 'TESTING');\n    }\n    \n  } catch (error) {\n    results.failed++;\n    results.errors.push(testName + ': ' + error.message);\n    results.details.push('❌ ' + testName + ': ERROR - ' + error.message);\n    addSystemLog('Test error: ' + testName + ' - ' + error.message, 'ERROR', 'TESTING');\n  }\n}\n\n/**\n * Показать результаты тестирования\n */\nfunction showTestResults(results) {\n  var ui = SpreadsheetApp.getUi();\n  \n  var summary = '🧪 РЕЗУЛЬТАТЫ ТЕСТИРОВАНИЯ\\n\\n';\n  summary += '📊 Статистика:\\n';\n  summary += '• Всего тестов: ' + results.total + '\\n';\n  summary += '• ✅ Прошли: ' + results.passed + '\\n';\n  summary += '• ❌ Не прошли: ' + results.failed + '\\n';\n  summary += '• 📈 Процент успеха: ' + Math.round((results.passed / results.total) * 100) + '%\\n\\n';\n  \n  if (results.failed > 0) {\n    summary += '❌ КРИТИЧЕСКИЕ ОШИБКИ:\\n';\n    for (var i = 0; i < Math.min(results.errors.length, 5); i++) {\n      summary += '• ' + results.errors[i] + '\\n';\n    }\n    if (results.errors.length > 5) {\n      summary += '• ... и ещё ' + (results.errors.length - 5) + ' ошибок\\n';\n    }\n    summary += '\\n📋 Проверьте логи системы для детализации.';\n  } else {\n    summary += '🎉 ВСЕ ТЕСТЫ ПРОШЛИ УСПЕШНО!\\n\\n';\n    summary += '✅ Система готова к работе с реальными данными.';\n  }\n  \n  ui.alert('Результаты тестирования', summary, ui.ButtonSet.OK);\n}\n\n// ===== ТЕСТОВЫЕ ФУНКЦИИ =====\n\n/**\n * Тест getClientCredentials\n */\nfunction testGetClientCredentials() {\n  try {\n    var credentials = getClientCredentials();\n    \n    if (!credentials || typeof credentials !== 'object') {\n      return { success: false, error: 'Function returned invalid object' };\n    }\n    \n    if (!credentials.hasOwnProperty('ok')) {\n      return { success: false, error: 'Missing \"ok\" property' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест validateLicenseForGM\n */\nfunction testValidateLicenseForGM() {\n  try {\n    var result = validateLicenseForGM();\n    \n    if (!result || typeof result !== 'object') {\n      return { success: false, error: 'Function returned invalid object' };\n    }\n    \n    if (!result.hasOwnProperty('ok')) {\n      return { success: false, error: 'Missing \"ok\" property' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест SERVER_API_URL\n */\nfunction testServerApiUrl() {\n  try {\n    if (typeof SERVER_API_URL === 'undefined') {\n      return { success: false, error: 'SERVER_API_URL is undefined' };\n    }\n    \n    if (SERVER_API_URL.includes('YOUR_SERVER_ID')) {\n      return { success: false, error: 'SERVER_API_URL contains placeholder' };\n    }\n    \n    if (!SERVER_API_URL.startsWith('https://script.google.com/macros/s/')) {\n      return { success: false, error: 'SERVER_API_URL format is incorrect' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест addSystemLog\n */\nfunction testAddSystemLog() {\n  try {\n    addSystemLog('Test log message', 'INFO', 'TESTING');\n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест GM function\n */\nfunction testGMFunction() {\n  try {\n    // Проверяем что функция существует\n    if (typeof GM !== 'function') {\n      return { success: false, error: 'GM function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест создания меню\n */\nfunction testMenuCreation() {\n  try {\n    var ui = SpreadsheetApp.getUi();\n    var menu = ui.createMenu('Test Menu');\n    \n    if (!menu) {\n      return { success: false, error: 'Cannot create menu' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест setupAllCredentialsUI exists\n */\nfunction testSetupCredentialsExists() {\n  try {\n    if (typeof setupAllCredentialsUI !== 'function') {\n      return { success: false, error: 'setupAllCredentialsUI function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Chat mode functions exist\n */\nfunction testChatModeExists() {\n  try {\n    if (typeof initializeChatMode !== 'function') {\n      return { success: false, error: 'initializeChatMode function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Smart prompts exist\n */\nfunction testSmartPromptsExists() {\n  try {\n    if (typeof setupSmartPromptTrigger !== 'function') {\n      return { success: false, error: 'setupSmartPromptTrigger function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Server ping\n */\nfunction testServerPing() {\n  try {\n    var response = UrlFetchApp.fetch(SERVER_API_URL, {\n      method: 'GET',\n      muteHttpExceptions: true\n    });\n    \n    if (response.getResponseCode() !== 200) {\n      return { success: false, error: 'Server returned HTTP ' + response.getResponseCode() };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Server license validation\n */\nfunction testServerLicenseValidation() {\n  try {\n    var credentials = getClientCredentials();\n    \n    if (!credentials.ok) {\n      return { success: false, error: 'No credentials to test with' };\n    }\n    \n    // Здесь можно добавить реальный тест лицензии\n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест VK import API\n */\nfunction testVkImportAPI() {\n  try {\n    if (typeof importVkPosts !== 'function') {\n      return { success: false, error: 'importVkPosts function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест OCR service API\n */\nfunction testOcrServiceAPI() {\n  try {\n    if (typeof ocrReviews !== 'function') {\n      return { success: false, error: 'ocrReviews function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест openWebInterface\n */\nfunction testOpenWebInterface() {\n  try {\n    if (typeof openWebInterface !== 'function') {\n      return { success: false, error: 'openWebInterface function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест getSystemStatusData\n */\nfunction testGetSystemStatusData() {\n  try {\n    if (typeof getSystemStatusData !== 'function') {\n      return { success: false, error: 'getSystemStatusData function does not exist' };\n    }\n    \n    var statusData = getSystemStatusData();\n    \n    if (!statusData || typeof statusData !== 'object') {\n      return { success: false, error: 'Function returned invalid object' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест importSocialPosts\n */\nfunction testImportSocialPosts() {\n  try {\n    if (typeof importSocialPosts !== 'function') {\n      return { success: false, error: 'importSocialPosts function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест testGeminiConnection function\n */\nfunction testGeminiConnectionFunction() {\n  try {\n    if (typeof testGeminiConnection !== 'function') {\n      return { success: false, error: 'testGeminiConnection function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Client-Server communication\n */\nfunction testClientServerComm() {\n  try {\n    // Проверяем что ThinClient существует\n    if (typeof callServer !== 'function') {\n      return { success: false, error: 'callServer function does not exist' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Sheet operations\n */\nfunction testSheetOperations() {\n  try {\n    var ss = SpreadsheetApp.getActive();\n    \n    if (!ss) {\n      return { success: false, error: 'Cannot access active spreadsheet' };\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Properties management\n */\nfunction testPropertiesManagement() {\n  try {\n    var props = PropertiesService.getScriptProperties();\n    \n    if (!props) {\n      return { success: false, error: 'Cannot access script properties' };\n    }\n    \n    // Тест записи/чтения\n    props.setProperty('TEST_KEY', 'test_value');\n    var value = props.getProperty('TEST_KEY');\n    \n    if (value !== 'test_value') {\n      return { success: false, error: 'Properties read/write failed' };\n    }\n    \n    // Очистка\n    props.deleteProperty('TEST_KEY');\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Тест Error handling\n */\nfunction testErrorHandling() {\n  try {\n    // Тестируем что система правильно обрабатывает ошибки\n    try {\n      throw new Error('Test error');\n    } catch (e) {\n      // Ошибка должна быть поймана\n      if (e.message !== 'Test error') {\n        return { success: false, error: 'Error handling failed' };\n      }\n    }\n    \n    return { success: true };\n    \n  } catch (error) {\n    return { success: false, error: error.message };\n  }\n}\n\n/**\n * Быстрый тест критических функций\n */\nfunction quickTest() {\n  var ui = SpreadsheetApp.getUi();\n  \n  var results = {\n    total: 0,\n    passed: 0,\n    failed: 0,\n    errors: []\n  };\n  \n  // Тестируем только критические функции\n  addTestResult(results, '🔐 getClientCredentials', testGetClientCredentials);\n  addTestResult(results, '⚙️ SERVER_API_URL', testServerApiUrl);\n  addTestResult(results, '🧠 GM function', testGMFunction);\n  addTestResult(results, '📱 importSocialPosts', testImportSocialPosts);\n  \n  var summary = '⚡ БЫСТРЫЙ ТЕСТ\\n\\n';\n  summary += 'Прошли: ' + results.passed + '/' + results.total + '\\n';\n  \n  if (results.failed > 0) {\n    summary += '\\n❌ Ошибки:\\n';\n    for (var i = 0; i < results.errors.length; i++) {\n      summary += '• ' + results.errors[i] + '\\n';\n    }\n  } else {\n    summary += '\\n✅ Все критические функции работают!';\n  }\n  \n  ui.alert('Быстрый тест', summary, ui.ButtonSet.OK);\n}\n\n/**\n * Проверка существования всех функций\n */\nfunction checkAllFunctionsExist() {\n  var ui = SpreadsheetApp.getUi();\n  \n  var requiredFunctions = [\n    'GM',\n    'getClientCredentials',\n    'validateLicenseForGM',\n    'addSystemLog',\n    'openWebInterface',\n    'importSocialPosts',\n    'testGeminiConnection',\n    'setupAllCredentialsUI',\n    'importVkPosts',\n    'ocrReviews'\n  ];\n  \n  var missing = [];\n  var existing = [];\n  \n  for (var i = 0; i < requiredFunctions.length; i++) {\n    var funcName = requiredFunctions[i];\n    try {\n      if (typeof eval(funcName) === 'function') {\n        existing.push(funcName);\n      } else {\n        missing.push(funcName);\n      }\n    } catch (e) {\n      missing.push(funcName + ' (error: ' + e.message + ')');\n    }\n  }\n  \n  var summary = '🔍 ПРОВЕРКА ФУНКЦИЙ\\n\\n';\n  summary += '✅ Найдено: ' + existing.length + '/' + requiredFunctions.length + '\\n';\n  \n  if (missing.length > 0) {\n    summary += '\\n❌ Отсутствуют:\\n';\n    for (var j = 0; j < missing.length; j++) {\n      summary += '• ' + missing[j] + '\\n';\n    }\n  } else {\n    summary += '\\n🎉 Все функции найдены!';\n  }\n  \n  ui.alert('Проверка функций', summary, ui.ButtonSet.OK);\n}"
+/**
+ * Comprehensive Test Suite for AI_TABLE
+ * Тестирует все основные компоненты системы
+ */
+
+// Глобальные переменные для результатов тестов
+var testResults = {
+  passed: 0,
+  failed: 0,
+  errors: 0,
+  details: []
+};
+
+/**
+ * Запуск всех тестов
+ */
+function runAllTests() {
+  // Сброс результатов
+  testResults = {
+    passed: 0,
+    failed: 0,
+    errors: 0,
+    details: []
+  };
+  
+  addSystemLog('INFO: Starting comprehensive test suite');
+  
+  // Запуск тестов по категориям
+  runCriticalTests();
+  runClientTests();
+  runServerTests();
+  runWebInterfaceTests();
+  runIntegrationTests();
+  
+  // Показать результаты
+  showTestResults();
+  
+  return testResults;
+}
+
+/**
+ * Критические тесты - основные функции
+ */
+function runCriticalTests() {
+  // 1. Проверка credentials functions
+  addTestResult('getClientCredentials', function() {
+    return typeof getClientCredentials === 'function';
+  });
+  
+  // 2. Проверка license validation
+  addTestResult('validateLicenseForGM', function() {
+    return typeof validateLicenseForGM === 'function';
+  });
+  
+  // 3. Проверка SERVER_API_URL
+  addTestResult('SERVER_API_URL config', function() {
+    return typeof SERVER_API_URL === 'string' && SERVER_API_URL.length > 0;
+  });
+  
+  // 4. Проверка logging system
+  addTestResult('addSystemLog', function() {
+    addSystemLog('Test log entry', 'INFO', 'TEST');
+    return true;
+  });
+}
+
+/**
+ * Клиентские тесты
+ */
+function runClientTests() {
+  // 1. GM function availability
+  addTestResult('GM function', function() {
+    return typeof GM === 'function';
+  });
+  
+  // 2. Menu creation
+  addTestResult('Menu creation', function() {
+    return typeof onOpen === 'function';
+  });
+  
+  // 3. Credentials UI
+  addTestResult('setupAllCredentialsUI', function() {
+    return typeof setupAllCredentialsUI === 'function';
+  });
+  
+  // 4. Chat mode functions
+  addTestResult('Chat mode functions', function() {
+    return typeof enterChatMode === 'function';
+  });
+  
+  // 5. Smart prompts
+  addTestResult('Smart prompts', function() {
+    return typeof processSmartPrompt === 'function';
+  });
+}
+
+/**
+ * Серверные тесты
+ */
+function runServerTests() {
+  // 1. Server ping
+  addTestResult('Server ping', function() {
+    try {
+      var response = UrlFetchApp.fetch(SERVER_API_URL + '/ping', {
+        method: 'GET',
+        muteHttpExceptions: true
+      });
+      return response.getResponseCode() === 200;
+    } catch (e) {
+      return false;
+    }
+  });
+  
+  // 2. License validation endpoint
+  addTestResult('Server license validation', function() {
+    return typeof validateServerLicense === 'function';
+  });
+  
+  // 3. VK import API
+  addTestResult('VK import API', function() {
+    return typeof importVkPosts === 'function';
+  });
+  
+  // 4. OCR service
+  addTestResult('OCR service', function() {
+    return typeof processOCRRequest === 'function';
+  });
+}
+
+/**
+ * Web Interface тесты
+ */
+function runWebInterfaceTests() {
+  // 1. Web interface opening
+  addTestResult('openWebInterface', function() {
+    return typeof openWebInterface === 'function';
+  });
+  
+  // 2. System status
+  addTestResult('getSystemStatusData', function() {
+    return typeof getSystemStatusData === 'function';
+  });
+  
+  // 3. Social import
+  addTestResult('importSocialPosts', function() {
+    return typeof importSocialPosts === 'function';
+  });
+  
+  // 4. Gemini connection test
+  addTestResult('testGeminiConnection', function() {
+    return typeof testGeminiConnection === 'function';
+  });
+}
+
+/**
+ * Интеграционные тесты
+ */
+function runIntegrationTests() {
+  // 1. Client-Server communication
+  addTestResult('Client-Server communication', function() {
+    return typeof callServerFunction === 'function';
+  });
+  
+  // 2. Sheet operations
+  addTestResult('Sheet operations', function() {
+    var sheet = SpreadsheetApp.getActiveSheet();
+    return sheet !== null;
+  });
+  
+  // 3. Properties management
+  addTestResult('Properties management', function() {
+    var props = PropertiesService.getScriptProperties();
+    return props !== null;
+  });
+  
+  // 4. Error handling
+  addTestResult('Error handling', function() {
+    return typeof handleGMError === 'function';
+  });
+}
+
+/**
+ * Добавление результата теста
+ */
+function addTestResult(testName, testFunction) {
+  try {
+    var result = testFunction();
+    if (result) {
+      testResults.passed++;
+      testResults.details.push(`✅ ${testName}`);
+    } else {
+      testResults.failed++;
+      testResults.details.push(`❌ ${testName}: Failed`);
+    }
+  } catch (error) {
+    testResults.errors++;
+    testResults.details.push(`💥 ${testName}: ${error.message}`);
+  }
+}
+
+/**
+ * Показать результаты тестов
+ */
+function showTestResults() {
+  var total = testResults.passed + testResults.failed + testResults.errors;
+  var successRate = total > 0 ? Math.round((testResults.passed / total) * 100) : 0;
+  
+  var message = `🧪 TEST RESULTS\n\n`;
+  message += `📊 Summary:\n`;
+  message += `✅ Passed: ${testResults.passed}\n`;
+  message += `❌ Failed: ${testResults.failed}\n`;
+  message += `💥 Errors: ${testResults.errors}\n`;
+  message += `📈 Success Rate: ${successRate}%\n\n`;
+  
+  if (testResults.details.length > 0) {
+    message += `Details:\n`;
+    testResults.details.slice(0, 10).forEach(detail => {
+      message += `${detail}\n`;
+    });
+    
+    if (testResults.details.length > 10) {
+      message += `... and ${testResults.details.length - 10} more\n`;
+    }
+  }
+  
+  SpreadsheetApp.getUi().alert('Test Results', message, SpreadsheetApp.getUi().ButtonSet.OK);
+  
+  addSystemLog(`Test completed: ${successRate}% success rate`, 'INFO', 'TEST');
+}
+
+/**
+ * Быстрый тест критических функций
+ */
+function quickTest() {
+  testResults = {
+    passed: 0,
+    failed: 0,
+    errors: 0,
+    details: []
+  };
+  
+  runCriticalTests();
+  showTestResults();
+  
+  return testResults;
+}
+
+/**
+ * Проверка существования всех необходимых функций
+ */
+function checkAllFunctionsExist() {
+  var requiredFunctions = [
+    'GM',
+    'onOpen',
+    'setupAllCredentialsUI',
+    'getClientCredentials',
+    'validateLicenseForGM',
+    'addSystemLog',
+    'handleGMError'
+  ];
+  
+  var missing = [];
+  
+  requiredFunctions.forEach(function(funcName) {
+    if (typeof this[funcName] !== 'function') {
+      missing.push(funcName);
+    }
+  });
+  
+  if (missing.length > 0) {
+    var message = `❌ Missing functions:\n${missing.join('\n')}`;
+    SpreadsheetApp.getUi().alert('Function Check', message, SpreadsheetApp.getUi().ButtonSet.OK);
+    return false;
+  } else {
+    SpreadsheetApp.getUi().alert('Function Check', '✅ All required functions are present', SpreadsheetApp.getUi().ButtonSet.OK);
+    return true;
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "ai_table",
+  "version": "2.0.1",
+  "description": "AI Table with Google Apps Script integration",
+  "main": "deploy-to-folder.js",
+  "scripts": {
+    "deploy": "node deploy-to-folder.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "googleapis": "^131.0.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crosspostly/ai_table.git"
+  },
+  "keywords": [
+    "google-apps-script",
+    "ai",
+    "automation",
+    "sheets"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/crosspostly/ai_table/issues"
+  },
+  "homepage": "https://github.com/crosspostly/ai_table#readme"
+}
