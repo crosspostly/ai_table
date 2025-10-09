@@ -1,12 +1,12 @@
 /**
  * Social Import Client v2.0
  * Клиентский интерфейс для универсального импорта социальных сетей
- * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/Main.txt - ПРОСТЫЕ ДИАЛОГИ БЕЗ ЛИСТА "Параметры"
+ * ВОССТАНОВЛЕНО ИЗ old/Main.txt - ЧТЕНИЕ ИЗ ЛИСТА "Параметры" B1, B2, C1
  */
 
 /**
  * Универсальный импорт постов из социальных сетей (клиентский интерфейс)
- * ВОССТАНОВЛЕНО ИЗ old/Main.txt - РАБОЧАЯ ВЕРСИЯ
+ * ВОССТАНОВЛЕНО ИЗ old/Main.txt - РАБОЧАЯ ВЕРСИЯ С ЛИСТОМ "Параметры"
  */
 function importSocialPostsClient() {
   var ui = SpreadsheetApp.getUi();
@@ -22,40 +22,41 @@ function importSocialPostsClient() {
     return;
   }
   
-  // Запрашиваем источник через UI диалог
-  var sourceResult = ui.prompt('📱 Импорт постов из социальных сетей', 
-    'Введите источник (ссылка, @username или username):\n\n' +
-    'Примеры:\n' +
-    '✅ https://instagram.com/nasa\n' +
-    '✅ https://vk.com/durov\n' +
-    '✅ @durov\n' +
-    '✅ nasa', 
-    ui.ButtonSet.OK_CANCEL);
-  
-  if (sourceResult.getSelectedButton() !== ui.Button.OK) {
+  // ЧИТАЕМ ПАРАМЕТРЫ ИЗ ЛИСТА "Параметры" (как в old/Main.txt)
+  var paramsSheet = ss.getSheetByName('Параметры');
+  if (!paramsSheet) {
+    ui.alert('❌ Лист "Параметры" не найден', 
+      'Создайте лист "Параметры" с настройками:\n\n' +
+      'B1 - Источник (URL или username)\n' +
+      'B2 - Количество постов\n' +
+      'C1 - Платформа (опционально)', 
+      ui.ButtonSet.OK);
+    addSystemLog('Social import failed: no Параметры sheet', 'ERROR', 'SOCIAL');
     return;
   }
   
-  var source = sourceResult.getResponseText().trim();
-  if (!source) {
-    ui.alert('Ошибка', 'Источник не может быть пустым', ui.ButtonSet.OK);
+  // Читаем параметры из листа (как в old/Main.txt)
+  var source = paramsSheet.getRange('B1').getValue();
+  var count = paramsSheet.getRange('B2').getValue();
+  var platform = paramsSheet.getRange('C1').getValue();
+  
+  // Валидация
+  if (!source || !count) {
+    ui.alert('❌ Не указаны параметры импорта', 
+      'Заполните на листе "Параметры":\n\n' +
+      'B1 - Источник (например: https://vk.com/durov)\n' +
+      'B2 - Количество постов (например: 20)', 
+      ui.ButtonSet.OK);
+    addSystemLog('Social import failed: missing source or count in Параметры', 'ERROR', 'SOCIAL');
     return;
   }
   
-  // Запрашиваем количество постов
-  var countResult = ui.prompt('📱 Импорт постов', 
-    'Количество постов для импорта (1-50):', 
-    ui.ButtonSet.OK_CANCEL);
-  
-  if (countResult.getSelectedButton() !== ui.Button.OK) {
-    return;
-  }
-  
-  var count = parseInt(countResult.getResponseText().trim()) || 10;
+  // Преобразуем count в число
+  count = parseInt(count) || 10;
   if (count < 1) count = 1;
-  if (count > 50) count = 50;
+  if (count > 100) count = 100;
   
-  addSystemLog('Social import start: source=' + source + ', count=' + count, 'INFO', 'SOCIAL');
+  addSystemLog('Social import start from Параметры: source=' + source + ', count=' + count + ', platform=' + (platform || 'auto'), 'INFO', 'SOCIAL');
   
   try {
     // Показываем процесс
