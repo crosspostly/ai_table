@@ -326,6 +326,59 @@ var SecurityValidator = {
   }
 };
 
+/**
+ * 🛡️ БЕЗОПАСНАЯ ОБРАБОТКА ОШИБОК
+ * Логирует ошибки без утечки чувствительных данных
+ */
+function handleSecureError(error, context) {
+  try {
+    // Безопасное логирование контекста
+    var safeContext = {};
+    if (context && typeof context === 'object') {
+      for (var key in context) {
+        if (context.hasOwnProperty(key)) {
+          var value = context[key];
+          // Маскируем sensitive данные
+          if (typeof value === 'string' && (
+            key.toLowerCase().includes('token') ||
+            key.toLowerCase().includes('key') ||
+            key.toLowerCase().includes('password')
+          )) {
+            safeContext[key] = value.length > 4 ? value.substring(0, 4) + '***' : '[HIDDEN]';
+          } else {
+            safeContext[key] = value;
+          }
+        }
+      }
+    }
+    
+    // Безопасное сообщение об ошибке
+    var errorMessage = error && error.message ? error.message : String(error);
+    var safeErrorMessage = errorMessage.replace(/[A-Za-z0-9_-]{20,}/g, function(match) {
+      return match.substring(0, 4) + '***';
+    });
+    
+    // Логируем с маскировкой
+    addSystemLog('🚨 SECURE ERROR: ' + safeErrorMessage + ' | Context: ' + JSON.stringify(safeContext), 'ERROR', 'SECURITY');
+    
+    // Возвращаем безопасное сообщение для пользователя
+    if (errorMessage.includes('API')) {
+      return 'Ошибка API. Проверьте настройки ключей.';
+    } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+      return 'Ошибка сетевого соединения. Попробуйте позже.';
+    } else if (errorMessage.includes('permission') || errorMessage.includes('unauthorized')) {
+      return 'Ошибка авторизации. Проверьте права доступа.';
+    } else {
+      return 'Произошла ошибка при выполнении операции. Проверьте настройки.';
+    }
+    
+  } catch (handlingError) {
+    // Если даже обработка ошибки провалилась
+    addSystemLog('🚨 CRITICAL: Error handling failed: ' + handlingError.message, 'ERROR', 'CRITICAL');
+    return 'Критическая ошибка системы. Обратитесь к администратору.';
+  }
+}
+
 // ВАЖНО: ИСПРАВЛЕНА АРХИТЕКТУРА CREDENTIALS
 // VK/Instagram токены - только на сервере (пользователь НЕ вводит)
 // Gemini API ключи - на клиенте (пользователь вводит для прямых вызовов API)
