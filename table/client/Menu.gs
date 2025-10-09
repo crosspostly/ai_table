@@ -27,6 +27,9 @@ function onOpen() {
       .addItem('🔧 Очистить старые триггеры', 'cleanupOldTriggersWithHelp')
       .addItem('👀 Показать активные триггеры', 'showActiveTriggersDialogWithHelp')
       .addSeparator()
+      .addItem('📋 Показать логи системы', 'showRecentLogs')
+      .addItem('🗑️ Очистить старые логи', 'clearOldLogsUI')
+      .addSeparator()
       .addItem('📊 Статус системы', 'showSystemStatusWithHelp')
     )
     .addToUi();
