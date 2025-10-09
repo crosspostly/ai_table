@@ -102,12 +102,11 @@ function checkSystemStatus() {
   }
   
   statusReport.push('');
-  
-  }
-  statusReport.push('');
-  
   statusReport.push('🔧 Для настройки недостающих компонентов:');
   statusReport.push('🤖 Table AI → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ');
+  
+  // ⚠️ ВАЖНО: VK API НЕ проверяется здесь!
+  // VK токены хранятся на СЕРВЕРЕ, клиент их НЕ видит!
   
   ui.alert('📊 System Status', statusReport.join('\n'), ui.ButtonSet.OK);
   addSystemLog('System status checked', 'INFO', 'SYSTEM');

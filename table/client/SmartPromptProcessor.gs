@@ -229,7 +229,7 @@ function setupSmartPromptTrigger() {
     
     // Создаем новый триггер на изменение
     ScriptApp.newTrigger('onSmartPromptEdit')
-      .onEdit(ss)
+      .onEdit()
       .create();
     
     // Создаем/обновляем лист Параметры с чекбоксом в D1
