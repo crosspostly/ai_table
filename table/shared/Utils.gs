@@ -2,6 +2,159 @@
 // Утилиты общего назначения из old/Main.gs
 
 /**
+ * 🔄 ATOMIC OPERATIONS SYSTEM для предотвращения data corruption
+ */
+var ATOMIC_OPERATIONS = {
+  maxBackups: 5, // Максимум backup файлов
+  backupPrefix: 'atomic_backup_'
+};
+
+/**
+ * 🔒 Создаёт backup текущего состояния для atomic operations
+ */
+function createAtomicBackup(sheetName, description) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sourceSheet = ss.getSheetByName(sheetName);
+    
+    if (!sourceSheet) {
+      throw new Error('Sheet not found: ' + sheetName);
+    }
+    
+    // Генерируем уникальное имя backup
+    var timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+    var backupName = ATOMIC_OPERATIONS.backupPrefix + sheetName + '_' + timestamp;
+    
+    // Создаём backup лист
+    var backupSheet = sourceSheet.copyTo(ss);
+    backupSheet.setName(backupName);
+    backupSheet.setTabColor('#ffeb3b'); // Желтый для backup
+    
+    // Добавляем метаданные в backup
+    if (backupSheet.getLastRow() === 0) {
+      backupSheet.appendRow(['=== ATOMIC BACKUP ===']);
+    }
+    backupSheet.getRange(1, backupSheet.getLastColumn() + 1).setValue('Backup: ' + description);
+    backupSheet.getRange(1, backupSheet.getLastColumn()).setValue('Created: ' + new Date().toLocaleString());
+    
+    addSystemLog('✅ Atomic backup created: ' + backupName, 'INFO', 'ATOMIC');
+    
+    // Очищаем старые backups
+    cleanupOldBackups();
+    
+    return {
+      backupName: backupName,
+      sheetName: sheetName,
+      timestamp: timestamp
+    };
+    
+  } catch (error) {
+    addSystemLog('❌ Failed to create atomic backup: ' + error.message, 'ERROR', 'ATOMIC');
+    throw error;
+  }
+}
+
+/**
+ * 🧹 Очистка старых backup файлов
+ */
+function cleanupOldBackups() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var allSheets = ss.getSheets();
+    var backupSheets = [];
+    
+    // Находим все backup листы
+    allSheets.forEach(function(sheet) {
+      if (sheet.getName().startsWith(ATOMIC_OPERATIONS.backupPrefix)) {
+        backupSheets.push({
+          sheet: sheet,
+          name: sheet.getName()
+        });
+      }
+    });
+    
+    // Сортируем по времени (новые в конце)
+    backupSheets.sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    
+    // Удаляем старые backups
+    if (backupSheets.length > ATOMIC_OPERATIONS.maxBackups) {
+      var toDelete = backupSheets.slice(0, backupSheets.length - ATOMIC_OPERATIONS.maxBackups);
+      toDelete.forEach(function(backup) {
+        try {
+          ss.deleteSheet(backup.sheet);
+          addSystemLog('🗑️ Old backup removed: ' + backup.name, 'INFO', 'ATOMIC');
+        } catch (e) {
+          addSystemLog('⚠️ Failed to remove backup: ' + backup.name, 'WARN', 'ATOMIC');
+        }
+      });
+    }
+    
+  } catch (error) {
+    addSystemLog('❌ Backup cleanup failed: ' + error.message, 'ERROR', 'ATOMIC');
+  }
+}
+
+/**
+ * 🔄 Восстанавливает данные из backup
+ */
+function restoreFromBackup(backupInfo) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var backupSheet = ss.getSheetByName(backupInfo.backupName);
+    
+    if (!backupSheet) {
+      throw new Error('Backup sheet not found: ' + backupInfo.backupName);
+    }
+    
+    var targetSheet = ss.getSheetByName(backupInfo.sheetName);
+    if (!targetSheet) {
+      throw new Error('Target sheet not found: ' + backupInfo.sheetName);
+    }
+    
+    // Очищаем target sheet
+    targetSheet.clear();
+    
+    // Копируем данные из backup (исключая метаданные)
+    var lastRow = backupSheet.getLastRow();
+    var lastCol = backupSheet.getLastColumn() - 2; // Исключаем 2 колонки метаданных
+    
+    if (lastRow > 0 && lastCol > 0) {
+      var sourceRange = backupSheet.getRange(1, 1, lastRow, lastCol);
+      var targetRange = targetSheet.getRange(1, 1, lastRow, lastCol);
+      sourceRange.copyTo(targetRange);
+    }
+    
+    addSystemLog('✅ Restored from backup: ' + backupInfo.backupName, 'INFO', 'ATOMIC');
+    
+    return true;
+    
+  } catch (error) {
+    addSystemLog('❌ Restore from backup failed: ' + error.message, 'ERROR', 'ATOMIC');
+    throw error;
+  }
+}
+
+/**
+ * 🗑️ Удаляет backup после успешной операции
+ */
+function clearBackup(backupInfo) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var backupSheet = ss.getSheetByName(backupInfo.backupName);
+    
+    if (backupSheet) {
+      ss.deleteSheet(backupSheet);
+      addSystemLog('🗑️ Backup cleared: ' + backupInfo.backupName, 'INFO', 'ATOMIC');
+    }
+    
+  } catch (error) {
+    addSystemLog('⚠️ Failed to clear backup: ' + error.message, 'WARN', 'ATOMIC');
+  }
+}
+
+/**
  * Markdown → читабельный текст
  * Перенесено из old/Main.gs - критически важная функция для OCR
  */
@@ -52,7 +205,7 @@ function convertMarkdownToReadableText(markdownText) {
     text = text.trim();
     
   } catch (e) {
-    console.error('Markdown conversion error:', e.message);
+    Logger.log('Markdown conversion error: ' + e.message);
     return markdownText; // Возвращаем оригинал в случае ошибки
   }
   
@@ -92,11 +245,11 @@ function addSystemLog(message, level, category) {
     
     cache.put(cacheKey, JSON.stringify(logs), ttl);
     
-    // Дублируем в консоль
-    console.log('[' + timestamp + '] ' + level + ' [' + category + '] ' + message);
+    // Дублируем в логи (Google Apps Script compatible)
+    Logger.log('[' + timestamp + '] ' + level + ' [' + category + '] ' + message);
     
   } catch (e) {
-    console.error('System log error:', e.message);
+    Logger.log('System log error: ' + e.message);
   }
 }
 
@@ -210,7 +363,7 @@ function safeJsonParse(jsonString, defaultValue) {
   try {
     return JSON.parse(jsonString);
   } catch (e) {
-    console.warn('JSON parse error:', e.message);
+    Logger.log('JSON parse error: ' + e.message);
     return defaultValue || {};
   }
 }
@@ -222,7 +375,7 @@ function safeJsonStringify(obj, defaultValue) {
   try {
     return JSON.stringify(obj);
   } catch (e) {
-    console.warn('JSON stringify error:', e.message);
+    Logger.log('JSON stringify error: ' + e.message);
     return defaultValue || '{}';
   }
 }

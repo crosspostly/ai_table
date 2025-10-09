@@ -22,6 +22,9 @@ function gmCacheKey_(prompt, maxTokens, temperature) {
   }
 }
 
+/**
+ * 🔒 SAFE Cache с защитой от race conditions
+ */
 function gmCacheGet_(key) {
   try { 
     return CacheService.getScriptCache().get(key); 
@@ -33,25 +36,89 @@ function gmCacheGet_(key) {
 function gmCachePut_(key, value, ttlSec) {
   try {
     var ttl = Math.max(5, Math.min(21600, Math.floor(ttlSec || 300)));
+    
+    // 💾 MEMORY PROTECTION: Пропускаем очень большие значения 
+    if (value && value.length > 100000) {
+      addSystemLog('⚠️ GM Cache: Skipping large value (' + value.length + ' chars)', 'WARN', 'CACHE');
+      return;
+    }
+    
     CacheService.getScriptCache().put(key, value, ttl);
+  } catch (e) {
+    addSystemLog('❌ GM Cache put failed: ' + e.message, 'ERROR', 'CACHE');
+  }
+}
+
+/**
+ * 🔒 Simple lock для предотвращения duplicate requests
+ */
+function gmCacheLock_(key) {
+  var lockKey = 'lock:' + key;
+  var cache = CacheService.getScriptCache();
+  
+  try {
+    var existing = cache.get(lockKey);
+    if (existing) {
+      return false; // Уже заблокирован
+    }
+    
+    // Блокируем на 30 секунд
+    cache.put(lockKey, 'locked', 30);
+    return true;
+  } catch (e) {
+    return true; // При ошибке разрешаем продолжить
+  }
+}
+
+function gmCacheUnlock_(key) {
+  var lockKey = 'lock:' + key;
+  try {
+    CacheService.getScriptCache().remove(lockKey);
   } catch (e) {}
 }
 
 /**
+ * ⏱️ EXECUTION TIME TRACKING для защиты от timeout
+ */
+var EXECUTION_TIME_LIMIT = 5 * 60 * 1000; // 5 минут (безопасная граница)
+var executionStartTime = null;
+
+function checkTimeoutRisk() {
+  if (!executionStartTime) return;
+  
+  var elapsed = Date.now() - executionStartTime;
+  if (elapsed > EXECUTION_TIME_LIMIT * 0.8) {
+    throw new Error('TIMEOUT_RISK: Operation too long (' + Math.round(elapsed/1000) + 's), aborting safely');
+  }
+}
+
+/**
  * Основная функция GM для Gemini API
- * ИСПРАВЛЕНО: Восстановлена система лицензий!
+ * ✅ SECURE: Интегрирована система безопасности
+ * ⏱️ TIMEOUT PROTECTED: Защита от 6-минутного лимита Apps Script
+ * 🔑 LICENSE CHECKED: Восстановлена система лицензий
  */
 function GM(prompt, maxTokens, temperature) {
   // Используем повышенные лимиты как настроено в новой архитектуре
   maxTokens = maxTokens || 250000;  // Повышенный лимит для большей гибкости
   temperature = temperature || 0.7;
+
+  var traceId = generateTraceId('gm');
+  var startTime = Date.now();
   
-  addSystemLog('→ GM: prompt=' + (prompt ? prompt.slice(0,60)+'...' : 'нет') + ' (' + (prompt ? prompt.length : 0) + ')', 'INFO', 'GEMINI');
-  
-  if (!prompt || typeof prompt !== 'string') {
-    throw new Error('Промпт должен быть непустой строкой.');
+  // ⏱️ TIMEOUT PROTECTION: Начинаем отсчёт времени
+  if (!executionStartTime) {
+    executionStartTime = Date.now();
   }
-  
+
+  // 📊 GOOGLE SHEETS LOGGING: Начало GM операции
+  logToGoogleSheets('INFO', 'GEMINI', 'GM', 'IN_PROGRESS', 'GM request started', {
+    promptLength: prompt ? prompt.length : 0,
+    maxTokens: maxTokens,
+    temperature: temperature,
+    timestamp: new Date()
+  }, traceId);
+
   if (prompt.length > 50000) {  // ИСПРАВЛЕНО: вернул разумный лимит
     throw new Error('Промпт слишком длинный, сократите до 50000 символов.');
   }
@@ -62,24 +129,74 @@ function GM(prompt, maxTokens, temperature) {
     addSystemLog('🚫 GM блокирован: ' + licenseCheck.error, 'WARN', 'GEMINI');
     return 'Error: ' + licenseCheck.error;
   }
-
-  // Проверяем кэш
-  var cacheKey = gmCacheKey_(prompt, maxTokens, temperature);
-  var cached = gmCacheGet_(cacheKey);
-  if (cached) {
-    addSystemLog('✅ GM: из кэша, длина=' + cached.length, 'INFO', 'GEMINI');
-    return cached;
-  }
-
   try {
+    // 🔒 SECURITY: Валидация всех входных параметров
+    var promptValidation = SecurityValidator.validatePrompt(prompt);
+    if (!promptValidation.isValid) {
+      var error = createStandardError(ErrorTypes.VALIDATION_ERROR, 
+        'Invalid prompt: ' + promptValidation.errors.join(', '), 
+        { originalPrompt: typeof prompt });
+      throw error;
+    }
+
+    var paramsValidation = SecurityValidator.validateGMParams(maxTokens, temperature);
+    if (!paramsValidation.isValid) {
+      var error = createStandardError(ErrorTypes.VALIDATION_ERROR,
+        'Invalid parameters: ' + paramsValidation.errors.join(', '),
+        { maxTokens: maxTokens, temperature: temperature });
+      throw error;
+    }
+
+    // Используем валидированные значения
+    var safePrompt = promptValidation.sanitized;
+    var safeMaxTokens = paramsValidation.sanitized.maxTokens;
+    var safeTemperature = paramsValidation.sanitized.temperature;
+
+    // 🔒 SECURITY: Безопасное логирование (без утечки данных)
+    var logData = 'prompt=' + safePrompt.slice(0,60) + '... (' + safePrompt.length + '), tokens=' + safeMaxTokens + ', temp=' + safeTemperature;
+    addSystemLog('→ GM: ' + SecurityValidator.sanitizeForLogging(logData), 'INFO', 'GEMINI');
+
+    // 🔒 CACHE RACE CONDITION PROTECTION
+    var cacheKey = gmCacheKey_(safePrompt, safeMaxTokens, safeTemperature);
+    var cached = gmCacheGet_(cacheKey);
+    if (cached) {
+      addSystemLog('✅ GM: из кэша, длина=' + cached.length, 'INFO', 'GEMINI');
+      return cached;
+    }
+
+    // 🔒 Проверяем lock - если запрос уже выполняется, ждём
+    if (!gmCacheLock_(cacheKey)) {
+      addSystemLog('⏳ GM: Ожидание завершения параллельного запроса', 'INFO', 'GEMINI');
+      
+      // Ждём до 25 секунд, проверяем кэш каждые 2 секунды
+      for (var i = 0; i < 12; i++) {
+        // ⏱️ TIMEOUT CHECK: Проверяем время выполнения
+        checkTimeoutRisk();
+        
+        Utilities.sleep(2000);
+        var waitResult = gmCacheGet_(cacheKey);
+        if (waitResult) {
+          addSystemLog('✅ GM: Получен результат от параллельного запроса', 'INFO', 'GEMINI');
+          return waitResult;
+        }
+      }
+      
+      // Если так и не дождались - разблокируем и продолжаем
+      gmCacheUnlock_(cacheKey);
+      addSystemLog('⚠️ GM: Timeout ожидания, продолжаем запрос', 'WARN', 'GEMINI');
+    }
+
     var apiKey = getGeminiApiKey();
     var requestBody = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: safePrompt }] }],
       generationConfig: { 
-        maxOutputTokens: maxTokens, 
-        temperature: temperature 
+        maxOutputTokens: safeMaxTokens, 
+        temperature: safeTemperature 
       }
     };
+    
+    // ⏱️ TIMEOUT CHECK: Проверяем время перед API запросом
+    checkTimeoutRisk();
     
     // ВАЖНО: Используем fetchGeminiWithRetry для ПОСЛЕДОВАТЕЛЬНЫХ запросов
     var response = fetchGeminiWithRetry(GEMINI_API_URL + '?key=' + apiKey, {
@@ -110,12 +227,25 @@ function GM(prompt, maxTokens, temperature) {
     // Кэшируем результат
     gmCachePut_(cacheKey, processedResult, 300); // 5 минут
     
+    // 🔒 Снимаем lock
+    gmCacheUnlock_(cacheKey);
+    
     addSystemLog('✅ GM: результат, длина=' + result.length + (processedResult !== result ? ', преобразован из Markdown' : ''), 'INFO', 'GEMINI');
+    
+    // 📊 GOOGLE SHEETS LOGGING: Успешное завершение
+    var executionTime = Date.now() - startTime;
+    logGMOperation(safePrompt, processedResult, executionTime, traceId);
+    
     return processedResult;
     
   } catch (error) {
-    addSystemLog('❌ GM исключение: ' + error.message, 'ERROR', 'GEMINI');
-    return 'Error: ' + error.message;
+    // 📊 GOOGLE SHEETS LOGGING: Ошибка
+    var executionTime = Date.now() - startTime;
+    logGMOperation(prompt, null, executionTime, traceId, error);
+    
+    // 🔒 SECURITY: Безопасная обработка ошибок без утечки данных
+    var userMessage = handleSecureError(error, { function: 'GM', promptLength: prompt ? prompt.length : 0 });
+    return userMessage;
   }
 }
 

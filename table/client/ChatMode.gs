@@ -332,27 +332,89 @@ function showChatContextSettings() {
 }
 
 /**
- * Устанавливает триггер для режима чата
+ * 🔒 TRIGGER DEBOUNCING для предотвращения конфликтов
+ */
+var TRIGGER_DEBOUNCE_MS = 500;
+var lastTriggerTime = 0;
+
+/**
+ * Устанавливает триггер для режима чата с debouncing protection
  */
 function setupChatTrigger() {
   try {
-    // Удаляем существующие триггеры чата
-    var triggers = ScriptApp.getProjectTriggers();
-    for (var i = 0; i < triggers.length; i++) {
-      if (triggers[i].getHandlerFunction() === 'onChatEdit') {
-        ScriptApp.deleteTrigger(triggers[i]);
-      }
+    // 🔒 TRIGGER PROTECTION: Очищаем старые triggers безопасно
+    cleanupChatTriggersOnly();
+    
+    // Проверяем лимит triggers (макс 20 на project)
+    var currentTriggers = ScriptApp.getProjectTriggers();
+    if (currentTriggers.length >= 18) {
+      addSystemLog('⚠️ Warning: Close to trigger limit (' + currentTriggers.length + '/20)', 'WARN', 'TRIGGERS');
     }
     
-    // Создаем новый триггер
-    ScriptApp.newTrigger('onChatEdit')
+    // Создаем новый триггер с debounced функцией
+    ScriptApp.newTrigger('onChatEditDebounced')
       .onEdit()
       .create();
       
-    addSystemLog('✓ Триггер режима чата установлен', 'INFO', 'CHAT_MODE');
+    addSystemLog('✓ Триггер режима чата установлен с debouncing protection', 'INFO', 'CHAT_MODE');
     
   } catch (error) {
-    addSystemLog('Ошибка установки триггера чата: ' + error.message, 'ERROR', 'CHAT_MODE');
+    addSystemLog('❌ Ошибка установки триггера чата: ' + error.message, 'ERROR', 'CHAT_MODE');
+    
+    // При ошибке пытаемся очистить проблемные triggers
+    try {
+      cleanupChatTriggersOnly();
+    } catch (cleanupError) {
+      addSystemLog('❌ Trigger cleanup failed: ' + cleanupError.message, 'ERROR', 'TRIGGERS');
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * 🧹 SAFE cleanup только chat triggers
+ */
+function cleanupChatTriggersOnly() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed = 0;
+  
+  triggers.forEach(function(trigger) {
+    var funcName = trigger.getHandlerFunction();
+    if (funcName === 'onChatEdit' || funcName === 'onChatEditDebounced') {
+      try {
+        ScriptApp.deleteTrigger(trigger);
+        removed++;
+      } catch (e) {
+        addSystemLog('⚠️ Failed to remove trigger: ' + funcName, 'WARN', 'TRIGGERS');
+      }
+    }
+  });
+  
+  if (removed > 0) {
+    addSystemLog('🧹 Removed ' + removed + ' old chat triggers', 'INFO', 'TRIGGERS');
+  }
+}
+
+/**
+ * 🔒 DEBOUNCED version of onChatEdit
+ */
+function onChatEditDebounced(e) {
+  var now = Date.now();
+  
+  // Debouncing: игнорируем если прошло меньше 500ms
+  if (now - lastTriggerTime < TRIGGER_DEBOUNCE_MS) {
+    addSystemLog('⏭️ Chat edit debounced (too frequent)', 'DEBUG', 'CHAT_MODE');
+    return;
+  }
+  
+  lastTriggerTime = now;
+  
+  // Вызываем оригинальную функцию
+  try {
+    onChatEdit(e);
+  } catch (error) {
+    addSystemLog('❌ Debounced chat edit failed: ' + error.message, 'ERROR', 'CHAT_MODE');
   }
 }
 

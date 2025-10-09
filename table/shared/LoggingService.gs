@@ -16,8 +16,8 @@ function addSystemLog(message, level, component) {
   var timestamp = new Date().toISOString();
   var logEntry = `[${timestamp}] [${level}] [${component}] ${message}`;
   
-  // 1. Console log
-  console.log(logEntry);
+  // 1. Logger.log instead of console.log (Google Apps Script compatible)
+  Logger.log(logEntry);
   
   // 2. PropertiesService для persistence
   try {
@@ -32,8 +32,8 @@ function addSystemLog(message, level, component) {
     }));
     
   } catch (error) {
-    // Fallback - только console если Properties недоступен
-    console.warn('PropertiesService logging failed:', error.message);
+    // Fallback - только Logger если Properties недоступен
+    Logger.log('PropertiesService logging failed: ' + error.message);
   }
   
   // 3. Для критических ошибок - также в Google Sheets
@@ -41,7 +41,7 @@ function addSystemLog(message, level, component) {
     try {
       logToSheet(logEntry, level);
     } catch (error) {
-      console.warn('Sheet logging failed:', error.message);
+      Logger.log('Sheet logging failed: ' + error.message);
     }
   }
 }
@@ -98,7 +98,7 @@ function logToSheet(logEntry, level) {
     }
     
   } catch (error) {
-    console.error('Sheet logging error:', error.message);
+    Logger.log('Sheet logging error: ' + error.message);
   }
 }
 
