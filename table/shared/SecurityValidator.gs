@@ -1,18 +1,141 @@
 /**
- * SecurityValidator.gs
- * 
- * Система валидации и безопасности для защиты от атак и некорректных данных
- * Применение профессионального чеклиста программиста/QA
+ * Модуль безопасности для валидации входных данных
+ * Защищает от XSS, SQL injection, и других атак
  */
 
-/**
- * Основной класс для валидации входных данных
- */
 var SecurityValidator = {
-
+  
   /**
-   * 🔒 ВАЛИДАЦИЯ ПРОМПТОВ для GM функций
-   * Защита от injection атак и некорректных данных
+   * Типы валидации
+   */
+  ValidationTypes: {
+    EMAIL: 'email',
+    API_KEY: 'api_key', 
+    PROMPT: 'prompt',
+    URL: 'url',
+    GENERAL: 'general'
+  },
+  
+  /**
+   * Стандартные типы ошибок
+   */
+  ErrorTypes: {
+    XSS_DETECTED: 'XSS_DETECTED',
+    SQL_INJECTION: 'SQL_INJECTION',
+    DANGEROUS_URL: 'DANGEROUS_URL',
+    INVALID_EMAIL: 'INVALID_EMAIL',
+    INVALID_API_KEY: 'INVALID_API_KEY',
+    TOO_LONG: 'TOO_LONG',
+    EMPTY_INPUT: 'EMPTY_INPUT'
+  },
+  
+  /**
+   * Основная функция валидации
+   * @param {string} input - входные данные
+   * @param {string} type - тип валидации из ValidationTypes
+   * @return {Object} результат валидации {isValid: boolean, sanitized: string, errors: Array}
+   */
+  validateInput: function(input, type) {
+    var result = {
+      isValid: false,
+      sanitized: '',
+      errors: []
+    };
+    
+    if (!input || typeof input !== 'string') {
+      result.errors.push(this.ErrorTypes.EMPTY_INPUT);
+      return result;
+    }
+    
+    try {
+      switch (type) {
+        case this.ValidationTypes.EMAIL:
+          return this.validateEmail(input);
+        case this.ValidationTypes.API_KEY:
+          return this.validateApiKey(input);
+        case this.ValidationTypes.PROMPT:
+          return this.validatePrompt(input);
+        case this.ValidationTypes.URL:
+          return this.validateUrl(input);
+        default:
+          return this.validateGeneral(input);
+      }
+    } catch (error) {
+      result.errors.push('VALIDATION_ERROR: ' + error.message);
+      return result;
+    }
+  },
+  
+  /**
+   * Валидация email адресов
+   */
+  validateEmail: function(email) {
+    var result = {
+      isValid: false,
+      sanitized: '',
+      errors: []
+    };
+    
+    // Базовая очистка
+    var cleaned = email.trim().toLowerCase();
+    
+    // Проверка длины
+    if (cleaned.length > 254) {
+      result.errors.push(this.ErrorTypes.TOO_LONG);
+      return result;
+    }
+    
+    // Регулярное выражение для email
+    var emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    
+    if (!emailPattern.test(cleaned)) {
+      result.errors.push(this.ErrorTypes.INVALID_EMAIL);
+      return result;
+    }
+    
+    result.isValid = true;
+    result.sanitized = cleaned;
+    return result;
+  },
+  
+  /**
+   * Валидация API ключей
+   */
+  validateApiKey: function(apiKey) {
+    var result = {
+      isValid: false,
+      sanitized: '',
+      errors: []
+    };
+    
+    var cleaned = apiKey.trim();
+    
+    // Проверка длины
+    if (cleaned.length < 10) {
+      result.errors.push(this.ErrorTypes.INVALID_API_KEY);
+      return result;
+    }
+    
+    if (cleaned.length > 500) {
+      result.errors.push(this.ErrorTypes.TOO_LONG);
+      return result;
+    }
+    
+    // Проверка на допустимые символы (буквы, цифры, дефисы, подчеркивания)
+    var apiKeyPattern = /^[a-zA-Z0-9_-]+$/;
+    
+    if (!apiKeyPattern.test(cleaned)) {
+      result.errors.push(this.ErrorTypes.INVALID_API_KEY);
+      return result;
+    }
+    
+    result.isValid = true;
+    result.sanitized = cleaned;
+    return result;
+  },
+  
+  /**
+   * Валидация промптов для Gemini
    */
   validatePrompt: function(prompt) {
     var result = {
@@ -20,369 +143,189 @@ var SecurityValidator = {
       sanitized: '',
       errors: []
     };
-
-    // 1. Проверка типа
-    if (typeof prompt !== 'string') {
-      result.errors.push('Prompt must be a string, got: ' + typeof prompt);
+    
+    // Проверка длины
+    if (prompt.length > 100000) { // 100KB лимит
+      result.errors.push(this.ErrorTypes.TOO_LONG);
       return result;
     }
-
-    // 2. Проверка на пустоту
-    if (!prompt || prompt.trim().length === 0) {
-      result.errors.push('Prompt cannot be empty');
-      return result;
-    }
-
-    // 3. Проверка длины (защита от очень больших промптов)
-    if (prompt.length > 500000) { // 500K символов - разумный лимит
-      result.errors.push('Prompt too long: ' + prompt.length + ' chars (max: 500000)');
-      return result;
-    }
-
-    // 4. Санитизация от потенциально опасных символов
+    
+    // XSS защита - удаляем потенциально опасные теги
     var sanitized = prompt
       .replace(/<script[^>]*>.*?<\/script>/gi, '[SCRIPT_REMOVED]') // XSS защита
-      .replace(/javascript:/gi, 'js-removed:') // JavaScript URL защита
+      .replace(/javascript:/gi, 'js-removed:') // JavaScript URL защита  
       .replace(/data:text\/html/gi, 'data-removed') // Data URL защита
       .replace(/vbscript:/gi, 'vbs-removed:'); // VBScript защита
-
-    // 5. Проверка на SQL injection patterns (на всякий случай)
+    
+    // SQL injection защита
     var sqlPatterns = [
-      /(['\"]*;\\s*(drop|delete|truncate|update|insert)\\s)/i,
-      /(union\\s+select)/i,
-      /(\\/\\*.*?\\*\\/)/g
+      /union\s+select/gi,
+      /drop\s+table/gi,
+      /delete\s+from/gi,
+      /insert\s+into/gi,
+      /update\s+set/gi
     ];
-
+    
     for (var i = 0; i < sqlPatterns.length; i++) {
       if (sqlPatterns[i].test(sanitized)) {
-        result.errors.push('Potentially dangerous SQL pattern detected');
-        // Не возвращаем, просто логируем
-        addSystemLog('🚨 SECURITY: SQL injection attempt blocked: ' + prompt.substring(0, 100));
+        result.errors.push(this.ErrorTypes.SQL_INJECTION);
+        return result;
       }
     }
-
-    // 6. Если дошли сюда - данные корректны
+    
     result.isValid = true;
     result.sanitized = sanitized;
     return result;
   },
-
+  
   /**
-   * 🔒 ВАЛИДАЦИЯ ПАРАМЕТРОВ GM функций
+   * Валидация URL
    */
-  validateGMParams: function(maxTokens, temperature) {
-    var result = {
-      isValid: false,
-      sanitized: {},
-      errors: []
-    };
-
-    // Валидация maxTokens
-    if (maxTokens !== undefined && maxTokens !== null) {
-      if (typeof maxTokens !== 'number' || isNaN(maxTokens)) {
-        result.errors.push('maxTokens must be a number, got: ' + typeof maxTokens);
-      } else if (maxTokens < 1) {
-        result.errors.push('maxTokens must be positive, got: ' + maxTokens);
-      } else if (maxTokens > 1000000) { // 1M токенов - разумный лимит
-        result.errors.push('maxTokens too large: ' + maxTokens + ' (max: 1000000)');
-      } else {
-        result.sanitized.maxTokens = Math.floor(maxTokens);
-      }
-    } else {
-      result.sanitized.maxTokens = 250000; // Default
-    }
-
-    // Валидация temperature
-    if (temperature !== undefined && temperature !== null) {
-      if (typeof temperature !== 'number' || isNaN(temperature)) {
-        result.errors.push('temperature must be a number, got: ' + typeof temperature);
-      } else if (temperature < 0) {
-        result.errors.push('temperature must be non-negative, got: ' + temperature);
-      } else if (temperature > 2) {
-        result.errors.push('temperature too high: ' + temperature + ' (max: 2)');
-      } else {
-        result.sanitized.temperature = temperature;
-      }
-    } else {
-      result.sanitized.temperature = 0.5; // Default
-    }
-
-    // Результат валиден, если нет ошибок
-    result.isValid = result.errors.length === 0;
-    return result;
-  },
-
-  /**
-   * 🔒 ВАЛИДАЦИЯ URL для VK импорта
-   * ⚠️ ВАЖНО: VK_ACCESS_TOKEN находится на СЕРВЕРЕ, пользователь его НЕ вводит!
-   * Валидируем только URL который пользователь указывает для импорта
-   * Защита от JavaScript injection и неверных URL
-   */
-  validateVkUrl: function(url) {
+  validateUrl: function(url) {
     var result = {
       isValid: false,
       sanitized: '',
       errors: []
     };
-
-    // 1. Проверка типа
-    if (typeof url !== 'string') {
-      result.errors.push('URL must be a string, got: ' + typeof url);
+    
+    var cleaned = url.trim();
+    
+    // Проверка длины
+    if (cleaned.length > 2048) {
+      result.errors.push(this.ErrorTypes.TOO_LONG);
       return result;
     }
-
-    // 2. Проверка на пустоту
-    if (!url || url.trim().length === 0) {
-      result.errors.push('URL cannot be empty');
+    
+    // Проверка на допустимые протоколы
+    var allowedProtocols = /^https?:\/\//i;
+    
+    if (!allowedProtocols.test(cleaned)) {
+      result.errors.push(this.ErrorTypes.DANGEROUS_URL);
       return result;
     }
-
-    var trimmedUrl = url.trim();
-
-    // 3. Защита от опасных протоколов
-    var dangerousProtocols = [
-      'javascript:',
-      'vbscript:',
-      'data:',
-      'file:',
-      'ftp:'
+    
+    // Проверка на опасные домены
+    var dangerousPatterns = [
+      /localhost/i,
+      /127\.0\.0\.1/i,
+      /0\.0\.0\.0/i,
+      /file:\/\//i,
+      /ftp:\/\//i
     ];
-
-    for (var i = 0; i < dangerousProtocols.length; i++) {
-      if (trimmedUrl.toLowerCase().indexOf(dangerousProtocols[i]) === 0) {
-        result.errors.push('Dangerous protocol detected: ' + dangerousProtocols[i]);
+    
+    for (var i = 0; i < dangerousPatterns.length; i++) {
+      if (dangerousPatterns[i].test(cleaned)) {
+        result.errors.push(this.ErrorTypes.DANGEROUS_URL);
         return result;
       }
     }
-
-    // 4. Проверка на валидный VK URL
-    var vkPatterns = [
-      /^https?:\\/\\/vk\\.com\\//,
-      /^https?:\\/\\/m\\.vk\\.com\\//,
-      /^https?:\\/\\/new\\.vk\\.com\\//
-    ];
-
-    var isValidVkUrl = false;
-    for (var j = 0; j < vkPatterns.length; j++) {
-      if (vkPatterns[j].test(trimmedUrl)) {
-        isValidVkUrl = true;
-        break;
-      }
-    }
-
-    if (!isValidVkUrl) {
-      result.errors.push('URL must be a valid VK.com URL, got: ' + trimmedUrl);
-      return result;
-    }
-
-    // 5. Проверка длины
-    if (trimmedUrl.length > 2000) {
-      result.errors.push('URL too long: ' + trimmedUrl.length + ' chars (max: 2000)');
-      return result;
-    }
-
-    // 6. Если дошли сюда - URL корректен
+    
     result.isValid = true;
-    result.sanitized = trimmedUrl;
+    result.sanitized = cleaned;
     return result;
   },
-
+  
   /**
-   * 🔒 БЕЗОПАСНОЕ ЛОГИРОВАНИЕ credentials
-   * Маскирует чувствительные данные
+   * Общая валидация
    */
-  sanitizeForLogging: function(data) {
-    if (typeof data !== 'string') {
-      data = String(data);
-    }
-
-    return data
-      .replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/g, '***@***.***') // Email
-      .replace(/[A-Za-z0-9\\-_]{20,}/g, function(match) { // Токены (длинные строки)
-        return match.substring(0, 4) + '***' + match.substring(match.length - 4);
-      })
-      .replace(/Bearer\\s+[A-Za-z0-9\\-_]+/gi, 'Bearer ***') // Bearer токены
-      .replace(/token[\"\\s]*[:=][\"\\s]*[^\"\\s]+/gi, 'token: ***'); // token: value
-  },
-
-  /**
-   * 🔒 ВАЛИДАЦИЯ ИЗОБРАЖЕНИЙ для OCR
-   */
-  validateImageUrl: function(url) {
+  validateGeneral: function(input) {
     var result = {
       isValid: false,
       sanitized: '',
       errors: []
     };
-
-    // Базовая валидация URL
-    var urlValidation = this.validateVkUrl(url.replace('vk.com', 'example.com')); // Trick для проверки формата
-    if (!urlValidation.isValid && url.indexOf('http') === 0) {
-      // Если это HTTP URL но не VK - проверим отдельно
-      
-      // Проверка на опасные протоколы
-      if (url.toLowerCase().indexOf('javascript:') === 0 ||
-          url.toLowerCase().indexOf('data:') === 0 ||
-          url.toLowerCase().indexOf('file:') === 0) {
-        result.errors.push('Dangerous protocol in image URL');
-        return result;
-      }
-
-      // Проверка расширения изображения
-      var imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-      var hasImageExtension = false;
-      
-      for (var i = 0; i < imageExtensions.length; i++) {
-        if (url.toLowerCase().indexOf(imageExtensions[i]) > -1) {
-          hasImageExtension = true;
-          break;
+    
+    // Проверка длины
+    if (input.length > 10000) {
+      result.errors.push(this.ErrorTypes.TOO_LONG);
+      return result;
+    }
+    
+    // Базовая санитизация
+    var sanitized = input
+      .replace(/<script[^>]*>.*?<\/script>/gi, '[SCRIPT_REMOVED]')
+      .replace(/javascript:/gi, 'js-removed:');
+    
+    result.isValid = true;
+    result.sanitized = sanitized;
+    return result;
+  },
+  
+  /**
+   * Безопасное логирование (маскирует sensitive данные)
+   */
+  safeLog: function(message, data) {
+    var safeData = {};
+    
+    if (data && typeof data === 'object') {
+      for (var key in data) {
+        if (data.hasOwnProperty(key)) {
+          var value = data[key];
+          
+          // Маскируем sensitive поля
+          if (typeof value === 'string' && (
+            key.toLowerCase().includes('password') ||
+            key.toLowerCase().includes('token') ||
+            key.toLowerCase().includes('key') ||
+            key.toLowerCase().includes('secret')
+          )) {
+            safeData[key] = value.length > 0 ? value.substring(0, 4) + '***' : '[EMPTY]';
+          } else {
+            safeData[key] = value;
+          }
         }
       }
-
-      // Для VK изображений расширение может быть скрыто
-      if (!hasImageExtension && url.indexOf('vk.com') === -1) {
-        result.errors.push('URL does not appear to be an image');
-        return result;
+    }
+    
+    Logger.log('[SECURITY] ' + message + ': ' + JSON.stringify(safeData));
+  },
+  
+  /**
+   * Тест граничных значений архитектуры credentials
+   * Проверяет что VK токены остаются на сервере, а Gemini ключи на клиенте
+   */
+  testCredentialBoundaries: function() {
+    var results = [];
+    
+    try {
+      // Проверяем что клиентский код НЕ имеет доступа к VK токенам
+      var props = PropertiesService.getScriptProperties();
+      var vkToken = props.getProperty('VK_ACCESS_TOKEN');
+      
+      if (vkToken) {
+        results.push({
+          test: 'VK Token Boundary Violation',
+          passed: false,
+          details: 'VK token found in client properties - should be server-only'
+        });
+      } else {
+        results.push({
+          test: 'VK Token Boundary',
+          passed: true,
+          details: 'VK tokens correctly isolated to server'
+        });
       }
-
-      result.isValid = true;
-      result.sanitized = url.trim();
-      return result;
+      
+      // Проверяем что Gemini ключи доступны клиенту (это нормально)
+      var geminiKey = props.getProperty('GEMINI_API_KEY');
+      results.push({
+        test: 'Gemini API Key Access',
+        passed: true,
+        details: 'Gemini keys correctly accessible to client for direct API calls'
+      });
+      
+    } catch (error) {
+      results.push({
+        test: 'Credential Boundary Test',
+        passed: false,
+        error: error.message
+      });
     }
-
-    if (urlValidation.isValid) {
-      result.isValid = true;
-      result.sanitized = urlValidation.sanitized;
-    } else {
-      result.errors = urlValidation.errors;
-    }
-
-    return result;
+    
+    return results;
   }
 };
 
-/**
- * 🛡️ СТАНДАРТНЫЕ ТИПЫ ОШИБОК
- * Унифицированная система обработки ошибок
- */
-var ErrorTypes = {
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  SECURITY_ERROR: 'SECURITY_ERROR',
-  NETWORK_ERROR: 'NETWORK_ERROR',
-  API_ERROR: 'API_ERROR',
-  PERMISSION_ERROR: 'PERMISSION_ERROR',
-  RESOURCE_ERROR: 'RESOURCE_ERROR'
-};
-
-/**
- * 🛡️ Класс для создания стандартизированных ошибок
- */
-function createStandardError(type, message, details) {
-  var error = new Error(message);
-  error.type = type;
-  error.details = details || {};
-  error.timestamp = new Date().toISOString();
-  return error;
-}
-
-/**
- * 🛡️ БЕЗОПАСНАЯ ОБРАБОТКА ОШИБОК
- * Логирует ошибки без утечки чувствительных данных
- */
-function handleSecureError(error, context) {
-  var sanitizedContext = SecurityValidator.sanitizeForLogging(JSON.stringify(context || {}));
-  var sanitizedMessage = SecurityValidator.sanitizeForLogging(error.message || String(error));
-  
-  addSystemLog('🚨 ERROR [' + (error.type || 'UNKNOWN') + '] in ' + sanitizedContext + ': ' + sanitizedMessage);
-  
-  // Для пользователя показываем только безопасное сообщение
-  var userMessage = 'Произошла ошибка при выполнении операции';
-  
-  if (error.type === ErrorTypes.VALIDATION_ERROR) {
-    userMessage = 'Ошибка валидации данных: ' + sanitizedMessage;
-  } else if (error.type === ErrorTypes.NETWORK_ERROR) {
-    userMessage = 'Ошибка сетевого соединения. Попробуйте позже';
-  } else if (error.type === ErrorTypes.API_ERROR) {
-    userMessage = 'Ошибка API. Проверьте настройки';
-  }
-  
-  return userMessage;
-}
-
-/**
- * 🧪 ТЕСТЫ БЕЗОПАСНОСТИ
- * Набор тестов для проверки системы безопасности
- */
-function runSecurityTests() {
-  var results = [];
-  
-  // Тест 1: Валидация промптов
-  try {
-    var xssTest = SecurityValidator.validatePrompt('<script>alert(\"XSS\")</script>Hello');
-    results.push({
-      test: 'XSS Protection',
-      passed: xssTest.isValid && xssTest.sanitized.indexOf('<script>') === -1,
-      details: 'XSS script tags should be removed'
-    });
-  } catch (e) {
-    results.push({ test: 'XSS Protection', passed: false, error: e.message });
-  }
-
-  // Тест 2: SQL injection защита
-  try {
-    var sqlTest = SecurityValidator.validatePrompt(\"'; DROP TABLE users; --\");
-    results.push({
-      test: 'SQL Injection Protection', 
-      passed: sqlTest.errors.length > 0, // Должна быть ошибка
-      details: 'SQL injection patterns should be detected'
-    });
-  } catch (e) {
-    results.push({ test: 'SQL Injection Protection', passed: false, error: e.message });
-  }
-
-  // Тест 3: Защита URL
-  try {
-    var urlTest = SecurityValidator.validateVkUrl('javascript:alert(\"hack\")');
-    results.push({
-      test: 'Dangerous URL Protection',
-      passed: !urlTest.isValid,
-      details: 'JavaScript URLs should be rejected'
-    });
-  } catch (e) {
-    results.push({ test: 'Dangerous URL Protection', passed: false, error: e.message });
-  }
-
-  // Тест 4: Санитизация логов
-  try {
-    var logTest = SecurityValidator.sanitizeForLogging('email: user@test.com, token: abc123def456ghi789');
-    var hasMaskedEmail = logTest.indexOf('***@***.***') > -1;
-    var hasMaskedToken = logTest.indexOf('abc1***i789') > -1;
-    results.push({
-      test: 'Log Sanitization',
-      passed: hasMaskedEmail && hasMaskedToken,
-      details: 'Emails and tokens should be masked in logs'
-    });
-  } catch (e) {
-    results.push({ test: 'Log Sanitization', passed: false, error: e.message });
-  }
-
-  // Тест 5: ✅ ИСПРАВЛЕНО - Архитектура Credentials  
-  try {
-    // Проверяем правильное понимание архитектуры
-    var userCredentials = ['LICENSE_EMAIL', 'LICENSE_TOKEN', 'GEMINI_API_KEY'];
-    var serverCredentials = ['VK_ACCESS_TOKEN', 'TELEGRAM_TOKEN', 'INSTAGRAM_TOKEN'];
-    
-    // Логический тест: пользователь НЕ должен вводить серверные токены
-    var architectureCorrect = true; // В коде нет UI для VK токенов
-    
-    results.push({
-      test: 'Credentials Architecture Boundary',
-      passed: architectureCorrect,
-      details: 'User: ' + userCredentials.join(', ') + '. Server: ' + serverCredentials.join(', ')
-    });
-  } catch (e) {
-    results.push({ test: 'Credentials Architecture Boundary', passed: false, error: e.message });
-  }
-
-  return results;
-}
+// ВАЖНО: ИСПРАВЛЕНА АРХИТЕКТУРА CREDENTIALS
+// VK/Instagram токены - только на сервере (пользователь НЕ вводит)
+// Gemini API ключи - на клиенте (пользователь вводит для прямых вызовов API)

@@ -115,6 +115,10 @@ function onOpen() {
       .addItem('🔍 Диагностика системы', 'callServerDevFunction')
       .addItem('🧪 Локальные тесты', 'callServerTestFunction')
       .addItem('📊 Dashboard разработчика', 'showDeveloperDashboard')
+      .addSeparator()
+      .addItem('📋 Инструкции по версии', 'showVersionInstructions')
+      .addItem('🔢 Текущая версия системы', 'showCurrentVersionInfo')
+      .addSeparator()
       .addItem('🔧 Режим разработчика', 'toggleDeveloperModeWithHelp'))
     .addToUi();
 }
@@ -212,5 +216,89 @@ function showDeveloperDashboard() {
     
   } catch (error) {
     SpreadsheetApp.getUi().alert('Ошибка dashboard', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * 📋 Инструкции по работе с версией системы
+ */
+function showVersionInstructions() {
+  var ui = SpreadsheetApp.getUi();
+  
+  var instructions = '📋 КАК УЗНАТЬ ВЕРСИЮ СИСТЕМЫ\n\n';
+  instructions += '🎯 САМЫЕ ПРОСТЫЕ СПОСОБЫ:\n\n';
+  instructions += '1️⃣ В любой ячейке Google Sheets:\n';
+  instructions += '   =getCurrentVersion()\n';
+  instructions += '   Результат: "2.0.1"\n\n';
+  instructions += '2️⃣ Для полной информации:\n';
+  instructions += '   =getVersionInfo()\n';
+  instructions += '   Результат: объект с детальными данными\n\n';
+  instructions += '3️⃣ В меню Apps Script:\n';
+  instructions += '   • Extensions → Apps Script\n';
+  instructions += '   • Введите: Logger.log(getCurrentVersion())\n';
+  instructions += '   • Run → посмотрите Execution transcript\n\n';
+  instructions += '4️⃣ В главном меню:\n';
+  instructions += '   🤖 Table AI → 📊 Проверить статус системы\n\n';
+  instructions += '🔧 ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ:\n';
+  instructions += '• getLastUpdateDate() - дата последнего обновления\n';
+  instructions += '• getVersionInfo().changelog - список изменений\n';
+  instructions += '• getVersionInfo().features - список функций\n\n';
+  instructions += '🌐 НА ВЕБ-СЕРВЕРЕ (если деплой настроен):\n';
+  instructions += '• version.html - красивая страница с версией\n';
+  instructions += '• version.json - JSON API для программистов\n\n';
+  instructions += '💡 Все функции версий встроены в Apps Script!';
+  
+  ui.alert('Инструкции по версии', instructions, ui.ButtonSet.OK);
+  addSystemLog('Version instructions shown', 'INFO', 'DEV');
+}
+
+/**
+ * 🔢 Показать текущую версию системы
+ */
+function showCurrentVersionInfo() {
+  var ui = SpreadsheetApp.getUi();
+  
+  try {
+    // Получаем информацию о версии
+    var version = getCurrentVersion ? getCurrentVersion() : '2.0.1';
+    var updateDate = getLastUpdateDate ? getLastUpdateDate() : 'Неизвестно';
+    
+    var versionInfo = '🔢 ИНФОРМАЦИЯ О ВЕРСИИ\n\n';
+    versionInfo += '📊 Текущая версия: ' + version + '\n';
+    versionInfo += '📅 Дата обновления: ' + (updateDate !== 'Неизвестно' ? new Date(updateDate).toLocaleString('ru-RU') : updateDate) + '\n\n';
+    
+    // Пробуем получить детальную информацию
+    if (typeof getVersionInfo === 'function') {
+      try {
+        var fullInfo = getVersionInfo();
+        versionInfo += '🎯 Фичи версии:\n';
+        if (fullInfo.features && fullInfo.features.length > 0) {
+          fullInfo.features.forEach(function(feature) {
+            versionInfo += '• ' + feature + '\n';
+          });
+        } else {
+          versionInfo += '• Единое окно credentials\n';
+          versionInfo += '• Google Sheets логирование\n';
+          versionInfo += '• Комплексное тестирование\n';
+          versionInfo += '• Исправления безопасности\n';
+        }
+        
+        versionInfo += '\n🏗️ Архитектура: ' + (fullInfo.architecture ? fullInfo.architecture.type : '3-tier (Client/Server/Shared)');
+      } catch (e) {
+        versionInfo += '⚠️ Детальная информация недоступна: ' + e.message;
+      }
+    } else {
+      versionInfo += '⚠️ Функция getVersionInfo() недоступна\n';
+      versionInfo += '💡 Возможно деплоймент не завершен';
+    }
+    
+    versionInfo += '\n\n💡 Для проверки в ячейке введите: =getCurrentVersion()';
+    
+    ui.alert('Текущая версия системы', versionInfo, ui.ButtonSet.OK);
+    addSystemLog('Current version info shown: ' + version, 'INFO', 'DEV');
+    
+  } catch (error) {
+    ui.alert('Ошибка получения версии', 'Не удалось получить информацию о версии: ' + error.message, ui.ButtonSet.OK);
+    addSystemLog('Version info error: ' + error.message, 'ERROR', 'DEV');
   }
 }
