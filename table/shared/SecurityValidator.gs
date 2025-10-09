@@ -252,6 +252,52 @@ var SecurityValidator = {
   },
   
   /**
+   * 🔒 ВАЛИДАЦИЯ ПАРАМЕТРОВ GM функций
+   * Восстановлена из коммита a3dae18
+   */
+  validateGMParams: function(maxTokens, temperature) {
+    var result = {
+      isValid: false,
+      sanitized: {},
+      errors: []
+    };
+
+    // Валидация maxTokens
+    if (maxTokens !== undefined && maxTokens !== null) {
+      if (typeof maxTokens !== 'number' || isNaN(maxTokens)) {
+        result.errors.push('maxTokens must be a number, got: ' + typeof maxTokens);
+      } else if (maxTokens < 1) {
+        result.errors.push('maxTokens must be positive, got: ' + maxTokens);
+      } else if (maxTokens > 1000000) { // 1M токенов - разумный лимит
+        result.errors.push('maxTokens too large: ' + maxTokens + ' (max: 1000000)');
+      } else {
+        result.sanitized.maxTokens = Math.floor(maxTokens);
+      }
+    } else {
+      result.sanitized.maxTokens = 250000; // Default
+    }
+
+    // Валидация temperature
+    if (temperature !== undefined && temperature !== null) {
+      if (typeof temperature !== 'number' || isNaN(temperature)) {
+        result.errors.push('temperature must be a number, got: ' + typeof temperature);
+      } else if (temperature < 0) {
+        result.errors.push('temperature must be non-negative, got: ' + temperature);
+      } else if (temperature > 2) {
+        result.errors.push('temperature too high: ' + temperature + ' (max: 2)');
+      } else {
+        result.sanitized.temperature = temperature;
+      }
+    } else {
+      result.sanitized.temperature = 0.5; // Default
+    }
+
+    // Результат валиден, если нет ошибок
+    result.isValid = result.errors.length === 0;
+    return result;
+  },
+  
+  /**
    * Безопасное логирование (маскирует sensitive данные)
    */
   safeLog: function(message, data) {
@@ -280,6 +326,8 @@ var SecurityValidator = {
     Logger.log('[SECURITY] ' + message + ': ' + JSON.stringify(safeData));
   },
   
+
+
   /**
    * Тест граничных значений архитектуры credentials
    * Проверяет что VK токены остаются на сервере, а Gemini ключи на клиенте
@@ -325,6 +373,59 @@ var SecurityValidator = {
     return results;
   }
 };
+
+/**
+ * 🛡️ БЕЗОПАСНАЯ ОБРАБОТКА ОШИБОК
+ * Логирует ошибки без утечки чувствительных данных
+ */
+function handleSecureError(error, context) {
+  try {
+    // Безопасное логирование контекста
+    var safeContext = {};
+    if (context && typeof context === 'object') {
+      for (var key in context) {
+        if (context.hasOwnProperty(key)) {
+          var value = context[key];
+          // Маскируем sensitive данные
+          if (typeof value === 'string' && (
+            key.toLowerCase().includes('token') ||
+            key.toLowerCase().includes('key') ||
+            key.toLowerCase().includes('password')
+          )) {
+            safeContext[key] = value.length > 4 ? value.substring(0, 4) + '***' : '[HIDDEN]';
+          } else {
+            safeContext[key] = value;
+          }
+        }
+      }
+    }
+    
+    // Безопасное сообщение об ошибке
+    var errorMessage = error && error.message ? error.message : String(error);
+    var safeErrorMessage = errorMessage.replace(/[A-Za-z0-9_-]{20,}/g, function(match) {
+      return match.substring(0, 4) + '***';
+    });
+    
+    // Логируем с маскировкой
+    addSystemLog('🚨 SECURE ERROR: ' + safeErrorMessage + ' | Context: ' + JSON.stringify(safeContext), 'ERROR', 'SECURITY');
+    
+    // Возвращаем безопасное сообщение для пользователя
+    if (errorMessage.includes('API')) {
+      return 'Ошибка API. Проверьте настройки ключей.';
+    } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+      return 'Ошибка сетевого соединения. Попробуйте позже.';
+    } else if (errorMessage.includes('permission') || errorMessage.includes('unauthorized')) {
+      return 'Ошибка авторизации. Проверьте права доступа.';
+    } else {
+      return 'Произошла ошибка при выполнении операции. Проверьте настройки.';
+    }
+    
+  } catch (handlingError) {
+    // Если даже обработка ошибки провалилась
+    addSystemLog('🚨 CRITICAL: Error handling failed: ' + handlingError.message, 'ERROR', 'CRITICAL');
+    return 'Критическая ошибка системы. Обратитесь к администратору.';
+  }
+}
 
 // ВАЖНО: ИСПРАВЛЕНА АРХИТЕКТУРА CREDENTIALS
 // VK/Instagram токены - только на сервере (пользователь НЕ вводит)

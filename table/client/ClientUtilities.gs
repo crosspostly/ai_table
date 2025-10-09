@@ -103,7 +103,7 @@ function ocrReviews() {
 function importVkPosts() {
   // Use the universal social import instead
   try {
-    importSocialPosts();
+    importVkPostsSimple();
   } catch (e) {
     SpreadsheetApp.getUi().alert('Ошибка импорта', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
   }
@@ -608,4 +608,129 @@ function getOcrOverwrite_() {
   } catch (e) {}
   
   return false;
+}
+
+/**
+ * Алиас для универсального импорта
+ */
+function importSocialPosts() {
+  importSocialPostsClient();
+}
+
+/**
+ * Smart Chain Functions
+ */
+function runSmartChain() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('🚀 Запуск анализа', 
+    'Умная цепочка анализа данных:\n\n' +
+    '• Автоматический анализ данных\n' +
+    '• Применение AI обработки\n' +
+    '• Формирование отчетов\n\n' +
+    '💡 Функция будет активирована в следующей версии.',
+    ui.ButtonSet.OK);
+  addSystemLog('Smart chain execution requested', 'INFO', 'CHAIN');
+}
+
+function runChainCurrentRow() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('⚡️ Обновление ячейки', 
+    'Умное обновление текущей ячейки:\n\n' +
+    '• Анализ содержимого\n' +
+    '• AI обработка данных\n' +
+    '• Обновление результата\n\n' +
+    '💡 Функция будет активирована в следующей версии.',
+    ui.ButtonSet.OK);
+  addSystemLog('Smart chain current row requested', 'INFO', 'CHAIN');
+}
+
+/**
+ * Простой VK импорт с UI запросом параметров
+ */
+function importVkPostsSimple() {
+  var ui = SpreadsheetApp.getUi();
+  
+  try {
+    // Проверяем credentials
+    var credentials = getClientCredentials();
+    if (!credentials.ok) {
+      ui.alert('Ошибка настроек', 'Настройте credentials: ' + credentials.error + '\n\nМеню: 🤖 Table AI → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ', ui.ButtonSet.OK);
+      return;
+    }
+    
+    // Запрашиваем URL VK
+    var urlResult = ui.prompt('VK Импорт', 'Введите URL группы/пользователя VK:\n\nПример: https://vk.com/durov\nили просто: durov', ui.ButtonSet.OK_CANCEL);
+    
+    if (urlResult.getSelectedButton() !== ui.Button.OK) {
+      return;
+    }
+    
+    var source = urlResult.getResponseText().trim();
+    if (!source) {
+      ui.alert('Ошибка', 'URL не может быть пустым', ui.ButtonSet.OK);
+      return;
+    }
+    
+    // Запрашиваем количество
+    var countResult = ui.prompt('VK Импорт', 'Количество постов для импорта (1-50):', ui.ButtonSet.OK_CANCEL);
+    
+    if (countResult.getSelectedButton() !== ui.Button.OK) {
+      return;
+    }
+    
+    var count = parseInt(countResult.getResponseText().trim()) || 10;
+    if (count < 1) count = 1;
+    if (count > 50) count = 50;
+    
+    // Показываем процесс
+    ui.alert('Импорт запущен', 'Импорт ' + count + ' постов из ' + source + '...\nЭто может занять до 2 минут.', ui.ButtonSet.OK);
+    
+    // Проверяем есть ли функция callServer
+    if (typeof callServer !== 'function') {
+      ui.alert('Ошибка', 'Функция callServer не найдена. Проверьте файлы проекта.', ui.ButtonSet.OK);
+      return;
+    }
+    
+    // Вызов серверного API  
+    var serverRequest = {
+      action: 'social_import',
+      email: credentials.email,
+      token: credentials.token,
+      source: source,
+      count: count,
+      platform: 'vk'
+    };
+    
+    var result = callServer(serverRequest);
+    
+    if (result && result.ok && result.data && result.data.length) {
+      // Проверяем есть ли функция записи
+      if (typeof writeSocialPostsToSheet === 'function') {
+        writeSocialPostsToSheet(SpreadsheetApp.getActive(), result.data, 'VK');
+      } else {
+        // Простая запись в текущий лист
+        var sheet = SpreadsheetApp.getActiveSheet();
+        var lastRow = sheet.getLastRow();
+        var startRow = lastRow + 1;
+        
+        for (var i = 0; i < result.data.length; i++) {
+          var post = result.data[i];
+          sheet.getRange(startRow + i, 1).setValue(post.date || '');
+          sheet.getRange(startRow + i, 2).setValue(post.text || '');
+          sheet.getRange(startRow + i, 3).setValue(post.link || '');
+        }
+      }
+      
+      ui.alert('Успех!', 'Импорт завершён: ' + result.data.length + ' постов\nДанные записаны в текущий лист', ui.ButtonSet.OK);
+      addSystemLog('VK import success: ' + result.data.length + ' posts', 'INFO', 'VK_IMPORT');
+    } else {
+      var errorMsg = result && result.error ? result.error : 'Неизвестная ошибка сервера';
+      ui.alert('Ошибка импорта', 'Не удалось импортировать посты:\n' + errorMsg, ui.ButtonSet.OK);
+      addSystemLog('VK import failed: ' + errorMsg, 'ERROR', 'VK_IMPORT');
+    }
+    
+  } catch (e) {
+    ui.alert('Ошибка', 'Ошибка при импорте: ' + e.message, ui.ButtonSet.OK);
+    addSystemLog('VK import error: ' + e.message, 'ERROR', 'VK_IMPORT');
+  }
 }
