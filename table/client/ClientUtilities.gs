@@ -510,3 +510,102 @@ function openWebInterface() {
   
   ui.showModalDialog(html, 'Table AI - Веб-интерфейс');
 }
+
+/**
+ * Server OCR Batch (gm_image action)
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/ocrRunV2_client.txt
+ */
+function serverGmOcrBatch_(images, lang) {
+  var creds = getClientCredentials();
+  if (!creds.ok) {
+    throw new Error('Credentials error: ' + creds.error);
+  }
+  
+  if (!Array.isArray(images) || images.length === 0) {
+    throw new Error('NO_IMAGES');
+  }
+  
+  var payload = {
+    action: 'gm_image',
+    email: creds.email,
+    token: creds.token,
+    apiKey: creds.apiKey,
+    images: images,
+    lang: lang || 'ru',
+    delimiter: '____'
+  };
+  
+  addSystemLog('→ serverGmOcrBatch_: calling server with ' + images.length + ' images', 'DEBUG', 'OCR');
+  
+  var response = UrlFetchApp.fetch(SERVER_URL, {
+    method: 'POST',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  
+  var code = response.getResponseCode();
+  var responseData = JSON.parse(response.getContentText());
+  
+  if (code !== 200 || !responseData.ok) {
+    throw new Error(responseData.error || 'Server error: ' + code);
+  }
+  
+  addSystemLog('← serverGmOcrBatch_: success, response length=' + (responseData.data ? responseData.data.length : 0), 'INFO', 'OCR');
+  
+  return responseData.data;
+}
+
+/**
+ * Server Status Check (license validation)
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/Main.txt
+ */
+function serverStatus_() {
+  var creds = getClientCredentials();
+  if (!creds.ok) {
+    return { ok: false, error: creds.error };
+  }
+  
+  try {
+    var response = UrlFetchApp.fetch(SERVER_URL, {
+      method: 'POST',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        action: 'status',
+        email: creds.email,
+        token: creds.token
+      }),
+      muteHttpExceptions: true
+    });
+    
+    var code = response.getResponseCode();
+    var data = JSON.parse(response.getContentText());
+    
+    if (code === 200 && data.ok !== undefined) {
+      return data;
+    }
+    
+    return { ok: false, error: 'Server returned ' + code };
+    
+  } catch (e) {
+    return { ok: false, error: 'Server error: ' + e.message };
+  }
+}
+
+/**
+ * Get OCR Overwrite Flag
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/Main.txt
+ */
+function getOcrOverwrite_() {
+  try {
+    var ss = SpreadsheetApp.getActive();
+    var params = ss.getSheetByName('Параметры');
+    
+    if (params) {
+      var val = params.getRange('B7').getDisplayValue(); // OCR Overwrite флаг
+      return String(val).toLowerCase() === 'да' || String(val).toLowerCase() === 'yes';
+    }
+  } catch (e) {}
+  
+  return false;
+}

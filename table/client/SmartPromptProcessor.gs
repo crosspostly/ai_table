@@ -216,6 +216,9 @@ function onSmartPromptEdit(e) {
  */
 function setupSmartPromptTrigger() {
   try {
+    var ui = SpreadsheetApp.getUi();
+    var ss = SpreadsheetApp.getActive();
+    
     // Удаляем существующие триггеры
     var triggers = ScriptApp.getProjectTriggers();
     for (var i = 0; i < triggers.length; i++) {
@@ -228,11 +231,36 @@ function setupSmartPromptTrigger() {
     ScriptApp.newTrigger('onSmartPromptEdit')
       .onEdit()
       .create();
+    
+    // Создаем/обновляем лист Параметры с чекбоксом в D1
+    var paramsSheet = ss.getSheetByName('Параметры');
+    if (!paramsSheet) {
+      paramsSheet = ss.insertSheet('Параметры');
+    }
+    
+    // Добавляем заголовок и чекбокс для контекста в D1
+    var d1 = paramsSheet.getRange('D1');
+    d1.setValue('Контекст чата');
+    d1.setFontWeight('bold');
+    d1.setBackground('#f3f4f6');
+    
+    // Создаем чекбокс в D1 (прямо в заголовке)
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireCheckbox()
+      .setAllowInvalid(false)
+      .build();
+    d1.setDataValidation(rule);
+    
+    // Добавляем комментарий
+    d1.setNote('✓ = Включить сохранение контекста разговора в Chat Mode\n(чат будет помнить предыдущие сообщения)');
       
-    addSystemLog('✓ Триггер умных промптов установлен', 'INFO', 'SETUP');
+    addSystemLog('✓ Триггер умных промптов установлен + чекбокс D1 создан', 'INFO', 'SETUP');
+    
+    ui.alert('✅ Успех', 'Умные промпты активированы!\n\n• Лист "Параметры" обновлен\n• Чекбокс "Контекст чата" в D1\n• Триггер установлен\n\nТеперь пишите "Промпт: текст" в любой ячейке!', ui.ButtonSet.OK);
     
   } catch (error) {
     addSystemLog('Ошибка установки триггера умных промптов: ' + error.message, 'ERROR', 'SETUP');
+    throw error;
   }
 }
 
