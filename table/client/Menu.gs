@@ -28,6 +28,7 @@ function onOpen() {
       .addSeparator()
       .addItem('🔐 Лицензия: Email + Токен', 'setLicenseCredentialsUIWithHelp')
       .addItem('📊 Проверить статус лицензии', 'checkLicenseStatusUIWithHelp')
+      .addItem('🌐 Тест подключения к серверу', 'testConnectionWithHelp')
       .addSeparator()
       .addItem('🔧 Очистить старые триггеры', 'cleanupOldTriggersWithHelp')
       .addItem('👀 Показать активные триггеры', 'showActiveTriggersDialogWithHelp')
@@ -956,6 +957,55 @@ function callServerTestFunction() {
   var ui = SpreadsheetApp.getUi();
   ui.alert('Тесты запускаются на сервере');
   // TODO: Вызов серверных тестов через API
+}
+
+/**
+ * Тест подключения к серверу - с инструкцией
+ */
+function testConnectionWithHelp() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = `🌐 ТЕСТ ПОДКЛЮЧЕНИЯ К СЕРВЕРУ\n\nПроверяет доступность всех критических сервисов:\n\n📋 Что проверяет:\n• License Server - проверка лицензий\n• Gemini API - доступность AI\n• VK Parser - социальные сети\n• Social Import Service - импорт постов\n\n✅ Полезно для диагностики проблем с сетью\n💡 Результат покажет статус каждого сервиса`;
+
+  var result = ui.alert('Инструкция', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    // Запускаем комплексный тест
+    var services = checkAllServicesAvailability();
+    
+    var testResult = '🌐 РЕЗУЛЬТАТЫ ТЕСТА ПОДКЛЮЧЕНИЯ:\n\n';
+    testResult += services.summary + '\n\n';
+    
+    if (services.allAvailable) {
+      testResult += '✅ Все сервисы доступны!\n\n';
+    } else {
+      testResult += '❌ Некоторые сервисы недоступны.\n\n';
+    }
+    
+    // Детальная информация
+    testResult += 'Детали:\n';
+    services.all.forEach(function(service) {
+      testResult += '• ' + service.serviceName + ': ';
+      if (service.available) {
+        testResult += '✅ OK (HTTP ' + service.responseCode + ')\n';
+      } else {
+        testResult += '❌ FAIL (' + (service.error || 'HTTP ' + service.responseCode) + ')\n';
+      }
+    });
+    
+    // Дополнительный тест Social Import
+    testResult += '\n🧪 Тест Social Import:\n';
+    try {
+      var socialTest = testSocialImportConnection();
+      if (socialTest.success) {
+        testResult += '✅ Social Import работает\n';
+      } else {
+        testResult += '❌ Social Import ошибка: ' + (socialTest.error || 'Unknown error') + '\n';
+      }
+    } catch (e) {
+      testResult += '❌ Social Import критическая ошибка: ' + e.message + '\n';
+    }
+    
+    ui.alert('Результаты теста', testResult, ui.ButtonSet.OK);
+  }
 }
 
 /**

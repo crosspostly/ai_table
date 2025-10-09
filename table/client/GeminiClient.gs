@@ -96,8 +96,13 @@ function checkTimeoutRisk() {
  * Основная функция GM для Gemini API
  * ✅ SECURE: Интегрирована система безопасности
  * ⏱️ TIMEOUT PROTECTED: Защита от 6-минутного лимита Apps Script
+ * 🔑 LICENSE CHECKED: Восстановлена система лицензий
  */
 function GM(prompt, maxTokens, temperature) {
+  // Используем повышенные лимиты как настроено в новой архитектуре
+  maxTokens = maxTokens || 250000;  // Повышенный лимит для большей гибкости
+  temperature = temperature || 0.7;
+
   var traceId = generateTraceId('gm');
   var startTime = Date.now();
   
@@ -105,7 +110,7 @@ function GM(prompt, maxTokens, temperature) {
   if (!executionStartTime) {
     executionStartTime = Date.now();
   }
-  
+
   // 📊 GOOGLE SHEETS LOGGING: Начало GM операции
   logToGoogleSheets('INFO', 'GEMINI', 'GM', 'IN_PROGRESS', 'GM request started', {
     promptLength: prompt ? prompt.length : 0,
@@ -113,7 +118,17 @@ function GM(prompt, maxTokens, temperature) {
     temperature: temperature,
     timestamp: new Date()
   }, traceId);
-  
+
+  if (prompt.length > 50000) {  // ИСПРАВЛЕНО: вернул разумный лимит
+    throw new Error('Промпт слишком длинный, сократите до 50000 символов.');
+  }
+
+  // КРИТИЧНО: Проверка лицензии ОБЯЗАТЕЛЬНА (восстановлена из старой версии)
+  var licenseCheck = validateLicenseForGM();
+  if (!licenseCheck.ok) {
+    addSystemLog('🚫 GM блокирован: ' + licenseCheck.error, 'WARN', 'GEMINI');
+    return 'Error: ' + licenseCheck.error;
+  }
   try {
     // 🔒 SECURITY: Валидация всех входных параметров
     var promptValidation = SecurityValidator.validatePrompt(prompt);
