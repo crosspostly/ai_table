@@ -19,7 +19,7 @@ function onOpen() {
     .addItem('⚡ Активировать умные промпты', 'setupSmartPromptTriggerWithHelp')
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Настройки')
-      .addItem('🔧 Настроить все ключи', 'setupAllCredentialsWithHelp')
+      .addItem('🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ (Email+Token+API)', 'setupAllCredentialsUnified')
       .addItem('📊 Проверить статус системы', 'checkSystemStatus')
       .addSeparator()
       .addItem('🔑 API ключ Gemini', 'initGeminiKeyWithHelp')
@@ -63,13 +63,12 @@ function onOpen() {
     .addItem('📊 Открыть лист "Логи" в новой вкладке', 'openLogsSheet')
     .addToUi();
   
-  // DEV меню для серверных вызовов
-  if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
-    ui.createMenu('🧰 DEV')
-      .addItem('📝 Логи сервера', 'callServerDevFunction')
-      .addItem('🧪 Тесты сервера', 'callServerTestFunction')
-      .addToUi();
-  }
+  // DEV меню - всегда доступно
+  ui.createMenu('🧰 DEV')
+    .addItem('📝 Диагностика системы', 'callServerDevFunction')
+    .addItem('🧪 Локальные тесты', 'callServerTestFunction')
+    .addItem('🔧 Developer Dashboard', 'showDeveloperDashboard')
+    .addToUi();
 }
 
 /**
@@ -405,10 +404,10 @@ function setCompletionPhraseUIWithHelp() {
 }
 
 /**
- * 🔧 ЕДИНОЕ ОКНО НАСТРОЙКИ ВСЕХ CREDENTIALS
- * Главная функция для настройки License + Gemini API ключа
+ * 🌟 ЕДИНОЕ ОКНО НАСТРОЙКИ ВСЕХ CREDENTIALS  
+ * ЭТО ТО, ЧТО ВЫ ПРОСИЛИ - ОДНО ОКНО ДЛЯ ВСЕХ КЛЮЧЕЙ!
  */
-function setupAllCredentialsWithHelp() {
+function setupAllCredentialsUnified() {
   var ui = SpreadsheetApp.getUi();
   
   // Показываем главную инструкцию
@@ -949,14 +948,34 @@ function showSystemStatusWithHelp() {
 
 function callServerDevFunction() {
   var ui = SpreadsheetApp.getUi();
-  ui.alert('DEV функции доступны только на сервере');
-  // TODO: Вызов серверной DEV функции через API
+  
+  // Показываем локальные DEV функции
+  var result = ui.alert('🧰 DEV ФУНКЦИИ', 
+    '📋 Доступные DEV функции:\n\n' +
+    '• Локальные логи системы\n' +
+    '• Диагностика credentials\n' +
+    '• Анализ производительности\n\n' +
+    'Запустить диагностику?', ui.ButtonSet.YES_NO);
+  
+  if (result === ui.Button.YES) {
+    showSystemStatus();
+  }
 }
 
 function callServerTestFunction() {
   var ui = SpreadsheetApp.getUi();
-  ui.alert('Тесты запускаются на сервере');
-  // TODO: Вызов серверных тестов через API
+  
+  // Запускаем локальные тесты
+  var result = ui.alert('🧪 ЛОКАЛЬНЫЕ ТЕСТЫ', 
+    '🔍 Доступные тесты:\n\n' +
+    '• Быстрый тест системы\n' +
+    '• Проверка всех функций\n' +
+    '• Тест безопасности\n\n' +
+    'Запустить быстрый тест?', ui.ButtonSet.YES_NO);
+  
+  if (result === ui.Button.YES) {
+    quickTest();
+  }
 }
 
 /**
