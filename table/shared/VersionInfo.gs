@@ -11,10 +11,10 @@ function getVersionInfo() {
       "homepage": "https://aitables.com"
     },
     "version": {
-      "current": "2.0.1",
-      "previous": "2.0.0",
+      "current": "2.1.0",
+      "previous": "2.0.1",
       "releaseDate": "2024-10-09",
-      "updateTimestamp": "2024-10-09T15:30:00Z",
+      "updateTimestamp": "2024-10-09T21:45:00Z",
       "status": "stable"
     },
     "build": {
