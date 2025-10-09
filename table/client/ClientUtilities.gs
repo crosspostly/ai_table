@@ -103,7 +103,7 @@ function ocrReviews() {
 function importVkPosts() {
   // Use the universal social import instead
   try {
-    importSocialPosts();
+    importSocialPostsClient();
   } catch (e) {
     SpreadsheetApp.getUi().alert('Ошибка импорта', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
   }
@@ -608,4 +608,38 @@ function getOcrOverwrite_() {
   } catch (e) {}
   
   return false;
+}
+
+/**
+ * Алиас для универсального импорта
+ */
+function importSocialPosts() {
+  importSocialPostsClient();
+}
+
+/**
+ * Smart Chain Functions
+ */
+function runSmartChain() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('🚀 Запуск анализа', 
+    'Умная цепочка анализа данных:\n\n' +
+    '• Автоматический анализ данных\n' +
+    '• Применение AI обработки\n' +
+    '• Формирование отчетов\n\n' +
+    '💡 Функция будет активирована в следующей версии.',
+    ui.ButtonSet.OK);
+  addSystemLog('Smart chain execution requested', 'INFO', 'CHAIN');
+}
+
+function runChainCurrentRow() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('⚡️ Обновление ячейки', 
+    'Умное обновление текущей ячейки:\n\n' +
+    '• Анализ содержимого\n' +
+    '• AI обработка данных\n' +
+    '• Обновление результата\n\n' +
+    '💡 Функция будет активирована в следующей версии.',
+    ui.ButtonSet.OK);
+  addSystemLog('Smart chain current row requested', 'INFO', 'CHAIN');
 }
