@@ -455,7 +455,16 @@ table/
 
 ## 🔄 **CHANGELOG**
 
-### **v2.0.0** (Current)
+### **v2.0.1** (Current) 
+- ✅ **UNIFIED CREDENTIALS WINDOW** - единое окно ввода всех ключей
+- ✅ **FIXED DEPLOYMENT ERRORS** - исправлены синтаксические ошибки в GitHub Actions
+- ✅ **GOOGLE SHEETS LOGGING** - система логирования в реальном времени в лист "Логи"
+- ✅ **COMPREHENSIVE TESTING** - 25+ автоматических тестов с детальными отчётами
+- ✅ **MERGE CONFLICTS RESOLVED** - унифицированы все улучшения без конфликтов
+- ✅ **DEV FUNCTIONS FIXED** - функции разработчика работают локально
+- ✅ **CRITICAL BUG FIXES** - исправлены все ReferenceError и runtime ошибки
+
+### **v2.0.0** 
 - ✅ Comprehensive security system
 - ✅ Complete testing methodology  
 - ✅ Unified credentials management

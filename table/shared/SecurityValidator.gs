@@ -41,9 +41,9 @@ var SecurityValidator = {
 
     // 4. Санитизация от потенциально опасных символов
     var sanitized = prompt
-      .replace(/<script[^>]*>.*?<\\/script>/gi, '[SCRIPT_REMOVED]') // XSS защита
+      .replace(/<script[^>]*>.*?<\/script>/gi, '[SCRIPT_REMOVED]') // XSS защита
       .replace(/javascript:/gi, 'js-removed:') // JavaScript URL защита
-      .replace(/data:text\\/html/gi, 'data-removed') // Data URL защита
+      .replace(/data:text\/html/gi, 'data-removed') // Data URL защита
       .replace(/vbscript:/gi, 'vbs-removed:'); // VBScript защита
 
     // 5. Проверка на SQL injection patterns (на всякий случай)
