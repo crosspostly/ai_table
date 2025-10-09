@@ -42,8 +42,8 @@ function gmCachePut_(key, value, ttlSec) {
  * ИСПРАВЛЕНО: Восстановлена система лицензий!
  */
 function GM(prompt, maxTokens, temperature) {
-  // ИСПРАВЛЕНО: Возвращены разумные лимиты из старой версии
-  maxTokens = maxTokens || 25000;  // Разумный лимит (было 250000 - слишком много!)
+  // Используем повышенные лимиты как настроено в новой архитектуре
+  maxTokens = maxTokens || 250000;  // Повышенный лимит для большей гибкости
   temperature = temperature || 0.7;
   
   addSystemLog('→ GM: prompt=' + (prompt ? prompt.slice(0,60)+'...' : 'нет') + ' (' + (prompt ? prompt.length : 0) + ')', 'INFO', 'GEMINI');
