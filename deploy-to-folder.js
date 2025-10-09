@@ -167,6 +167,59 @@ function readProjectFiles() {
     console.log(`   ✅ appsscript.json`);
   }
   
+  // Version files
+  const versionHtmlPath = path.join(__dirname, 'version.html');
+  if (fs.existsSync(versionHtmlPath)) {
+    const versionHtml = fs.readFileSync(versionHtmlPath, 'utf8');
+    files.push({
+      name: 'version',
+      type: 'HTML',
+      source: versionHtml
+    });
+    console.log(`   ✅ version.html (version info page)`);
+  }
+  
+  const versionJsonPath = path.join(__dirname, 'version.json');
+  if (fs.existsSync(versionJsonPath)) {
+    // Обновляем timestamp в JSON перед деплоем
+    const versionData = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
+    versionData.version.updateTimestamp = new Date().toISOString();
+    versionData.build.number = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    versionData.metadata.generated_at = new Date().toISOString();
+    
+    // Добавляем как JS функцию для Apps Script
+    const versionFunction = `/**
+ * Получение информации о версии системы
+ * @return {Object} Объект с данными о версии
+ */
+function getVersionInfo() {
+  return ${JSON.stringify(versionData, null, 2)};
+}
+
+/**
+ * Получение текущей версии (строка)
+ * @return {string} Номер версии
+ */
+function getCurrentVersion() {
+  return getVersionInfo().version.current;
+}
+
+/**
+ * Получение даты последнего обновления
+ * @return {string} ISO строка даты
+ */
+function getLastUpdateDate() {
+  return getVersionInfo().version.updateTimestamp;
+}`;
+    
+    files.push({
+      name: 'VersionInfo',
+      type: 'SERVER_JS',
+      source: versionFunction
+    });
+    console.log(`   ✅ version.json → VersionInfo.gs (API functions)`);
+  }
+  
   console.log(`\n📦 Total files: ${files.length}\n`);
   
   return files;

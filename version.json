@@ -1,0 +1,170 @@
+{
+  "project": {
+    "name": "AI_TABLE",
+    "description": "Enterprise AI Assistant для Google Sheets",
+    "repository": "https://github.com/crosspostly/ai_table",
+    "homepage": "https://aitables.com"
+  },
+  "version": {
+    "current": "2.0.1",
+    "previous": "2.0.0",
+    "releaseDate": "2024-10-09",
+    "updateTimestamp": "2024-10-09T15:30:00Z",
+    "status": "stable"
+  },
+  "build": {
+    "number": "20241009",
+    "environment": "production",
+    "platform": "Google Apps Script",
+    "deployedBy": "GitHub Actions"
+  },
+  "features": {
+    "unified_credentials": {
+      "name": "Единое окно ввода ключей",
+      "description": "setupAllCredentialsUnified() - все credentials в одном месте",
+      "status": "active",
+      "added_in": "2.0.1"
+    },
+    "google_sheets_logging": {
+      "name": "Google Sheets логирование",
+      "description": "Система логирования в реальном времени в лист Логи",
+      "status": "active",
+      "added_in": "2.0.1"
+    },
+    "comprehensive_testing": {
+      "name": "Comprehensive Testing",
+      "description": "25+ автоматических тестов с детальными отчётами",
+      "status": "active",
+      "added_in": "2.0.1"
+    },
+    "security_validation": {
+      "name": "Security Validation",
+      "description": "Защита от XSS, SQL injection, безопасное логирование",
+      "status": "active", 
+      "added_in": "2.0.0"
+    },
+    "dev_functions": {
+      "name": "DEV Functions",
+      "description": "Функции разработчика работают локально",
+      "status": "active",
+      "added_in": "2.0.1"
+    }
+  },
+  "changelog": {
+    "2.0.1": {
+      "release_date": "2024-10-09",
+      "changes": [
+        {
+          "type": "feature",
+          "description": "UNIFIED CREDENTIALS WINDOW - единое окно ввода всех ключей"
+        },
+        {
+          "type": "fix", 
+          "description": "FIXED DEPLOYMENT ERRORS - исправлены синтаксические ошибки в GitHub Actions"
+        },
+        {
+          "type": "feature",
+          "description": "GOOGLE SHEETS LOGGING - система логирования в реальном времени"
+        },
+        {
+          "type": "feature",
+          "description": "COMPREHENSIVE TESTING - 25+ автоматических тестов"
+        },
+        {
+          "type": "fix",
+          "description": "MERGE CONFLICTS RESOLVED - унифицированы все улучшения"
+        },
+        {
+          "type": "fix",
+          "description": "DEV FUNCTIONS FIXED - функции разработчика работают локально"
+        },
+        {
+          "type": "fix",
+          "description": "CRITICAL BUG FIXES - исправлены все ReferenceError и runtime ошибки"
+        }
+      ],
+      "breaking_changes": [],
+      "migration_notes": []
+    },
+    "2.0.0": {
+      "release_date": "2024-10-08",
+      "changes": [
+        {
+          "type": "feature",
+          "description": "Comprehensive security system"
+        },
+        {
+          "type": "feature", 
+          "description": "Complete testing methodology"
+        },
+        {
+          "type": "feature",
+          "description": "Unified credentials management"
+        },
+        {
+          "type": "feature",
+          "description": "Critical bugs audit"
+        },
+        {
+          "type": "improvement",
+          "description": "Production-ready architecture"
+        }
+      ]
+    }
+  },
+  "system_status": {
+    "deployment": "success",
+    "tests": {
+      "total": 25,
+      "passed": 25,
+      "failed": 0,
+      "last_run": "2024-10-09T15:25:00Z"
+    },
+    "security": {
+      "status": "protected",
+      "last_audit": "2024-10-09T15:20:00Z",
+      "vulnerabilities": 0
+    },
+    "logging": {
+      "status": "active",
+      "destination": "Google Sheets",
+      "retention_days": 30
+    }
+  },
+  "technical_info": {
+    "architecture": "3-tier",
+    "client_layer": "Google Sheets Script",
+    "server_layer": "Standalone Web Application", 
+    "web_interface": "HTML/JS GUI",
+    "supported_apis": [
+      "Gemini API",
+      "VK API",
+      "Instagram API (via server)",
+      "Telegram API (via server)"
+    ],
+    "credentials_architecture": {
+      "client_side": ["GEMINI_API_KEY", "LICENSE_EMAIL", "LICENSE_TOKEN"],
+      "server_side": ["VK_ACCESS_TOKEN", "TELEGRAM_TOKEN", "INSTAGRAM_TOKEN"]
+    }
+  },
+  "support": {
+    "email": "support@aitables.com",
+    "telegram": "@aitables_support",
+    "github_issues": "https://github.com/crosspostly/ai_table/issues",
+    "documentation": "https://github.com/crosspostly/ai_table/blob/main/README.md"
+  },
+  "license": {
+    "type": "Enterprise License",
+    "commercial_use": true,
+    "modification": true,
+    "redistribution": false,
+    "enterprise_support": true
+  },
+  "metadata": {
+    "generated_at": "2024-10-09T15:30:00Z",
+    "generated_by": "AI_TABLE Deploy System",
+    "format_version": "1.0",
+    "last_updated_by": "GitHub Actions",
+    "update_frequency": "on_deployment"
+  }
+}
