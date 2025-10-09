@@ -205,7 +205,7 @@ function convertMarkdownToReadableText(markdownText) {
     text = text.trim();
     
   } catch (e) {
-    console.error('Markdown conversion error:', e.message);
+    Logger.log('Markdown conversion error: ' + e.message);
     return markdownText; // Возвращаем оригинал в случае ошибки
   }
   
@@ -245,11 +245,11 @@ function addSystemLog(message, level, category) {
     
     cache.put(cacheKey, JSON.stringify(logs), ttl);
     
-    // Дублируем в консоль
-    console.log('[' + timestamp + '] ' + level + ' [' + category + '] ' + message);
+    // Дублируем в логи (Google Apps Script compatible)
+    Logger.log('[' + timestamp + '] ' + level + ' [' + category + '] ' + message);
     
   } catch (e) {
-    console.error('System log error:', e.message);
+    Logger.log('System log error: ' + e.message);
   }
 }
 
@@ -363,7 +363,7 @@ function safeJsonParse(jsonString, defaultValue) {
   try {
     return JSON.parse(jsonString);
   } catch (e) {
-    console.warn('JSON parse error:', e.message);
+    Logger.log('JSON parse error: ' + e.message);
     return defaultValue || {};
   }
 }
@@ -375,7 +375,7 @@ function safeJsonStringify(obj, defaultValue) {
   try {
     return JSON.stringify(obj);
   } catch (e) {
-    console.warn('JSON stringify error:', e.message);
+    Logger.log('JSON stringify error: ' + e.message);
     return defaultValue || '{}';
   }
 }

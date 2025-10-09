@@ -423,7 +423,7 @@ function getServerUrl() {
  * Log to console and cache
  */
 function logClient(message) {
-  console.log('[CLIENT] ' + message);
+  Logger.log('[CLIENT] ' + message);
   
   try {
     var cache = CacheService.getScriptCache();

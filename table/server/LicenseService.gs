@@ -261,7 +261,7 @@ function logLicenseActivity(action, email, token, result, traceId) {
     
   } catch (e) {
     // Не критично если логирование не работает
-    console.error('License log error:', e.message);
+    Logger.log('License log error: ' + e.message);
   }
 }
 
