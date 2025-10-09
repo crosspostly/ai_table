@@ -120,14 +120,13 @@ function onOpen() {
       .addItem('🔧 Принудительная очистка логов', 'forceFlushAllLogs')
       .addItem('📋 Статистика логов', 'showLogStatistics'))
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
-      .addItem('🔍 Диагностика системы', 'callServerDevFunction')
-      .addItem('🧪 Локальные тесты', 'callServerTestFunction')
-      .addItem('📊 Dashboard разработчика', 'showDeveloperDashboard')
+      .addItem('🎯 МАСТЕР ПРОВЕРКА', 'masterSystemCheck')
       .addSeparator()
-      .addItem('📋 Инструкции по версии', 'showVersionInstructions')
-      .addItem('🔢 Детальная информация', 'showCurrentVersionInfo')
+      .addItem('🔍 Диагностика', 'callServerDevFunction')
+      .addItem('🧪 Проверить функции', 'checkAllFunctionExistence')
       .addSeparator()
-      .addItem('🔧 Режим разработчика', 'toggleDeveloperModeWithHelp'))
+      .addItem('📋 Версия', 'showCurrentVersionInfo')
+      .addItem('🔧 Режим DEV', 'toggleDeveloperModeWithHelp'))
     .addToUi();
 }
 

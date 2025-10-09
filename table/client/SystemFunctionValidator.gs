@@ -6,8 +6,9 @@
 
 /**
  * ГЛАВНАЯ ФУНКЦИЯ - запускает полную проверку всех функций
+ * @param {boolean} silent - если true, не показывает UI алерты
  */
-function validateAllSystemFunctions() {
+function validateAllSystemFunctions(silent) {
   var startTime = new Date();
   addSystemLog('🔍 НАЧАТА АВТОМАТИЧЕСКАЯ ПРОВЕРКА ВСЕХ ФУНКЦИЙ СИСТЕМЫ', 'INFO', 'VALIDATION');
   
@@ -41,11 +42,15 @@ function validateAllSystemFunctions() {
     // Логируем результаты
     logFunctionResults(allResults, startTime);
     
-    // Показываем результат пользователю
-    showFunctionReport(report);
+    // Показываем результат пользователю (если не silent mode)
+    if (!silent) {
+      showFunctionReport(report);
+    }
     
-    // Создаем missing функции автоматически
-    createMissingFunctions(allResults);
+    // Создаем missing функции автоматически (если не silent mode)
+    if (!silent) {
+      createMissingFunctions(allResults);
+    }
     
     return report;
     
@@ -267,6 +272,13 @@ function createStubFunction(funcName, category) {
   } catch (error) {
     addSystemLog('❌ Ошибка создания функции ' + funcName + ': ' + error.message, 'ERROR', 'VALIDATION');
   }
+}
+
+/**
+ * АЛИАС ДЛЯ СОВМЕСТИМОСТИ
+ */
+function checkAllFunctionExistence(silent) {
+  return validateAllSystemFunctions(silent);
 }
 
 /**
