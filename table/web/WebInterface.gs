@@ -37,11 +37,11 @@ function getSystemStatusData() {
   var credentials = getClientCredentials();
   
   return {
-    credentialsOk: credentials.valid,
+    credentialsOk: credentials.ok,
     credentialsError: credentials.error || '',
     hasEmail: !!(credentials.email),
     hasToken: !!(credentials.token),
-    hasGeminiKey: !!(credentials.geminiApiKey),
+    hasGeminiKey: !!(credentials.apiKey),
     
     // Проверяем листы
     hasReviewsSheet: !!SpreadsheetApp.getActive().getSheetByName('Отзывы'),
@@ -274,7 +274,7 @@ function webApiGeminiRequest(prompt, options) {
     options = options || {};
     
     var credentials = getClientCredentials();
-    if (!credentials.valid) {
+    if (!credentials.ok) {
       return {
         success: false,
         error: 'Не настроены credentials: ' + credentials.error
@@ -318,7 +318,7 @@ function webApiTestConnection() {
     return {
       success: true,
       status: {
-        credentials: credentials.valid,
+        credentials: credentials.ok,
         system: systemStatus,
         server: serverStatus,
         timestamp: new Date().toISOString()

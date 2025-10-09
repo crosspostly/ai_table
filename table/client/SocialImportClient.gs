@@ -11,7 +11,7 @@ function importSocialPostsClient() {
   var ss = SpreadsheetApp.getActive();
   
   var credentials = getClientCredentials();
-  if (!credentials.valid) {
+  if (!credentials.ok) {
     ui.alert('Ошибка credentials', 'Не настроены credentials: ' + credentials.error, ui.ButtonSet.OK);
     return;
   }
@@ -282,7 +282,7 @@ function testSocialImportConnection() {
     
     // Проверка credentials
     var credentials = getClientCredentials();
-    if (!credentials.valid) {
+    if (!credentials.ok) {  // ИСПРАВЛЕНО: было credentials.valid
       ui.alert('❌ Ошибка credentials', credentials.error, ui.ButtonSet.OK);
       return;
     }

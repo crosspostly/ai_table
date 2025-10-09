@@ -27,15 +27,27 @@ function onOpen() {
       .addItem('🔧 Очистить старые триггеры', 'cleanupOldTriggersWithHelp')
       .addItem('👀 Показать активные триггеры', 'showActiveTriggersDialogWithHelp')
       .addSeparator()
+      .addItem('📋 Показать логи системы', 'showRecentLogs')
+      .addItem('🗑️ Очистить старые логи', 'clearOldLogsUI')
+      .addSeparator()
       .addItem('📊 Статус системы', 'showSystemStatusWithHelp')
     )
     .addToUi();
 
-  // DEV меню только вызов серверных функций
+  // Меню тестирования (всегда доступно!)
+  ui.createMenu('🧪 Тестирование')
+    .addItem('✅ Запустить все тесты', 'runAllTests')
+    .addItem('🔍 Проверить функции', 'checkAllFunctionsExist')
+    .addItem('⚡ Быстрый тест', 'quickTest')
+    .addSeparator()
+    .addItem('📋 Экспорт логов', 'exportAndShowLogs')
+    .addToUi();
+  
+  // DEV меню для серверных вызовов
   if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
     ui.createMenu('🧰 DEV')
-      .addItem('📝 Логи системы', 'callServerDevFunction')
-      .addItem('🧪 Тесты', 'callServerTestFunction')
+      .addItem('📝 Логи сервера', 'callServerDevFunction')
+      .addItem('🧪 Тесты сервера', 'callServerTestFunction')
       .addToUi();
   }
 }
@@ -546,9 +558,9 @@ function showSystemStatus() {
 📊 Статус системы Table AI v2.0
 
 🔐 Credentials:
-• Email лицензии: ${credentials.valid ? '✅ Настроен' : '❌ ' + credentials.error}
-• Токен лицензии: ${credentials.valid ? '✅ Настроен' : '❌ Не настроен'}
-• Gemini API: ${credentials.valid && credentials.geminiApiKey ? '✅ Настроен' : '❌ Не настроен'}
+• Email лицензии: ${credentials.ok ? '✅ Настроен' : '❌ ' + credentials.error}
+• Токен лицензии: ${credentials.ok ? '✅ Настроен' : '❌ Не настроен'}
+• Gemini API: ${credentials.ok && credentials.apiKey ? '✅ Настроен' : '❌ Не настроен'}
 
 ⚙️ Настройки:
 • Перезапись OCR: ${ocrOverwrite === 'true' ? '✅ Включена' : '❌ Выключена'}
@@ -561,7 +573,7 @@ function showSystemStatus() {
 • Лист "Параметры": ${paramsSheet}
 
 💡 Рекомендации:
-${credentials.valid ? '' : '• Настройте credentials через меню'}
+${credentials.ok ? '' : '• Настройте credentials через меню'}
 ${reviewsSheet === '✅' ? '' : '• Создайте лист "Отзывы" для OCR обработки'}
 ${paramsSheet === '✅' ? '' : '• Создайте лист "Параметры" для VK импорта'}
   `.trim();

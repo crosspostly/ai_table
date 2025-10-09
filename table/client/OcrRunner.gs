@@ -276,7 +276,7 @@ function findNextWriteRow_(sheet, startRow) {
 function gmOcrFromBlob_(blob, lang) {
   try {
     var credentials = getClientCredentials();
-    if (!credentials.valid || !credentials.apiKey) {
+    if (!credentials.ok || !credentials.apiKey) {
       throw new Error('GEMINI_API_KEY not configured');
     }
     
