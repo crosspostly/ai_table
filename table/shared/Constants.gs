@@ -26,7 +26,8 @@ const MAX_LOGS = 200; // Максимум логов в памяти
 const LOGS_TTL = 86400; // TTL логов: 24 часа
 
 // ====== SERVER URL ======
-const SERVER_API_URL = 'https://script.google.com/macros/s/AKfycby_YOUR_SERVER_ID/exec';
+// ИСПРАВЛЕНО: Восстановлен правильный URL из старой версии
+const SERVER_API_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHniTv_12cAHlqjYfra7fQ3m3Vri5XvZTQ_uUZZovCYeTo2_u6gQw/exec';
 
 // ====== Rate Limiting ======
 const RATE_LIMIT_WINDOW = 3600; // 1 час в секундах
