@@ -357,6 +357,51 @@ function GM_STATIC(prompt, maxTokens, temperature, _tick) {
 }
 
 /**
+ * Условная функция GM_IF - вызывает GM только при выполнении условия
+ * @param {*} condition - условие для проверки
+ * @param {string} prompt - промпт для Gemini
+ * @param {number} maxTokens - максимум токенов
+ * @param {number} temperature - температура
+ * @return {string} - результат GM или пустая строка
+ */
+function GM_IF(condition, prompt, maxTokens, temperature) {
+  try {
+    addSystemLog('🔍 GM_IF: проверка условия', 'INFO', 'GEMINI');
+    
+    // Проверяем условие
+    var shouldExecute = false;
+    
+    if (typeof condition === 'boolean') {
+      shouldExecute = condition;
+    } else if (typeof condition === 'string') {
+      // Если строка не пустая и не равна "false", "0", "no"
+      var condStr = condition.toLowerCase().trim();
+      shouldExecute = condStr !== '' && condStr !== 'false' && condStr !== '0' && condStr !== 'no' && condStr !== 'нет';
+    } else if (typeof condition === 'number') {
+      shouldExecute = condition !== 0;
+    } else {
+      // Для объектов, массивов и null/undefined
+      shouldExecute = condition != null && condition != undefined;
+    }
+    
+    if (!shouldExecute) {
+      addSystemLog('❌ GM_IF: условие не выполнено, пропускаем GM', 'INFO', 'GEMINI');
+      return '';
+    }
+    
+    addSystemLog('✅ GM_IF: условие выполнено, вызываем GM', 'INFO', 'GEMINI');
+    
+    // Вызываем обычную функцию GM
+    return GM(prompt, maxTokens, temperature);
+    
+  } catch (error) {
+    var errorMsg = 'GM_IF Exception: ' + error.message;
+    addSystemLog('❌ GM_IF ошибка: ' + errorMsg, 'ERROR', 'GEMINI');
+    return errorMsg;
+  }
+}
+
+/**
  * OCR функция с переносом в old/
  */
 function ocrReviews() {
