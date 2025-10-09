@@ -97,36 +97,25 @@ function onOpen() {
   // Получаем версию для отображения в меню
   var versionInfo = getVersionDisplayInfo();
   
-  // Главное меню - часто используемые функции
+  // Главное меню - только самые важные функции
   ui.createMenu('🤖 Table AI')
     .addItem('🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ (Email+Token+API)', 'setupAllCredentialsWithHelp')
-    .addSeparator()
     .addItem('📊 Проверить статус системы', 'checkSystemStatus')
     .addItem('🌐 Открыть веб-интерфейс', 'openWebInterface')
     .addSeparator()
-    .addSubMenu(ui.createMenu('🧪 Тестирование')
-      .addItem('🚀 Запустить все тесты', 'runComprehensiveTests')
-      .addItem('🔍 Проверить ВСЕ функции системы', 'validateAllSystemFunctions')
-      .addItem('⚡ Быстрый тест', 'quickTest')
-      .addItem('📈 Анализ логов', 'analyzeLogsAndFixErrors')
-      .addItem('📋 Открыть лист логов', 'openLogsSheet'))
-    .addSubMenu(ui.createMenu('📊 Логи и Мониторинг')
-      .addItem('📊 Открыть лист "Логи"', 'openLogsSheetWithCreation')
-      .addItem('📋 Статус логов', 'showLogsSheetStatus')
-      .addSeparator()
-      .addItem('📈 Анализ логов', 'manualAnalyzeLogsAndFixErrors')
-      .addItem('🧪 Записать тестовые логи', 'writeTestLogMessage')
-      .addSeparator()
-      .addItem('🔧 Принудительная очистка логов', 'forceFlushAllLogs')
-      .addItem('📋 Статистика логов', 'showLogStatistics'))
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
       .addItem('🎯 МАСТЕР ПРОВЕРКА', 'masterSystemCheck')
       .addSeparator()
-      .addItem('🔍 Диагностика', 'callServerDevFunction')
-      .addItem('🧪 Проверить функции', 'checkAllFunctionExistence')
+      .addItem('🚀 Все тесты', 'runComprehensiveTests')
+      .addItem('🔍 Проверить функции', 'validateAllSystemFunctions')
+      .addItem('⚡ Быстрый тест', 'quickTest')
       .addSeparator()
-      .addItem('📋 Версия', 'showCurrentVersionInfo')
-      .addItem('🔧 Режим DEV', 'toggleDeveloperModeWithHelp'))
+      .addItem('📊 Открыть логи', 'openLogsSheetWithCreation')
+      .addItem('📋 Статус логов', 'showLogsSheetStatus')
+      .addItem('🧪 Тестовые логи', 'writeTestLogMessage')
+      .addSeparator()
+      .addItem('🔧 Диагностика', 'callServerDevFunction')
+      .addItem('📋 Версия', 'showCurrentVersionInfo'))
     .addToUi();
 }
 
