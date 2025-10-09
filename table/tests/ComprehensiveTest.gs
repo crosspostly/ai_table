@@ -58,6 +58,22 @@ function runAllTests() {
   
   Logger.log('='.repeat(60));
   
+  // Логируем результат в таблицу
+  if (results.failed === 0) {
+    logger.success({
+      total: results.total,
+      passed: results.passed,
+      failed: results.failed
+    });
+  } else {
+    logger.error('Some tests failed', {
+      total: results.total,
+      passed: results.passed,
+      failed: results.failed,
+      errors: results.errors.slice(0, 5) // Первые 5 ошибок
+    });
+  }
+  
   // Show UI alert
   var ui = SpreadsheetApp.getUi();
   var message = 'Total: ' + results.total + '\\n' +
@@ -112,23 +128,23 @@ function testGetClientCredentials() {
     throw new Error('Result is not an object');
   }
   
-  if (!result.hasOwnProperty('ok')) {
-    throw new Error('Result missing "ok" property');
+  if (!result.hasOwnProperty('valid')) {
+    throw new Error('Result missing "valid" property');
   }
   
-  // If ok=false, should have error
-  if (!result.ok && !result.error) {
-    throw new Error('Result has ok=false but no error message');
+  // If valid=false, should have error
+  if (!result.valid && !result.error) {
+    throw new Error('Result has valid=false but no error message');
   }
   
-  // If ok=true, should have credentials
-  if (result.ok) {
+  // If valid=true, should have credentials
+  if (result.valid) {
     if (!result.email || !result.token) {
-      throw new Error('Result has ok=true but missing credentials');
+      throw new Error('Result has valid=true but missing credentials');
     }
   }
   
-  Logger.log('      → Result: ok=' + result.ok + ', email=' + (result.email || 'N/A'));
+  Logger.log('      → Result: valid=' + result.valid + ', email=' + (result.email || 'N/A'));
 }
 
 /**

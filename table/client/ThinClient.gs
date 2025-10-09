@@ -10,7 +10,7 @@ function ocrReviewsThin() {
   
   // Check credentials
   var creds = getClientCredentials();
-  if (!creds.ok) {
+  if (!creds.valid) {
     ui.alert('Error: ' + creds.error);
     return;
   }
@@ -57,7 +57,7 @@ function ocrReviewsThin() {
         action: 'ocr_process',
         email: creds.email,
         token: creds.token,
-        geminiApiKey: creds.apiKey,
+        geminiApiKey: creds.geminiApiKey,
         cellData: cellData,
         cellMeta: cellMeta,
         options: {
@@ -66,7 +66,7 @@ function ocrReviewsThin() {
         }
       });
       
-      if (response.ok && response.data && response.data.length > 0) {
+      if (response.valid && response.data && response.data.length > 0) {
         // Write results using helper function
         writeOcrResults(sheet, r, response.data);
         processed++;
@@ -173,7 +173,7 @@ function importVkPostsThin() {
   var ui = SpreadsheetApp.getUi();
   
   var creds = getClientCredentials();
-  if (!creds.ok) {
+  if (!creds.valid) {
     ui.alert('Error: ' + creds.error);
     return;
   }
@@ -193,7 +193,7 @@ function importVkPostsThin() {
       count: vkParams.count
     });
     
-    if (response.ok && response.data) {
+    if (response.valid && response.data) {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       writeVkPosts(ss, response.data);
       
@@ -252,20 +252,20 @@ function GM_STATIC(prompt, maxTokens, temperature) {
   if (!prompt) return '';
   
   var creds = getClientCredentials();
-  if (!creds.ok) return 'ERROR: ' + creds.error;
+  if (!creds.valid) return 'ERROR: ' + creds.error;
   
   try {
     var response = callServer({
       action: 'gm',
       email: creds.email,
       token: creds.token,
-      geminiApiKey: creds.apiKey,
+      geminiApiKey: creds.geminiApiKey,
       prompt: String(prompt),
       maxTokens: maxTokens || 1000,
       temperature: temperature || 0.7
     });
     
-    if (response.ok && response.text) {
+    if (response.valid && response.text) {
       // Replace formula with static value
       var range = SpreadsheetApp.getActiveRange();
       if (range) {
@@ -306,53 +306,40 @@ function normalizeCondition(condition) {
 
 /**
  * Get client credentials from script properties
- * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/Main.txt
+ * ВОЗВРАЩЕНО К OLD СТРУКТУРЕ: valid, geminiApiKey
  */
 function getClientCredentials() {
   try {
     var props = PropertiesService.getScriptProperties();
     
-    // Пробуем СНАЧАЛА старые ключи (из old версии)
-    var email = props.getProperty('USER_EMAIL');
-    var token = props.getProperty('USER_TOKEN');
-    var apiKey = props.getProperty('GEMINI_API_KEY');
+    var email = props.getProperty('LICENSE_EMAIL');
+    var token = props.getProperty('LICENSE_TOKEN');
+    var geminiApiKey = props.getProperty('GEMINI_API_KEY');
     
-    // Fallback на новые ключи
-    if (!email) email = props.getProperty('LICENSE_EMAIL');
-    if (!token) token = props.getProperty('LICENSE_TOKEN');
-    
-    // Проверяем что ВСЕ заполнены
-    if (!email || !String(email).trim()) {
+    if (!email || !token) {
       return {
-        ok: false,
-        error: 'Email не настроен в Script Properties (USER_EMAIL или LICENSE_EMAIL)'
+        valid: false,
+        error: 'LICENSE_EMAIL или LICENSE_TOKEN не настроены'
       };
     }
     
-    if (!token || !String(token).trim()) {
+    if (!geminiApiKey) {
       return {
-        ok: false,
-        error: 'Token не настроен в Script Properties (USER_TOKEN или LICENSE_TOKEN)'
-      };
-    }
-    
-    if (!apiKey || !String(apiKey).trim()) {
-      return {
-        ok: false,
-        error: 'Gemini API Key не настроен в Script Properties (GEMINI_API_KEY)'
+        valid: false,
+        error: 'GEMINI_API_KEY не настроен'
       };
     }
     
     return {
-      ok: true,
-      email: String(email).trim(),
-      token: String(token).trim(),
-      apiKey: String(apiKey).trim()
+      valid: true,
+      email: email,
+      token: token,
+      geminiApiKey: geminiApiKey
     };
     
   } catch (e) {
     return {
-      ok: false,
+      valid: false,
       error: 'Ошибка чтения credentials: ' + e.message
     };
   }
