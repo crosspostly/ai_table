@@ -4,10 +4,14 @@ on:
   push:
     branches:
       - main
+      - web-interface-with-design
     paths:
       - 'table/client/**'
       - 'table/shared/**'
       - 'deploy-to-folder.js'
+      - 'package.json'
+      - 'version.html'
+      - 'version.json'
       - '.github/workflows/deploy-to-drive-folder.yml'
   
   workflow_dispatch:
@@ -33,7 +37,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          npm install googleapis@latest
+          npm install
       
       - name: Deploy to Drive folder
         env:

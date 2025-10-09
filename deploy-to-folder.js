@@ -20,20 +20,14 @@ const path = require('path');
 // ========== КОНФИГУРАЦИЯ ==========
 
 // БЫСТРАЯ ПРОВЕРКА: Если DRIVE_FOLDER_ID не указан - выходим без ошибки
-const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID;
-if (!DRIVE_FOLDER_ID) {
+const FOLDER_ID = process.env.DRIVE_FOLDER_ID;
+if (!FOLDER_ID) {
   console.log('⚠️  SKIP: DRIVE_FOLDER_ID не указан - пропускаем деплой');
   console.log('💡 Для деплоя установите переменную DRIVE_FOLDER_ID в секретах GitHub');
   process.exit(0); // Выходим без ошибки
 }
 
-const FOLDER_ID = process.env.DRIVE_FOLDER_ID;
 const CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
-
-if (!FOLDER_ID) {
-  console.error('❌ ERROR: DRIVE_FOLDER_ID environment variable is required!');
-  process.exit(1);
-}
 
 if (!CREDENTIALS.client_email) {
   console.error('❌ ERROR: GOOGLE_CREDENTIALS environment variable is required!');
