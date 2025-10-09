@@ -215,44 +215,26 @@ function parseSource(source, explicitPlatform) {
 }
 
 /**
- * Улучшенный импорт VK постов с поддержкой ссылок
+ * Улучшенный импорт VK постов с прямым VK API (БЕЗ VK_PARSER)
+ * ИСПРАВЛЕНО: Использует handleWallGet_() из VkImportService.gs
  */
 function importVkPostsAdvanced(source, count) {
   try {
-    addSystemLog('→ Импорт VK постов: ' + source, 'INFO', 'VK_IMPORT');
+    addSystemLog('→ Импорт VK постов через прямой VK API: ' + source, 'INFO', 'VK_IMPORT');
     
-    var url = VK_PARSER_URL + '?owner=' + encodeURIComponent(source) + '&count=' + encodeURIComponent(count);
+    // 🔥 ИСПРАВЛЕНИЕ: Используем прямой VK API вместо VK_PARSER_URL
+    var posts = handleWallGet_(source, count);
     
-    // Используем fetchSocialApiWithRetry вместо прямого UrlFetchApp.fetch
-    var response = fetchSocialApiWithRetry('vk', url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': USER_AGENT
-      }
-    });
-    
-    addSystemLog('← VK API ответ: HTTP ' + response.getResponseCode(), 'DEBUG', 'VK_IMPORT');
-    
-    if (response.getResponseCode() !== 200) {
-      throw new Error('VK API недоступен: HTTP ' + response.getResponseCode());
-    }
-    
-    var data = JSON.parse(response.getContentText());
-    
-    if (data.error) {
-      throw new Error('VK API ошибка: ' + data.error);
-    }
-    
-    var posts = data.posts || [];
     addSystemLog('📊 Получено VK постов: ' + posts.length, 'INFO', 'VK_IMPORT');
     
+    // Преобразуем в универсальный формат для writePostsToSheet
     return posts.map(function(post) {
       return {
         platform: 'vk',
-        date: new Date(post.date * 1000),
+        date: post.date,  // handleWallGet_ уже возвращает дату в читаемом формате
         text: post.text || '',
-        link: 'https://vk.com/wall' + post.owner_id + '_' + post.id,
-        id: post.id,
+        link: post.link,  // handleWallGet_ уже формирует полную ссылку
+        id: post.number,
         likes: post.likes || 0,
         comments: post.comments || 0
       };
@@ -369,7 +351,9 @@ function importInstagramPosts(username, limit) {
 }
 
 /**
- * Запись постов в лист с улучшенным форматированием
+ * Запись постов в лист - СТАРАЯ СТРУКТУРА с автоформулами
+ * ИСПРАВЛЕНО: Возвращена старая структура колонок (БЕЗ платформы в начале)
+ * A: Дата | B: Ссылка | C: Текст | D: Номер | E: Стоп-слова | F: Отфильтрованные | G: Новый номер
  */
 function writePostsToSheet(posts, sheetName) {
   try {
@@ -384,53 +368,47 @@ function writePostsToSheet(posts, sheetName) {
     // Очищаем лист
     sheet.clear();
     
-    // Заголовки с платформой
+    // 🔥 СТАРАЯ СТРУКТУРА КОЛОНОК (без платформы в первой колонке)
     var headers = [
-      'Платформа', 'Дата', 'Ссылка на пост', 'Текст поста', 'ID поста', 
-      'Лайки', 'Комментарии', 'Стоп-слова', 'Отфильтрованные посты', 
-      'Новый номер', 'Позитивные слова', 'Посты с позитивными словами',
-      'Новый номер (позитивные)', 'Анализ постов'  // K колонка для анализа
+      'Дата', 'Ссылка на пост', 'Текст поста', 'Номер поста',
+      'Стоп-слова', 'Отфильтрованные посты', 'Новый номер',
+      'Позитивные слова', 'Посты с позитивными словами', 'Новый номер (позитивные)',
+      'Анализ постов'  // K - колонка для анализа контента постов
     ];
     
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    var out = [headers];
     
-    // Форматируем заголовки
-    var headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setBackground('#4285f4').setFontColor('white').setFontWeight('bold');
+    // Преобразуем посты в старый формат
+    posts.forEach(function(post, i) {
+      var number = i + 1;
+      out.push([
+        post.date,         // A: Дата
+        post.link,         // B: Ссылка на пост
+        post.text,         // C: Текст поста
+        number,            // D: Номер поста
+        '',                // E: Стоп-слова (ввод пользователем)
+        '',                // F: Отфильтрованные (формула)
+        '',                // G: Новый номер (формула)
+        '',                // H: Позитивные слова (ввод)
+        '',                // I: Посты с позитивными (формула)
+        '',                // J: Новый номер позитивных (формула)
+        ''                 // K: Анализ постов
+      ]);
+    });
     
-    // Записываем данные постов
-    if (posts.length > 0) {
-      var data = posts.map(function(post, index) {
-        return [
-          post.platform.toUpperCase(), // A - платформа  
-          post.date,                   // B - дата
-          post.link,                   // C - ссылка
-          post.text,                   // D - текст
-          post.id,                     // E - ID
-          post.likes || 0,             // F - лайки  
-          post.comments || 0,          // G - комментарии
-          '',                          // H - стоп-слова (для заполнения пользователем)
-          '',                          // I - отфильтрованные
-          index + 1,                   // J - новый номер
-          '',                          // K - позитивные слова
-          '',                          // L - посты с позитивными 
-          '',                          // M - новый номер (позитивные)
-          ''                           // N - анализ постов
-        ];
-      });
-      
-      sheet.getRange(2, 1, data.length, headers.length).setValues(data);
-    }
+    // Записываем данные
+    sheet.getRange(1, 1, out.length, headers.length).setValues(out);
+    
+    // Применяем форматирование
+    applyUniformFormatting(sheet);
+    
+    // 🔥 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Автоматически создаём формулы фильтрации!
+    createStopWordsFormulas(sheet, out.length);
     
     // Автоширина колонок
     sheet.autoResizeColumns(1, headers.length);
     
-    // Применяем фильтрацию (если еще не настроена)
-    if (posts.length > 0) {
-      createAdvancedFilters(sheet, posts.length + 1);
-    }
-    
-    addSystemLog('✅ Посты записаны в лист ' + sheetName, 'INFO', 'SOCIAL_IMPORT');
+    addSystemLog('✅ Посты записаны в лист ' + sheetName + ' (старая структура + формулы)', 'INFO', 'SOCIAL_IMPORT');
     
   } catch (error) {
     addSystemLog('❌ Ошибка записи в лист: ' + error.message, 'ERROR', 'SOCIAL_IMPORT');
@@ -439,24 +417,68 @@ function writePostsToSheet(posts, sheetName) {
 }
 
 /**
- * Создает расширенные формулы фильтрации для соцсетей
+ * ПРАВИЛЬНЫЕ ФОРМУЛЫ из старой версии (VkImportService)
+ * Создание формул фильтрации для стоп-слов и позитивных слов
  */
-function createAdvancedFilters(sheet, totalRows) {
+function createStopWordsFormulas(sheet, totalRows) {
   try {
-    // Создаем формулы фильтрации в колонке I (отфильтрованные посты)
-    for (var i = 2; i <= totalRows; i++) {
-      // Формула проверки стоп-слов в H колонке против текста в D колонке
-      var stopWordsFormula = '=IF(AND(D' + i + '<>"", H' + i + '<>""), IF(ISERROR(SEARCH(H' + i + ', D' + i + ')), D' + i + ', ""), D' + i + ')';
-      sheet.getRange('I' + i).setFormula(stopWordsFormula);
+    addSystemLog('→ Создание формул фильтрации (старый метод)', 'INFO', 'SOCIAL_IMPORT');
+    
+    var stopWordsRange = '$E$2:$E$100';
+    
+    // Формулы для стоп-слов (колонки F и G)
+    for (var row = 2; row <= totalRows; row++) {
+      // F - отфильтрованные посты (скрывает посты со стоп-словами)
+      // ИСПОЛЬЗУЕМ C (текст поста), чтобы при копировании получать текст!
+      var formulaF = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + stopWordsRange + ', C' + row + ')))*(' + stopWordsRange + '<>"")) > 0, "", C' + row + ')';
+      sheet.getRange(row, 6).setFormula(formulaF);
       
-      // Формула для позитивных слов в L колонке
-      var positiveWordsFormula = '=IF(AND(D' + i + '<>"", K' + i + '<>""), IF(NOT(ISERROR(SEARCH(K' + i + ', D' + i + '))), D' + i + ', ""), "")';
-      sheet.getRange('L' + i).setFormula(positiveWordsFormula);
+      // G - новый номер для отфильтрованных постов
+      var formulaG = '=IF(F' + row + '<>"", COUNTA(F$2:F' + row + '), "")';
+      sheet.getRange(row, 7).setFormula(formulaG);
     }
     
-    addSystemLog('✅ Созданы формулы фильтрации для ' + (totalRows - 1) + ' постов', 'INFO', 'SOCIAL_IMPORT');
+    var positiveWordsRange = '$H$2:$H$100';
     
-  } catch (error) {
-    addSystemLog('❌ Ошибка создания фильтров: ' + error.message, 'ERROR', 'SOCIAL_IMPORT');
+    // Формулы для позитивных слов (колонки I и J)
+    for (var row = 2; row <= totalRows; row++) {
+      // I - посты с позитивными словами
+      // ИСПОЛЬЗУЕМ C (текст поста), чтобы при копировании получать текст!
+      var formulaI = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + positiveWordsRange + ', C' + row + ')))*(' + positiveWordsRange + '<>"")) > 0, C' + row + ', "")';
+      sheet.getRange(row, 9).setFormula(formulaI);
+      
+      // J - новый номер для позитивных постов
+      var formulaJ = '=IF(I' + row + '<>"", COUNTA(I$2:I' + row + '), "")';
+      sheet.getRange(row, 10).setFormula(formulaJ);
+    }
+    
+    // Форматирование заголовков
+    sheet.getRange(1, 5, 1, 3).setFontWeight('bold').setBackground('#FFF2CC');
+    sheet.getRange(1, 8, 1, 3).setFontWeight('bold').setBackground('#D9EAD3');
+    
+    // Автоширина колонок
+    sheet.autoResizeColumns(5, 6);
+    
+    addSystemLog('✅ Формулы фильтрации созданы', 'INFO', 'SOCIAL_IMPORT');
+  } catch (e) {
+    addSystemLog('❌ Ошибка создания формул: ' + e.message, 'ERROR', 'SOCIAL_IMPORT');
+    throw new Error('Ошибка создания формул: ' + e.message);
+  }
+}
+
+/**
+ * Применение единого форматирования к листу (из VkImportService)
+ */
+function applyUniformFormatting(sheet) {
+  try {
+    var range = sheet.getDataRange();
+    range.setFontFamily('Arial')
+         .setFontSize(10)
+         .setVerticalAlignment('middle')
+         .setHorizontalAlignment('left');
+    
+    addSystemLog('✅ Применено форматирование к листу ' + sheet.getName(), 'DEBUG', 'SOCIAL_IMPORT');
+  } catch (e) {
+    addSystemLog('⚠️ Ошибка форматирования листа ' + sheet.getName() + ': ' + e.message, 'WARN', 'SOCIAL_IMPORT');
   }
 }
