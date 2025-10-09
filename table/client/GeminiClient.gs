@@ -22,6 +22,9 @@ function gmCacheKey_(prompt, maxTokens, temperature) {
   }
 }
 
+/**
+ * 🔒 SAFE Cache с защитой от race conditions
+ */
 function gmCacheGet_(key) {
   try { 
     return CacheService.getScriptCache().get(key); 
@@ -33,15 +36,73 @@ function gmCacheGet_(key) {
 function gmCachePut_(key, value, ttlSec) {
   try {
     var ttl = Math.max(5, Math.min(21600, Math.floor(ttlSec || 300)));
+    
+    // 💾 MEMORY PROTECTION: Пропускаем очень большие значения 
+    if (value && value.length > 100000) {
+      addSystemLog('⚠️ GM Cache: Skipping large value (' + value.length + ' chars)', 'WARN', 'CACHE');
+      return;
+    }
+    
     CacheService.getScriptCache().put(key, value, ttl);
+  } catch (e) {
+    addSystemLog('❌ GM Cache put failed: ' + e.message, 'ERROR', 'CACHE');
+  }
+}
+
+/**
+ * 🔒 Simple lock для предотвращения duplicate requests
+ */
+function gmCacheLock_(key) {
+  var lockKey = 'lock:' + key;
+  var cache = CacheService.getScriptCache();
+  
+  try {
+    var existing = cache.get(lockKey);
+    if (existing) {
+      return false; // Уже заблокирован
+    }
+    
+    // Блокируем на 30 секунд
+    cache.put(lockKey, 'locked', 30);
+    return true;
+  } catch (e) {
+    return true; // При ошибке разрешаем продолжить
+  }
+}
+
+function gmCacheUnlock_(key) {
+  var lockKey = 'lock:' + key;
+  try {
+    CacheService.getScriptCache().remove(lockKey);
   } catch (e) {}
+}
+
+/**
+ * ⏱️ EXECUTION TIME TRACKING для защиты от timeout
+ */
+var EXECUTION_TIME_LIMIT = 5 * 60 * 1000; // 5 минут (безопасная граница)
+var executionStartTime = null;
+
+function checkTimeoutRisk() {
+  if (!executionStartTime) return;
+  
+  var elapsed = Date.now() - executionStartTime;
+  if (elapsed > EXECUTION_TIME_LIMIT * 0.8) {
+    throw new Error('TIMEOUT_RISK: Operation too long (' + Math.round(elapsed/1000) + 's), aborting safely');
+  }
 }
 
 /**
  * Основная функция GM для Gemini API
  * ✅ SECURE: Интегрирована система безопасности
+ * ⏱️ TIMEOUT PROTECTED: Защита от 6-минутного лимита Apps Script
  */
 function GM(prompt, maxTokens, temperature) {
+  // ⏱️ TIMEOUT PROTECTION: Начинаем отсчёт времени
+  if (!executionStartTime) {
+    executionStartTime = Date.now();
+  }
+  
   try {
     // 🔒 SECURITY: Валидация всех входных параметров
     var promptValidation = SecurityValidator.validatePrompt(prompt);
@@ -69,12 +130,34 @@ function GM(prompt, maxTokens, temperature) {
     var logData = 'prompt=' + safePrompt.slice(0,60) + '... (' + safePrompt.length + '), tokens=' + safeMaxTokens + ', temp=' + safeTemperature;
     addSystemLog('→ GM: ' + SecurityValidator.sanitizeForLogging(logData), 'INFO', 'GEMINI');
 
-    // Проверяем кэш
+    // 🔒 CACHE RACE CONDITION PROTECTION
     var cacheKey = gmCacheKey_(safePrompt, safeMaxTokens, safeTemperature);
     var cached = gmCacheGet_(cacheKey);
     if (cached) {
       addSystemLog('✅ GM: из кэша, длина=' + cached.length, 'INFO', 'GEMINI');
       return cached;
+    }
+
+    // 🔒 Проверяем lock - если запрос уже выполняется, ждём
+    if (!gmCacheLock_(cacheKey)) {
+      addSystemLog('⏳ GM: Ожидание завершения параллельного запроса', 'INFO', 'GEMINI');
+      
+      // Ждём до 25 секунд, проверяем кэш каждые 2 секунды
+      for (var i = 0; i < 12; i++) {
+        // ⏱️ TIMEOUT CHECK: Проверяем время выполнения
+        checkTimeoutRisk();
+        
+        Utilities.sleep(2000);
+        var waitResult = gmCacheGet_(cacheKey);
+        if (waitResult) {
+          addSystemLog('✅ GM: Получен результат от параллельного запроса', 'INFO', 'GEMINI');
+          return waitResult;
+        }
+      }
+      
+      // Если так и не дождались - разблокируем и продолжаем
+      gmCacheUnlock_(cacheKey);
+      addSystemLog('⚠️ GM: Timeout ожидания, продолжаем запрос', 'WARN', 'GEMINI');
     }
 
     var apiKey = getGeminiApiKey();
@@ -85,6 +168,9 @@ function GM(prompt, maxTokens, temperature) {
         temperature: safeTemperature 
       }
     };
+    
+    // ⏱️ TIMEOUT CHECK: Проверяем время перед API запросом
+    checkTimeoutRisk();
     
     // ВАЖНО: Используем fetchGeminiWithRetry для ПОСЛЕДОВАТЕЛЬНЫХ запросов
     var response = fetchGeminiWithRetry(GEMINI_API_URL + '?key=' + apiKey, {
@@ -114,6 +200,9 @@ function GM(prompt, maxTokens, temperature) {
     
     // Кэшируем результат
     gmCachePut_(cacheKey, processedResult, 300); // 5 минут
+    
+    // 🔒 Снимаем lock
+    gmCacheUnlock_(cacheKey);
     
     addSystemLog('✅ GM: результат, длина=' + result.length + (processedResult !== result ? ', преобразован из Markdown' : ''), 'INFO', 'GEMINI');
     return processedResult;
