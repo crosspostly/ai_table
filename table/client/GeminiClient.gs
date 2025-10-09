@@ -98,10 +98,21 @@ function checkTimeoutRisk() {
  * ⏱️ TIMEOUT PROTECTED: Защита от 6-минутного лимита Apps Script
  */
 function GM(prompt, maxTokens, temperature) {
+  var traceId = generateTraceId('gm');
+  var startTime = Date.now();
+  
   // ⏱️ TIMEOUT PROTECTION: Начинаем отсчёт времени
   if (!executionStartTime) {
     executionStartTime = Date.now();
   }
+  
+  // 📊 GOOGLE SHEETS LOGGING: Начало GM операции
+  logToGoogleSheets('INFO', 'GEMINI', 'GM', 'IN_PROGRESS', 'GM request started', {
+    promptLength: prompt ? prompt.length : 0,
+    maxTokens: maxTokens,
+    temperature: temperature,
+    timestamp: new Date()
+  }, traceId);
   
   try {
     // 🔒 SECURITY: Валидация всех входных параметров
@@ -205,9 +216,18 @@ function GM(prompt, maxTokens, temperature) {
     gmCacheUnlock_(cacheKey);
     
     addSystemLog('✅ GM: результат, длина=' + result.length + (processedResult !== result ? ', преобразован из Markdown' : ''), 'INFO', 'GEMINI');
+    
+    // 📊 GOOGLE SHEETS LOGGING: Успешное завершение
+    var executionTime = Date.now() - startTime;
+    logGMOperation(safePrompt, processedResult, executionTime, traceId);
+    
     return processedResult;
     
   } catch (error) {
+    // 📊 GOOGLE SHEETS LOGGING: Ошибка
+    var executionTime = Date.now() - startTime;
+    logGMOperation(prompt, null, executionTime, traceId, error);
+    
     // 🔒 SECURITY: Безопасная обработка ошибок без утечки данных
     var userMessage = handleSecureError(error, { function: 'GM', promptLength: prompt ? prompt.length : 0 });
     return userMessage;

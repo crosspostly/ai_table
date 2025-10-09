@@ -50,6 +50,18 @@ function onOpen() {
     .addItem('📋 Экспорт логов', 'exportAndShowLogs')
     .addToUi();
   
+  // 📊 ЛОГИРОВАНИЕ И МОНИТОРИНГ (новая система)
+  ui.createMenu('📊 Логи и Мониторинг')
+    .addItem('🧪 Комплексное тестирование', 'manualRunComprehensiveTests')
+    .addItem('📈 Анализ логов и исправление ошибок', 'manualAnalyzeLogsAndFixErrors')
+    .addSeparator()
+    .addItem('🔥 Принудительная отправка логов', 'forceFlushAllLogs')
+    .addItem('📋 Экспорт системных логов в лист', 'exportSystemLogsToSheet')
+    .addItem('🧹 Очистить системные логи', 'clearSystemLogs')
+    .addSeparator()
+    .addItem('📊 Открыть лист "Логи" в новой вкладке', 'openLogsSheet')
+    .addToUi();
+  
   // DEV меню для серверных вызовов
   if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
     ui.createMenu('🧰 DEV')
@@ -1136,5 +1148,53 @@ function runSecurityTestsMenu() {
       addSystemLog('🔒 Security tests failed: ' + error.message, 'ERROR', 'SECURITY');
       ui.alert('❌ Ошибка тестирования', 'Ошибка при запуске тестов безопасности: ' + error.message, ui.ButtonSet.OK);
     }
+  }
+}
+
+/**
+ * 📊 Открыть лист "Логи" в новой вкладке
+ */
+function openLogsSheet() {
+  try {
+    var spreadsheetId = SHEETS_LOGGER_CONFIG.spreadsheetId;
+    var sheetName = SHEETS_LOGGER_CONFIG.sheetName;
+    
+    // Создаем URL для прямого перехода к листу
+    var url = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit#gid=';
+    
+    // Пытаемся получить gid листа
+    try {
+      var ss = SpreadsheetApp.openById(spreadsheetId);
+      var sheet = ss.getSheetByName(sheetName);
+      if (sheet) {
+        var gid = sheet.getSheetId();
+        url += gid;
+      }
+    } catch (e) {
+      // Если не удалось получить gid, открываем основную страницу
+      url = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/edit';
+    }
+    
+    // Создаем HTML для открытия в новой вкладке
+    var html = HtmlService.createHtmlOutput(`
+      <script>
+        window.open('${url}', '_blank');
+        google.script.host.close();
+      </script>
+      <p>Открываем лист "Логи" в новой вкладке...</p>
+    `).setWidth(300).setHeight(100);
+    
+    SpreadsheetApp.getUi().showModalDialog(html, 'Переход к логам');
+    
+    // Также логируем это действие
+    logToGoogleSheets('INFO', 'NAVIGATION', 'OPEN_LOGS_SHEET', 'SUCCESS', 'User opened logs sheet', {
+      spreadsheetId: spreadsheetId,
+      sheetName: sheetName,
+      timestamp: new Date()
+    }, generateTraceId('nav'));
+    
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('❌ Ошибка', 'Не удалось открыть лист логов: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    addSystemLog('❌ Failed to open logs sheet: ' + error.message, 'ERROR', 'NAVIGATION');
   }
 }
