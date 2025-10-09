@@ -326,7 +326,30 @@ var SecurityValidator = {
     Logger.log('[SECURITY] ' + message + ': ' + JSON.stringify(safeData));
   },
   
-
+  /**
+   * Безопасное логирование для строк - маскирует чувствительные данные
+   */
+  sanitizeForLogging: function(data) {
+    if (typeof data !== 'string') {
+      data = JSON.stringify(data);
+    }
+    
+    // Маскируем email
+    data = data.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '***@***.***');
+    
+    // Маскируем длинные токены (20+ символов)
+    data = data.replace(/[A-Za-z0-9\-_]{20,}/g, function(match) {
+      return match.substring(0, 4) + '***' + match.substring(match.length - 4);
+    });
+    
+    // Маскируем Bearer токены
+    data = data.replace(/Bearer\s+[A-Za-z0-9\-_]+/gi, 'Bearer ***');
+    
+    // Маскируем token: value паттерны
+    data = data.replace(/token["\s]*[:=]["\s]*[^"\s]+/gi, 'token: ***');
+    
+    return data;
+  },
 
   /**
    * Тест граничных значений архитектуры credentials
