@@ -25,9 +25,9 @@ const RETRY_DELAY_INCREMENT = 10000; // Увеличение задержки с
 
 // ====== ЛОГИРОВАНИЕ ======
 const LOGS_CACHE_KEY = 'SYSTEM_LOGS'; // Ключ для логов
+const SYSTEM_LOGS_NAME = 'SYSTEM_LOGS'; // Алиас для совместимости с Utils.gs
 const MAX_LOGS = 200; // Максимум логов в памяти
 const LOGS_TTL = 86400; // TTL логов: 24 часа
-const SYSTEM_LOGS_NAME = 'SYSTEM_LOGS'; // Константа для system logs
 
 // ====== GOOGLE SHEETS LOGGER CONFIG ======
 var SHEETS_LOGGER_CONFIG = {
