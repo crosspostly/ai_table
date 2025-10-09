@@ -44,6 +44,8 @@ function onOpen() {
     .addItem('🔍 Проверить функции', 'checkAllFunctionsExist')
     .addItem('⚡ Быстрый тест', 'quickTest')
     .addSeparator()
+    .addItem('🔒 Тесты безопасности', 'runSecurityTestsMenu')
+    .addSeparator()
     .addItem('📋 Экспорт логов', 'exportAndShowLogs')
     .addToUi();
   
@@ -660,5 +662,57 @@ function setupSmartPromptTriggerWithHelp() {
   var result = ui.alert("Инструкция", instruction, ui.ButtonSet.OK_CANCEL);
   if (result === ui.Button.OK) {
     setupSmartPromptTrigger();
+  }
+}
+
+/**
+ * 🔒 Тесты безопасности - с инструкцией и запуском
+ */
+function runSecurityTestsMenu() {
+  var ui = SpreadsheetApp.getUi();
+  var instruction = `🔒 ТЕСТЫ БЕЗОПАСНОСТИ\n\nПрофессиональная проверка системы на уязвимости:\n\n📋 Что тестируется:\n• 🛡️ XSS Protection - защита от вредоносных скриптов\n• 🔐 SQL Injection Protection - защита от SQL-атак\n• 🌐 Dangerous URL Protection - валидация опасных ссылок\n• 📝 Log Sanitization - маскировка sensitive данных\n• ⚖️ Parameter Validation - проверка граничных значений\n• 🚨 Error Handling - безопасная обработка ошибок\n\n💡 Эти тесты основаны на профессиональном чеклисте программиста/QA.\n\n⚠️ Важно: тесты безопасны и не нарушают работу системы.\n\n📊 Результат покажет статус каждой проверки и рекомендации по улучшению.`;
+
+  var result = ui.alert('Инструкция', instruction, ui.ButtonSet.OK_CANCEL);
+  if (result === ui.Button.OK) {
+    try {
+      addSystemLog('🔒 Starting security tests from menu', 'INFO', 'SECURITY');
+      
+      var results = runSecurityTests();
+      
+      if (!results || results.length === 0) {
+        ui.alert('❌ Ошибка', 'Не удалось запустить тесты безопасности', ui.ButtonSet.OK);
+        return;
+      }
+      
+      var passed = 0;
+      var failed = 0;
+      var report = [];
+      
+      for (var i = 0; i < results.length; i++) {
+        var test = results[i];
+        if (test.passed) {
+          passed++;
+          report.push('✅ ' + test.test + ': PASSED');
+        } else {
+          failed++;
+          report.push('❌ ' + test.test + ': FAILED');
+          if (test.error) {
+            report.push('   Error: ' + test.error);
+          } else if (test.details) {
+            report.push('   Details: ' + test.details);
+          }
+        }
+      }
+      
+      var summary = `🔒 РЕЗУЛЬТАТЫ ТЕСТОВ БЕЗОПАСНОСТИ\n\n📊 Статистика:\n• Пройдено: ${passed}\n• Провалено: ${failed}\n• Всего: ${results.length}\n\n📋 Детали:\n${report.join('\n')}\n\n${failed === 0 ? '🎉 Все тесты безопасности пройдены!' : '⚠️ Обнаружены проблемы безопасности. Смотрите детали выше.'}`;
+      
+      addSystemLog('🔒 Security tests completed: ' + passed + '/' + results.length + ' passed', 'INFO', 'SECURITY');
+      
+      ui.alert('Результаты тестов безопасности', summary, ui.ButtonSet.OK);
+      
+    } catch (error) {
+      addSystemLog('🔒 Security tests failed: ' + error.message, 'ERROR', 'SECURITY');
+      ui.alert('❌ Ошибка тестирования', 'Ошибка при запуске тестов безопасности: ' + error.message, ui.ButtonSet.OK);
+    }
   }
 }

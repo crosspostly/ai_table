@@ -39,36 +39,50 @@ function gmCachePut_(key, value, ttlSec) {
 
 /**
  * Основная функция GM для Gemini API
+ * ✅ SECURE: Интегрирована система безопасности
  */
 function GM(prompt, maxTokens, temperature) {
-  maxTokens = maxTokens || 250000;  // Увеличено в 10 раз
-  temperature = temperature || 0.7;
-  
-  addSystemLog('→ GM: prompt=' + (prompt ? prompt.slice(0,60)+'...' : 'нет') + ' (' + (prompt ? prompt.length : 0) + ')', 'INFO', 'GEMINI');
-  
-  if (!prompt || typeof prompt !== 'string') {
-    throw new Error('Промпт должен быть непустой строкой.');
-  }
-  
-  if (prompt.length > 500000) {
-    throw new Error('Промпт слишком длинный, сократите до 500000 символов.');
-  }
-
-  // Проверяем кэш
-  var cacheKey = gmCacheKey_(prompt, maxTokens, temperature);
-  var cached = gmCacheGet_(cacheKey);
-  if (cached) {
-    addSystemLog('✅ GM: из кэша, длина=' + cached.length, 'INFO', 'GEMINI');
-    return cached;
-  }
-
   try {
+    // 🔒 SECURITY: Валидация всех входных параметров
+    var promptValidation = SecurityValidator.validatePrompt(prompt);
+    if (!promptValidation.isValid) {
+      var error = createStandardError(ErrorTypes.VALIDATION_ERROR, 
+        'Invalid prompt: ' + promptValidation.errors.join(', '), 
+        { originalPrompt: typeof prompt });
+      throw error;
+    }
+
+    var paramsValidation = SecurityValidator.validateGMParams(maxTokens, temperature);
+    if (!paramsValidation.isValid) {
+      var error = createStandardError(ErrorTypes.VALIDATION_ERROR,
+        'Invalid parameters: ' + paramsValidation.errors.join(', '),
+        { maxTokens: maxTokens, temperature: temperature });
+      throw error;
+    }
+
+    // Используем валидированные значения
+    var safePrompt = promptValidation.sanitized;
+    var safeMaxTokens = paramsValidation.sanitized.maxTokens;
+    var safeTemperature = paramsValidation.sanitized.temperature;
+
+    // 🔒 SECURITY: Безопасное логирование (без утечки данных)
+    var logData = 'prompt=' + safePrompt.slice(0,60) + '... (' + safePrompt.length + '), tokens=' + safeMaxTokens + ', temp=' + safeTemperature;
+    addSystemLog('→ GM: ' + SecurityValidator.sanitizeForLogging(logData), 'INFO', 'GEMINI');
+
+    // Проверяем кэш
+    var cacheKey = gmCacheKey_(safePrompt, safeMaxTokens, safeTemperature);
+    var cached = gmCacheGet_(cacheKey);
+    if (cached) {
+      addSystemLog('✅ GM: из кэша, длина=' + cached.length, 'INFO', 'GEMINI');
+      return cached;
+    }
+
     var apiKey = getGeminiApiKey();
     var requestBody = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: safePrompt }] }],
       generationConfig: { 
-        maxOutputTokens: maxTokens, 
-        temperature: temperature 
+        maxOutputTokens: safeMaxTokens, 
+        temperature: safeTemperature 
       }
     };
     
@@ -105,8 +119,9 @@ function GM(prompt, maxTokens, temperature) {
     return processedResult;
     
   } catch (error) {
-    addSystemLog('❌ GM исключение: ' + error.message, 'ERROR', 'GEMINI');
-    return 'Error: ' + error.message;
+    // 🔒 SECURITY: Безопасная обработка ошибок без утечки данных
+    var userMessage = handleSecureError(error, { function: 'GM', promptLength: prompt ? prompt.length : 0 });
+    return userMessage;
   }
 }
 
