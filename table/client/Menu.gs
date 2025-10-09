@@ -465,10 +465,7 @@ function setupAllCredentialsWithHelp() {
       </div>
     </div>
 
-    <div class="warning">
-      ⚠️ <strong>VK/Instagram/Telegram токены НЕ НУЖНЫ!</strong><br>
-      Они уже настроены администратором на сервере и автоматически используются при импорте.
-    </div>
+
 
     <div class="buttons">
       <button class="btn btn-primary" onclick="saveCredentials()">✅ Сохранить все</button>
