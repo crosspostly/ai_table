@@ -34,11 +34,20 @@ function onOpen() {
     )
     .addToUi();
 
-  // DEV меню только вызов серверных функций
+  // Меню тестирования (всегда доступно!)
+  ui.createMenu('🧪 Тестирование')
+    .addItem('✅ Запустить все тесты', 'runAllTests')
+    .addItem('🔍 Проверить функции', 'checkAllFunctionsExist')
+    .addItem('⚡ Быстрый тест', 'quickTest')
+    .addSeparator()
+    .addItem('📋 Экспорт логов', 'exportAndShowLogs')
+    .addToUi();
+  
+  // DEV меню для серверных вызовов
   if (typeof DEV_MODE !== 'undefined' && DEV_MODE) {
     ui.createMenu('🧰 DEV')
-      .addItem('📝 Логи системы', 'callServerDevFunction')
-      .addItem('🧪 Тесты', 'callServerTestFunction')
+      .addItem('📝 Логи сервера', 'callServerDevFunction')
+      .addItem('🧪 Тесты сервера', 'callServerTestFunction')
       .addToUi();
   }
 }

@@ -272,6 +272,13 @@ function showRecentLogs() {
 }
 
 /**
+ * UI функция: экспорт и показ логов (для меню тестирования)
+ */
+function exportAndShowLogs() {
+  showRecentLogs();
+}
+
+/**
  * UI функция: очистить старые логи
  */
 function clearOldLogsUI() {
