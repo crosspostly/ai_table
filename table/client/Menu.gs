@@ -123,41 +123,32 @@ function getVersionDisplayInfo() {
     // Получаем версию
     var version = getCurrentVersion ? getCurrentVersion() : '2.0.1';
     
-    // Получаем дату последнего обновления
-    var updateDate = 'неизвестно';
-    if (typeof getLastUpdateDate === 'function') {
-      try {
-        var rawDate = getLastUpdateDate();
-        if (rawDate && rawDate !== 'Неизвестно') {
-          var date = new Date(rawDate);
-          updateDate = date.toLocaleDateString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit'
-          });
-        }
-      } catch (e) {
-        // Если ошибка получения даты, используем текущую дату
-        updateDate = new Date().toLocaleDateString('ru-RU', {
-          day: '2-digit',
-          month: '2-digit'
-        });
-      }
-    } else {
-      // Если функция недоступна, используем текущую дату
-      updateDate = new Date().toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit'
-      });
-    }
-    
-    return 'v' + version + ' от ' + updateDate;
-    
-  } catch (error) {
-    // В случае любой ошибки возвращаем базовую информацию
-    return 'v2.0.1 от ' + new Date().toLocaleDateString('ru-RU', {
+    // ВСЕГДА показываем ТЕКУЩЕЕ время (время открытия меню)
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: '2-digit'
     });
+    var timeStr = now.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return 'v' + version + ' от ' + dateStr + ' ' + timeStr;
+    
+  } catch (error) {
+    // В случае любой ошибки возвращаем базовую информацию с текущим временем
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+    var timeStr = now.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return 'v2.0.1 от ' + dateStr + ' ' + timeStr;
   }
 }
 
