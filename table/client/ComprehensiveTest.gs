@@ -58,20 +58,11 @@ function runAllTests() {
   
   Logger.log('='.repeat(60));
   
-  // Логируем результат в таблицу
+  // Логируем результат в таблицу через addSystemLog
   if (results.failed === 0) {
-    logger.success({
-      total: results.total,
-      passed: results.passed,
-      failed: results.failed
-    });
+    addSystemLog('✅ All tests passed: ' + results.passed + '/' + results.total, 'INFO', 'TESTS');
   } else {
-    logger.error('Some tests failed', {
-      total: results.total,
-      passed: results.passed,
-      failed: results.failed,
-      errors: results.errors.slice(0, 5) // Первые 5 ошибок
-    });
+    addSystemLog('❌ Tests failed: ' + results.failed + '/' + results.total + ' failed', 'ERROR', 'TESTS');
   }
   
   // Show UI alert

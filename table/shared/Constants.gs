@@ -27,6 +27,37 @@ const RETRY_DELAY_INCREMENT = 10000; // Увеличение задержки с
 const LOGS_CACHE_KEY = 'SYSTEM_LOGS'; // Ключ для логов
 const MAX_LOGS = 200; // Максимум логов в памяти
 const LOGS_TTL = 86400; // TTL логов: 24 часа
+const SYSTEM_LOGS_NAME = 'SYSTEM_LOGS'; // Константа для system logs
+
+// ====== GOOGLE SHEETS LOGGER CONFIG ======
+var SHEETS_LOGGER_CONFIG = {
+  // ID таблицы для логов (извлекаем из URL)
+  spreadsheetId: '1Gt-am7rwX1R-1-uypLjrpI66ktMHkRfR-aPwAKTBC2A',
+  sheetName: 'Логи',
+  
+  // Структура колонок
+  columns: {
+    timestamp: 1,    // A: Время
+    level: 2,        // B: Уровень (INFO/WARN/ERROR)
+    category: 3,     // C: Категория (GEMINI/SECURITY/ATOMIC)
+    operation: 4,    // D: Операция (GM/VK_IMPORT/TEST)
+    status: 5,       // E: Статус (SUCCESS/FAILED/IN_PROGRESS)
+    message: 6,      // F: Сообщение
+    details: 7,      // G: Детали (JSON)
+    traceId: 8,      // H: Trace ID для связи операций
+    userId: 9,       // I: User ID (email)
+    executionTime: 10 // J: Время выполнения (ms)
+  },
+  
+  // Настройки
+  maxRows: 10000,  // Максимум строк логов
+  batchSize: 50,   // Размер batch для записи
+  flushInterval: 30000, // Flush каждые 30 секунд
+  
+  // Алерты
+  errorThreshold: 10, // Алерт при >10 ошибок за час
+  performanceThreshold: 30000 // Алерт при операциях >30 секунд
+};
 
 // ====== Rate Limiting ======
 const RATE_LIMIT_WINDOW = 3600; // 1 час в секундах
