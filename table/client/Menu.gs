@@ -94,6 +94,9 @@ function setupAllCredentialsUI() {
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   
+  // Получаем версию для отображения в меню
+  var versionInfo = getVersionDisplayInfo();
+  
   // Главное меню - часто используемые функции
   ui.createMenu('🤖 Table AI')
     .addItem('🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ (Email+Token+API)', 'setupAllCredentialsWithHelp')
@@ -111,16 +114,62 @@ function onOpen() {
       .addItem('🔧 Принудительная очистка логов', 'forceFlushAllLogs')
       .addItem('📊 Открыть лист "Логи"', 'openLogsSheet')
       .addItem('📋 Статистика логов', 'showLogStatistics'))
-    .addSubMenu(ui.createMenu('🧰 DEV')
+    .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
       .addItem('🔍 Диагностика системы', 'callServerDevFunction')
       .addItem('🧪 Локальные тесты', 'callServerTestFunction')
       .addItem('📊 Dashboard разработчика', 'showDeveloperDashboard')
       .addSeparator()
       .addItem('📋 Инструкции по версии', 'showVersionInstructions')
-      .addItem('🔢 Текущая версия системы', 'showCurrentVersionInfo')
+      .addItem('🔢 Детальная информация', 'showCurrentVersionInfo')
       .addSeparator()
       .addItem('🔧 Режим разработчика', 'toggleDeveloperModeWithHelp'))
     .addToUi();
+}
+
+/**
+ * Получение информации о версии для отображения в меню
+ */
+function getVersionDisplayInfo() {
+  try {
+    // Получаем версию
+    var version = getCurrentVersion ? getCurrentVersion() : '2.0.1';
+    
+    // Получаем дату последнего обновления
+    var updateDate = 'неизвестно';
+    if (typeof getLastUpdateDate === 'function') {
+      try {
+        var rawDate = getLastUpdateDate();
+        if (rawDate && rawDate !== 'Неизвестно') {
+          var date = new Date(rawDate);
+          updateDate = date.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit'
+          });
+        }
+      } catch (e) {
+        // Если ошибка получения даты, используем текущую дату
+        updateDate = new Date().toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit'
+        });
+      }
+    } else {
+      // Если функция недоступна, используем текущую дату
+      updateDate = new Date().toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit'
+      });
+    }
+    
+    return 'v' + version + ' от ' + updateDate;
+    
+  } catch (error) {
+    // В случае любой ошибки возвращаем базовую информацию
+    return 'v2.0.1 от ' + new Date().toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit'
+    });
+  }
 }
 
 /**
