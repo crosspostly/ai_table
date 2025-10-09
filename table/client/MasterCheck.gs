@@ -432,9 +432,24 @@ function generateFinalReport(results, duration, params, reviews) {
 function testGeminiConnection(params) {
   try {
     if (!params.apiKey) return false;
-    addSystemLog('🧪 Тестируем Gemini API...', 'INFO', 'BATTLE_TEST');
-    // Простой тест подключения
-    return true; // Заглушка - в реальности тут будет вызов GM
+    addSystemLog('🧪 Тестируем Gemini API с реальным ключом...', 'INFO', 'BATTLE_TEST');
+    
+    // Реальный тест с текущей архитектурой
+    if (typeof GM === 'function') {
+      // Пробуем вызвать GM с простым тестовым промптом
+      try {
+        var testResult = GM('Ответь одним словом: ОК', 100, 0.1);
+        var success = testResult && testResult.toString().length > 0;
+        addSystemLog('🧪 GM тест результат: ' + (success ? 'SUCCESS' : 'FAIL'), 'INFO', 'BATTLE_TEST');
+        return success;
+      } catch (gmError) {
+        addSystemLog('❌ GM function error: ' + gmError.message, 'ERROR', 'BATTLE_TEST');
+        return false;
+      }
+    } else {
+      addSystemLog('❌ GM function не найдена', 'ERROR', 'BATTLE_TEST');
+      return false;
+    }
   } catch (e) {
     addSystemLog('❌ Gemini тест failed: ' + e.message, 'ERROR', 'BATTLE_TEST');
     return false;
@@ -443,10 +458,35 @@ function testGeminiConnection(params) {
 
 function testReviewProcessing(params, review, testSheet) {
   try {
-    addSystemLog('🧪 Тестируем обработку отзыва...', 'INFO', 'BATTLE_TEST');
-    if (!review || review.length < 10) return false;
-    // Тут будет реальная обработка отзыва
-    return true;
+    addSystemLog('🧪 Тестируем обработку отзыва с реальными данными...', 'INFO', 'BATTLE_TEST');
+    if (!review || review.length < 10) {
+      addSystemLog('⚠️ Отзыв слишком короткий для тестирования', 'WARN', 'BATTLE_TEST');
+      return false;
+    }
+    
+    // Реальный тест обработки отзыва с текущей архитектурой
+    if (typeof GM === 'function' && params.apiKey) {
+      try {
+        // Простой анализ отзыва
+        var prompt = 'Кратко определи тон отзыва (позитивный/негативный/нейтральный): ' + review.substring(0, 200);
+        var result = GM(prompt, 200, 0.3);
+        
+        var success = result && result.toString().length > 0;
+        if (success) {
+          addSystemLog('🧪 Обработка отзыва успешна: ' + result.substring(0, 50) + '...', 'INFO', 'BATTLE_TEST');
+        } else {
+          addSystemLog('❌ Обработка отзыва вернула пустой результат', 'ERROR', 'BATTLE_TEST');
+        }
+        
+        return success;
+      } catch (gmError) {
+        addSystemLog('❌ Ошибка GM при обработке отзыва: ' + gmError.message, 'ERROR', 'BATTLE_TEST');
+        return false;
+      }
+    } else {
+      addSystemLog('⚠️ GM функция или API ключ недоступны для теста отзыва', 'WARN', 'BATTLE_TEST');
+      return false;
+    }
   } catch (e) {
     addSystemLog('❌ Review processing test failed: ' + e.message, 'ERROR', 'BATTLE_TEST');
     return false;
