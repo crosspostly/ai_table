@@ -165,7 +165,8 @@ function createStopWordsFormulas(sheet, totalRows) {
     // Формулы для стоп-слов (колонки F и G)
     for (var row = 2; row <= totalRows; row++) {
       // F - отфильтрованные посты (скрывает посты со стоп-словами)
-      var formulaF = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + stopWordsRange + ', C' + row + ')))*(' + stopWordsRange + '<>"")) > 0, "", C' + row + ')';
+      // ИСПРАВЛЕНО: Используем D (текст поста) вместо C (ссылка), чтобы при копировании получать текст!
+      var formulaF = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + stopWordsRange + ', D' + row + ')))*(' + stopWordsRange + '<>"")) > 0, "", D' + row + ')';
       sheet.getRange(row, 6).setFormula(formulaF);
       
       // G - новый номер для отфильтрованных постов
@@ -178,7 +179,8 @@ function createStopWordsFormulas(sheet, totalRows) {
     // Формулы для позитивных слов (колонки I и J)
     for (var row = 2; row <= totalRows; row++) {
       // I - посты с позитивными словами
-      var formulaI = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + positiveWordsRange + ', C' + row + ')))*(' + positiveWordsRange + '<>"")) > 0, C' + row + ', "")';
+      // ИСПРАВЛЕНО: Используем D (текст поста) вместо C (ссылка), чтобы при копировании получать текст!
+      var formulaI = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + positiveWordsRange + ', D' + row + ')))*(' + positiveWordsRange + '<>"")) > 0, D' + row + ', "")';
       sheet.getRange(row, 9).setFormula(formulaI);
       
       // J - новый номер для позитивных постов
@@ -198,6 +200,24 @@ function createStopWordsFormulas(sheet, totalRows) {
     logMessage('❌ Ошибка создания формул: ' + e.message, 'ERROR');
     SpreadsheetApp.getUi().alert('Ошибка создания формул: ' + e.message);
   }
+}
+
+/**
+ * Получение VK Reviews Regex
+ * ИЗ СТАРОЙ РАБОЧЕЙ ВЕРСИИ old/VK_PARSER.txt
+ * @return {RegExp}
+ */
+function getReviewsRegex_() {
+  try {
+    var s = PropertiesService.getScriptProperties().getProperty('VK_REVIEWS_REGEX');
+    if (s && s.trim()) {
+      return new RegExp(s, 'i');
+    }
+  } catch (e) {
+    logMessage('⚠️ VK_REVIEWS_REGEX не задан, использую default', 'WARN');
+  }
+  // Default regex для отзывов
+  return /(отзыв|reviews?|feedback|рейтинг|оценк|звезд)/i;
 }
 
 /**
