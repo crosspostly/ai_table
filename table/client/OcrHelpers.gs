@@ -321,14 +321,12 @@ function getVkParserBaseV2_() {
   
   // Try constant
   try {
-    // VK API теперь встроен в сервер через VkImportService.gs
-    // Используем SERVER_URL для всех серверных запросов
-    if (typeof SERVER_URL !== 'undefined' && SERVER_URL) {
-      return String(SERVER_URL).replace(/\/$/, '');
+    if (typeof VK_PARSER_URL !== 'undefined' && VK_PARSER_URL) {
+      return String(VK_PARSER_URL).replace(/\/$/, '');
     }
   } catch (e) {}
   
-  throw new Error('SERVER_URL not configured');
+  throw new Error('VK_PARSER_URL not configured');
 }
 
 /**

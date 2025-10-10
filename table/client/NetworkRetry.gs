@@ -189,7 +189,7 @@ function testSocialImportConnection() {
     addSystemLog('🧪 Testing social import connection...', 'INFO', 'NETWORK');
     
     // Тестируем простой запрос к VK Parser
-    var testUrl = SERVER_URL + '?test=1';
+    var testUrl = VK_PARSER_URL + '?test=1';
     var response = fetchGeminiWithRetry(testUrl, {
       method: 'GET',
       muteHttpExceptions: true

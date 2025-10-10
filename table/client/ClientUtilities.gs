@@ -343,8 +343,221 @@ function applySmartPromptRules(promptText) {
 /**
  * Prepare Chain Smart - deprecated, keeping for compatibility
  */
+/**
+ * Prepare Chain Smart - автоматический выбор режима
+ * ВОССТАНОВЛЕНО ИЗ old/Main.txt строки 460-476
+ */
 function prepareChainSmart() {
-  SpreadsheetApp.getUi().alert('Эта функция перемещена на сервер');
+  var ss = SpreadsheetApp.getActive();
+  var prompt = ss.getSheetByName('Prompt_box');
+  var hasTargets = false;
+  
+  if (prompt) {
+    var lastRow = Math.max(2, prompt.getLastRow());
+    var vals = prompt.getRange(2, 2, lastRow - 1, 1).getDisplayValues(); // B2:B
+    
+    for (var i = 0; i < vals.length; i++) {
+      if (String(vals[i][0] || '').trim()) {
+        hasTargets = true;
+        break;
+      }
+    }
+  }
+  
+  if (hasTargets) {
+    prepareChainFromPromptBox();
+  } else {
+    prepareChainForA3();
+  }
+}
+
+/**
+ * Prepare Chain From Prompt Box
+ * ВОССТАНОВЛЕНО ИЗ old/Main.txt строки 478-521
+ */
+function prepareChainFromPromptBox() {
+  var ss = SpreadsheetApp.getActive();
+  var prompt = ss.getSheetByName('Prompt_box');
+  var pack = ss.getSheetByName('Распаковка');
+  
+  if (!prompt) {
+    SpreadsheetApp.getUi().alert('Лист "Prompt_box" не найден');
+    return;
+  }
+  
+  if (!pack) {
+    SpreadsheetApp.getUi().alert('Лист "Распаковка" не найден');
+    return;
+  }
+  
+  var lastRow = Math.max(2, prompt.getLastRow());
+  var targets = prompt.getRange(2, 2, lastRow - 1, 1).getDisplayValues(); // B2:B — ячейка назначения
+  var mappings = [];
+  
+  for (var r = 2; r <= lastRow; r++) {
+    var targetStr = String(targets[r - 2][0] || '').trim();
+    
+    if (!targetStr) continue;
+    
+    try {
+      var parsed = parseTargetA1(targetStr);
+      mappings.push({
+        promptRow: r,
+        targetRow: parsed.row,
+        targetCol: parsed.col,
+        targetA1: parsed.a1
+      });
+    } catch (e) {
+      addSystemLog('⚠️ Пропуск строки Prompt_box!B' + r + ': ' + e.message, 'WARN', 'CLIENT');
+    }
+  }
+  
+  if (!mappings.length) {
+    SpreadsheetApp.getUi().alert('Нет целевых ячеек в Prompt_box!B, ничего не сделано.');
+    return;
+  }
+  
+  var phrase = getCompletionPhrase() || COMPLETION_PHRASE;
+  var phraseEscaped = phrase.replace(/"/g, '""');
+  
+  for (var i = 0; i < mappings.length; i++) {
+    var m = mappings[i];
+    var cond;
+    
+    if (i === 0) {
+      // Всегда якорь от A3
+      cond = '$A3<>""';
+    } else {
+      var prev = mappings[i - 1];
+      cond = 'LEFT(' + prev.targetA1 + ', LEN("' + phraseEscaped + '"))="' + phraseEscaped + '"';
+    }
+    
+    var formula = '=GM_IF(' + cond + ', Prompt_box!$F$' + m.promptRow + ', 25000, 0.7)';
+    pack.getRange(m.targetRow, m.targetCol).setFormula(formula);
+    
+    addSystemLog('📝 Формула установлена → Распаковка!' + m.targetA1 + ' из Prompt_box!F' + m.promptRow, 'INFO', 'CLIENT');
+  }
+  
+  SpreadsheetApp.getUi().alert('✅ Готово: формулы расставлены по целям из Prompt_box!B.\\nПервая ячейка запустится при заполнении соответствующего A-столбца, далее — по фразе готовности.');
+}
+
+/**
+ * Prepare Chain For A3 - стандартный режим B3..G3
+ * ВОССТАНОВЛЕНО ИЗ old/Main.txt строки 522-548
+ */
+function prepareChainForA3() {
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName('Распаковка');
+  
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Лист "Распаковка" не найден');
+    return;
+  }
+  
+  var row = 3;
+  var startCol = 2; // B
+  var steps = 6;    // B..G
+  var endCol = startCol + steps - 1;
+  var phrase = getCompletionPhrase() || COMPLETION_PHRASE;
+  var phraseEscaped = phrase.replace(/"/g, '""');
+  
+  for (var col = startCol; col <= endCol; col++) {
+    var stepIndex = col - 1;       // B=1 -> шаг 1
+    var promptRow = stepIndex + 1; // шаг 1 -> F2 ... шаг 6 -> F7
+    var target = sheet.getRange(row, col);
+    var promptRef = 'Prompt_box!$F$' + promptRow;
+    var formula;
+    
+    if (col === 2) {
+      formula = '=GM_IF($A3<>"", ' + promptRef + ', 25000, 0.7)';
+    } else {
+      var prevColLetter = columnToLetter(col - 1);
+      formula = '=GM_IF(LEFT(' + prevColLetter + '3, LEN("' + phraseEscaped + '"))="' + phraseEscaped + '", ' + promptRef + ', 25000, 0.7)';
+    }
+    
+    target.setFormula(formula);
+    addSystemLog('📝 Формула ' + target.getA1Notation() + ' установлена', 'DEBUG', 'CLIENT');
+  }
+  
+  SpreadsheetApp.getUi().alert('✅ Готово: формулы B3..G3 проставлены.\\nЗаполните A3 — шаги пойдут по очереди.');
+}
+
+/**
+ * Clear Chain For A3
+ * ВОССТАНОВЛЕНО ИЗ old/Main.txt строки 549-553
+ */
+function clearChainForA3() {
+  var ss = SpreadsheetApp.getActive();
+  var sheet = ss.getSheetByName('Распаковка');
+  
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Лист "Распаковка" не найден');
+    return;
+  }
+  
+  sheet.getRange(3, 2, 1, 6).clearContent(); // B3..G3
+  SpreadsheetApp.getUi().alert('🧹 Очищено: B3..G3');
+}
+
+/**
+ * Helper: Parse Target A1 notation
+ */
+function parseTargetA1(targetStr) {
+  // Simple A1 notation parser
+  var match = targetStr.match(/^([A-Z]+)(\d+)$/i);
+  
+  if (!match) {
+    throw new Error('Неверный формат ячейки: ' + targetStr);
+  }
+  
+  var col = columnLetterToIndex(match[1]);
+  var row = parseInt(match[2], 10);
+  
+  return {
+    a1: match[0].toUpperCase(),
+    col: col,
+    row: row
+  };
+}
+
+/**
+ * Helper: Column letter to index (A=1, B=2, ...)
+ */
+function columnLetterToIndex(letter) {
+  var col = 0;
+  letter = letter.toUpperCase();
+  
+  for (var i = 0; i < letter.length; i++) {
+    col = col * 26 + (letter.charCodeAt(i) - 64);
+  }
+  
+  return col;
+}
+
+/**
+ * Helper: Column index to letter (1=A, 2=B, ...)
+ */
+function columnToLetter(col) {
+  var letter = '';
+  
+  while (col > 0) {
+    var mod = (col - 1) % 26;
+    letter = String.fromCharCode(65 + mod) + letter;
+    col = Math.floor((col - mod) / 26);
+  }
+  
+  return letter;
+}
+
+/**
+ * Helper: Get completion phrase
+ */
+function getCompletionPhrase() {
+  try {
+    return COMPLETION_PHRASE;
+  } catch (e) {
+    return 'Отчёт готов';
+  }
 }
 
 /**
