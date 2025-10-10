@@ -69,6 +69,12 @@ function doPost(e) {
       case 'vk_token_validate':
         return handleVkTokenValidate(requestData, traceId);
         
+      case 'vk_import_diagnostic':
+        return handleVkImportDiagnostic(requestData, traceId);
+        
+      case 'get_vk_token':
+        return handleGetVkToken(requestData, traceId);
+        
       default:
         return createErrorResponse('Unknown action: ' + action, 400, traceId);
     }
@@ -510,5 +516,59 @@ function handleVkTokenValidate(data, traceId) {
   } catch (error) {
     logServer('VK token validation error: ' + error.message, traceId);
     return createErrorResponse('VK_TOKEN_VALIDATE_ERROR: ' + error.message, 500, traceId);
+  }
+}
+
+/**
+ * Handle VK Import Diagnostic Request - ДЕТАЛЬНАЯ ДИАГНОСТИКА
+ */
+function handleVkImportDiagnostic(data, traceId) {
+  try {
+    logServer('VK import diagnostic: owner=' + data.owner + ', count=' + data.count, traceId);
+    
+    var owner = data.owner;
+    var count = data.count || 3;
+    
+    if (!owner) {
+      return createErrorResponse('OWNER_REQUIRED', 400, traceId);
+    }
+    
+    // Логируем параметры
+    logServer('Диагностика VK: вызов handleWallGet_(' + owner + ', ' + count + ')', traceId);
+    
+    // Вызываем handleWallGet_ из VkImportService.gs
+    var posts = handleWallGet_(owner, count);
+    
+    logServer('Диагностика VK: получено ' + posts.length + ' постов', traceId);
+    
+    // Возвращаем детальную информацию
+    return createSuccessResponse(posts, traceId);
+    
+  } catch (error) {
+    logServer('VK import diagnostic error: ' + error.message + ', stack: ' + (error.stack || ''), traceId);
+    return createErrorResponse('VK_IMPORT_DIAGNOSTIC_ERROR: ' + error.message, 500, traceId);
+  }
+}
+
+/**
+ * Handle Get VK Token Request - для клиентской диагностики
+ */
+function handleGetVkToken(data, traceId) {
+  try {
+    logServer('Get VK token requested', traceId);
+    
+    var token = getVkToken_();
+    
+    if (!token) {
+      return createErrorResponse('VK_TOKEN_NOT_CONFIGURED', 500, traceId);
+    }
+    
+    logServer('VK token provided (length: ' + token.length + ')', traceId);
+    
+    return createSuccessResponse({ token: token }, traceId);
+    
+  } catch (error) {
+    logServer('Get VK token error: ' + error.message, traceId);
+    return createErrorResponse('GET_VK_TOKEN_ERROR: ' + error.message, 500, traceId);
   }
 }
