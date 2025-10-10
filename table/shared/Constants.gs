@@ -4,8 +4,10 @@
  */
 
 // ====== ГЛАВНЫЙ СЕРВЕР API ======
-// ИСПРАВЛЕНО: Единый URL сервера без дублирования
-const SERVER_API_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHniTv_12cAHlqjYfra7fQ3m3Vri5XvZTQ_uUZZovCYeTo2_u6gQw/exec';
+// ИСПРАВЛЕНО: Правильное имя константы как в old/Main.txt
+const SERVER_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHniTv_12cAHlqjYfra7fQ3m3Vri5XvZTQ_uUZZovCYeTo2_u6gQw/exec';
+// Алиас для обратной совместимости
+const SERVER_API_URL = SERVER_URL;
 
 // ====== ДОПОЛНИТЕЛЬНЫЕ СЕРВИСЫ ======
 const VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbzttbqz16EmmcXbEYCuYhNlXkCxAnCG77phspFL1_rTCi4xVqoorByJAPa4dI4iwT8/exec';

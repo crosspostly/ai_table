@@ -441,8 +441,8 @@ function runAllFunctionsCheckSection(testSheet) {
       'getClientCredentials', 'callServer',
       'addSystemLog', 'getSystemLogs',
       'runAllTests', 'quickTest', 'checkAllFunctionExistence',
-      'masterSystemCheck',
-      'showSystemStatus', 'setupAllCredentialsWithHelp',
+      'superMasterCheck',
+      'checkSystemStatus', 'setupAllCredentialsUI',
       'getCurrentVersion', 'getVersionInfo',
       'openWebInterface', 'configureSocialImport', 'runSmartChain'
     ];
