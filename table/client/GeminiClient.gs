@@ -154,7 +154,11 @@ function GM(prompt, maxTokens, temperature) {
 
     // 🔒 SECURITY: Безопасное логирование (без утечки данных)
     var logData = 'prompt=' + safePrompt.slice(0,60) + '... (' + safePrompt.length + '), tokens=' + safeMaxTokens + ', temp=' + safeTemperature;
-    addSystemLog('→ GM: ' + SecurityValidator.sanitizeForLogging(logData), 'INFO', 'GEMINI');
+    // Используем метод через объект SecurityValidator
+    var sanitized = (typeof SecurityValidator !== 'undefined' && SecurityValidator.sanitizeForLogging) 
+      ? SecurityValidator.sanitizeForLogging(logData) 
+      : logData.replace(/[A-Za-z0-9_-]{20,}/g, '***');
+    addSystemLog('→ GM: ' + sanitized, 'INFO', 'GEMINI');
 
     // 🔒 CACHE RACE CONDITION PROTECTION
     var cacheKey = gmCacheKey_(safePrompt, safeMaxTokens, safeTemperature);
@@ -265,15 +269,10 @@ function getGeminiApiKey() {
  */
 function initGeminiKey() {
   var ui = SpreadsheetApp.getUi();
-  var help = 'Где взять ключ (коротко):\
-' +
-             '1) Откройте: https://aistudio.google.com/app/apikey\
-' +
-             '2) Нажмите "Create API key"\
-' +
-             '3) Скопируйте ключ\
-\
-' +
+  var help = 'Где взять ключ (коротко):\\n' +
+             '1) Откройте: https://aistudio.google.com/app/apikey\\n' +
+             '2) Нажмите "Create API key"\\n' +
+             '3) Скопируйте ключ\\n\\n' +
              'Вставьте ключ в поле ниже и нажмите OK';
   
   var res = ui.prompt('🔑 Введите ваш Gemini API ключ', help, ui.ButtonSet.OK_CANCEL);
@@ -297,18 +296,11 @@ function initGeminiKey() {
 function showGeminiKeyHelp() {
   var ui = SpreadsheetApp.getUi();
   var msg =
-    'Как получить API ключ Gemini:\
-\
-' +
-    '1) Откройте Google AI Studio: https://aistudio.google.com/app/apikey\
-' +
-    '2) Нажмите "Create API key" (создать ключ)\
-' +
-    '3) Скопируйте ключ\
-' +
-    '4) Меню: 🔑 Gemini → "Установить API ключ" → вставьте ключ\
-\
-' +
+    'Как получить API ключ Gemini:\\n\\n' +
+    '1) Откройте Google AI Studio: https://aistudio.google.com/app/apikey\\n' +
+    '2) Нажмите "Create API key" (создать ключ)\\n' +
+    '3) Скопируйте ключ\\n' +
+    '4) Меню: 🔑 Gemini → "Установить API ключ" → вставьте ключ\\n\\n' +
     'Документация: https://ai.google.dev/gemini-api/docs/api-key?hl=ru';
   ui.alert('❓ Как получить API ключ Gemini', msg, ui.ButtonSet.OK);
 }
