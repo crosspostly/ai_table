@@ -111,11 +111,12 @@ function runFullDiagnostics() {
   
   try {
     var vkRequest = {
-      action: 'vk_import',
+      action: 'social_import',  // ИСПРАВЛЕНО: используем правильное действие
       email: credentials.email,
       token: credentials.token,
-      owner: 'durov',
-      count: 3
+      source: 'durov',  // ИСПРАВЛЕНО: используем source вместо owner
+      count: 3,
+      platform: 'vk'  // ДОБАВЛЕНО: указываем платформу
     };
     
     var vkResult = callServer(vkRequest);

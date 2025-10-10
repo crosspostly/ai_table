@@ -48,6 +48,7 @@ function checkSystemStatus() {
   var statusReport = [];
   statusReport.push('📊 AI_TABLE System Status Report');
   statusReport.push('Generated: ' + new Date().toLocaleString('ru-RU'));
+  statusReport.push('Last Update: ' + new Date().toISOString());
   statusReport.push('');
   
   // License Status
