@@ -140,15 +140,16 @@ function deepVkDiagnostics() {
     logDiagnostic('STEP 5/10', 'INFO', {}, 'Парсинг источника (B1)', '');
     try {
       var vkImportRequest = {
-        action: 'vk_import_diagnostic',  // Специальный action для диагностики
+        action: 'social_import',  // ИСПРАВЛЕНО: используем правильное действие
         email: creds.email,
         token: creds.token,
-        owner: b1,
-        count: b2 || 3  // Минимальное количество для теста
+        source: b1,  // ИСПРАВЛЕНО: используем source вместо owner
+        count: b2 || 3,  // Минимальное количество для теста
+        platform: 'vk'  // ДОБАВЛЕНО: указываем платформу
       };
       
       logDiagnostic('VK_IMPORT_REQUEST', 'INFO', vkImportRequest, 
-        'Запрос к серверу: action=vk_import_diagnostic, owner=' + b1 + ', count=' + (b2 || 3), '');
+        'Запрос к серверу: action=social_import, source=' + b1 + ', count=' + (b2 || 3) + ', platform=vk', '');
       
       // === ШАГ 6: ВЫЗОВ СЕРВЕРА ДЛЯ VK ИМПОРТА ===
       logDiagnostic('STEP 6/10', 'INFO', {}, 'Вызов сервера для VK импорта', '');
@@ -159,7 +160,7 @@ function deepVkDiagnostics() {
         'Ответ сервера получен. ok=' + (vkImportResult ? vkImportResult.ok : 'null'), '');
       
       if (!vkImportResult) {
-        logDiagnostic('VK_IMPORT', 'FAIL', {}, 'Сервер вернул null', 'Проверьте что сервер обрабатывает action=vk_import_diagnostic');
+        logDiagnostic('VK_IMPORT', 'FAIL', {}, 'Сервер вернул null', 'Проверьте что сервер обрабатывает action=social_import с platform=vk');
         throw new Error('Сервер вернул null при VK импорте');
       }
       
@@ -344,15 +345,16 @@ function testSimplifiedVkDiagnostic() {
     
     log('CREDENTIALS', 'OK', { email: creds.email }, 'Email: ' + creds.email);
     
-    // Пробуем через обычный VK import
-    log('VK_IMPORT', 'INFO', {}, 'Запрос через action=vk_import');
+    // Пробуем через social_import с платформой VK
+    log('VK_IMPORT', 'INFO', {}, 'Запрос через action=social_import, platform=vk');
     
     var vkRequest = {
-      action: 'vk_import',
+      action: 'social_import',  // ИСПРАВЛЕНО: правильное действие
       email: creds.email,
       token: creds.token,
-      owner: owner,
-      count: count
+      source: owner,  // ИСПРАВЛЕНО: source вместо owner
+      count: count,
+      platform: 'vk'  // ДОБАВЛЕНО: указываем платформу
     };
     
     log('REQUEST', 'INFO', vkRequest, 'Отправка запроса на сервер');
