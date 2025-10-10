@@ -395,3 +395,20 @@ function checkAllApisHealth() {
     timestamp: new Date()
   };
 }
+
+/**
+ * Получение таймаута для платформы
+ * @param {string} platform - название платформы
+ * @return {number} - таймаут в миллисекундах
+ */
+function getPlatformTimeout(platform) {
+  const timeouts = {
+    'vk': 30000,        // 30 секунд для VK
+    'instagram': 25000, // 25 секунд для Instagram
+    'telegram': 20000,  // 20 секунд для Telegram
+    'gemini': 60000,    // 60 секунд для Gemini
+    'default': 30000    // 30 секунд по умолчанию
+  };
+  
+  return timeouts[platform] || timeouts.default;
+}
