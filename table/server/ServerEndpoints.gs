@@ -63,6 +63,12 @@ function doPost(e) {
       case 'health':
         return handleHealthCheck(traceId);
         
+      case 'vk_token_diagnosis':
+        return handleVkTokenDiagnosis(requestData, traceId);
+        
+      case 'vk_token_validate':
+        return handleVkTokenValidate(requestData, traceId);
+        
       default:
         return createErrorResponse('Unknown action: ' + action, 400, traceId);
     }
@@ -390,7 +396,7 @@ function getVkParserUrl() {
   // или использовать константу из old/Main.gs
   try {
     var props = PropertiesService.getScriptProperties();
-    var url = props.getProperty('VK_PARSER_URL');
+    // VK_PARSER_URL больше не используется - VK API встроен
     
     if (url) return url;
     
@@ -464,5 +470,45 @@ function callGeminiApi(prompt, maxTokens, temperature, apiKey, traceId) {
       error: error.message,
       traceId: traceId
     };
+  }
+}
+
+/**
+ * Handle VK Token Diagnosis Request
+ */
+function handleVkTokenDiagnosis(data, traceId) {
+  try {
+    logServer('VK token diagnosis requested', traceId);
+    
+    // Call diagnoseVkToken from VkTokenValidator.gs
+    var diagnosis = diagnoseVkToken();
+    
+    logServer('VK token diagnosis completed: valid=' + diagnosis.valid, traceId);
+    
+    return createSuccessResponse(diagnosis, traceId);
+    
+  } catch (error) {
+    logServer('VK token diagnosis error: ' + error.message, traceId);
+    return createErrorResponse('VK_TOKEN_DIAGNOSIS_ERROR: ' + error.message, 500, traceId);
+  }
+}
+
+/**
+ * Handle VK Token Validate Request
+ */
+function handleVkTokenValidate(data, traceId) {
+  try {
+    logServer('VK token validation requested', traceId);
+    
+    // Call validateVkToken from VkTokenValidator.gs
+    var result = validateVkToken();
+    
+    logServer('VK token validation completed: valid=' + result.valid, traceId);
+    
+    return createSuccessResponse(result, traceId);
+    
+  } catch (error) {
+    logServer('VK token validation error: ' + error.message, traceId);
+    return createErrorResponse('VK_TOKEN_VALIDATE_ERROR: ' + error.message, 500, traceId);
   }
 }
