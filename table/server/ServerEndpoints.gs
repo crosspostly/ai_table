@@ -390,7 +390,7 @@ function getVkParserUrl() {
   // или использовать константу из old/Main.gs
   try {
     var props = PropertiesService.getScriptProperties();
-    var url = props.getProperty('VK_PARSER_URL');
+    // VK_PARSER_URL больше не используется - VK API встроен
     
     if (url) return url;
     

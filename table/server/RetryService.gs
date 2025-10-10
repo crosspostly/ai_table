@@ -363,7 +363,7 @@ function checkAllApisHealth() {
     { name: 'Instagram', url: 'https://www.instagram.com/', platform: 'instagram' },
     { name: 'VK', url: 'https://vk.com/', platform: 'vk' },
     { name: 'Telegram', url: 'https://t.me/', platform: 'telegram' },
-    { name: 'VK Parser', url: VK_PARSER_URL, platform: 'vk' },
+    { name: 'VK API', url: 'https://api.vk.com', platform: 'vk' },
     { name: 'Gemini API', url: GEMINI_API_URL, platform: 'gemini' }
   ];
   

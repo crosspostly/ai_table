@@ -10,7 +10,8 @@ const SERVER_URL = 'https://script.google.com/macros/s/AKfycbyyUlB5YWP4bwv3gHHni
 const SERVER_API_URL = SERVER_URL;
 
 // ====== ДОПОЛНИТЕЛЬНЫЕ СЕРВИСЫ ======
-const VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbzttbqz16EmmcXbEYCuYhNlXkCxAnCG77phspFL1_rTCi4xVqoorByJAPa4dI4iwT8/exec';
+// 🔥 УДАЛЕНО: VK_PARSER_URL - теперь VK API интегрирован в сервер через VkImportService.gs
+// VK токен хранится в Script Properties сервера: VK_TOKEN
 
 // ====== ВНЕШНИЕ API ======
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';

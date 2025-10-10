@@ -45,9 +45,11 @@ VkCollector.collectPosts = function(owner, count, traceId) {
   }
 };
 
-// 🔧 СТАРАЯ ФУНКЦИЯ: collect для альбомов/обсуждений/отзывов (всё ещё использует VK_PARSER)
+// 🔧 СТАРАЯ ФУНКЦИЯ: collect для альбомов/обсуждений/отзывов  
+// ⚠️ DEPRECATED: Нужно мигрировать на прямой VK API
 VkCollector.collect = function(source, limit) {
-  var baseUrl = getVkParserBaseUrl();
+  // FIXME: Migrate to direct VK API
+  throw new Error('VK альбомы/обсуждения/отзывы не поддерживаются. Используйте importVkPosts() для постов.');
   var endpoint = this.getEndpointForType(source.type);
   
   if (!endpoint) {
@@ -315,14 +317,13 @@ function createCollector(sourceType) {
 }
 
 /**
- * Получение базового URL VK парсера
+ * 🔥 UPDATED: VK API теперь встроен в VkImportService.gs
+ * Получение URL VK API - direct access, no external parser
  */
-function getVkParserBaseUrl() {
-  // Используем константу из Constants.gs или глобальную
-  if (typeof VK_PARSER_URL !== 'undefined' && VK_PARSER_URL) {
-    return String(VK_PARSER_URL).replace(/\/$/, '');
-  }
-  throw new Error('VK_PARSER_URL not configured');
+function getVkApiUrl() {
+  // VK API используется напрямую через VkImportService.gs::handleWallGet_()
+  // Токен берётся из Script Properties: VK_TOKEN
+  return 'https://api.vk.com/method/wall.get';
 }
 
 /**
