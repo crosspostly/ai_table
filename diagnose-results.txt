@@ -1,0 +1,166 @@
+╔════════════════════════════════════════════════════════╗
+║  ДИАГНОСТИКА ПРОБЛЕМЫ "NULL" ПРИ ИМПОРТЕ ПОСТОВ       ║
+╚════════════════════════════════════════════════════════╝
+
+🔍 Проверяем файлы на потенциальные источники null...
+
+✅ table/server/SocialImportService.gs - проверен
+✅ table/server/VkImportService.gs - проверен
+✅ table/server/ServerEndpoints.gs - проверен
+✅ table/client/SocialImportClient.gs - проверен
+✅ table/client/ClientUtilities.gs - проверен
+✅ table/shared/Constants.gs - проверен
+
+═══════════════════════════════════════════════════════
+
+📊 РЕЗУЛЬТАТЫ ДИАГНОСТИКИ:
+
+❌ НАЙДЕНО 3 СЛУЧАЕВ ВОЗВРАТА NULL:
+
+   1. table/server/SocialImportService.gs:97
+      if (!platform) return null;
+
+   2. table/server/SocialImportService.gs:116
+      return null;
+
+   3. table/server/ServerEndpoints.gs:401
+      return null;
+
+⚠️  НАЙДЕНО 25 СЛУЧАЕВ ВОЗВРАТА UNDEFINED:
+
+   1. table/server/VkImportService.gs:99
+      return;
+
+   2. table/server/VkImportService.gs:108
+      return;
+
+   3. table/server/VkImportService.gs:118
+      return;
+
+   4. table/server/VkImportService.gs:124
+      return;
+
+   5. table/server/VkImportService.gs:144
+      return;
+
+   6. table/server/VkImportService.gs:233
+      return;
+
+   7. table/client/SocialImportClient.gs:22
+      return;
+
+   8. table/client/SocialImportClient.gs:35
+      return;
+
+   9. table/client/SocialImportClient.gs:51
+      return;
+
+   10. table/client/SocialImportClient.gs:113
+      return;
+
+   11. table/client/ClientUtilities.gs:18
+      return;
+
+   12. table/client/ClientUtilities.gs:57
+      return;
+
+   13. table/client/ClientUtilities.gs:64
+      return;
+
+   14. table/client/ClientUtilities.gs:70
+      return;
+
+   15. table/client/ClientUtilities.gs:77
+      return;
+
+   16. table/client/ClientUtilities.gs:126
+      return;
+
+   17. table/client/ClientUtilities.gs:176
+      return;
+
+   18. table/client/ClientUtilities.gs:358
+      return;
+
+   19. table/client/ClientUtilities.gs:365
+      return;
+
+   20. table/client/ClientUtilities.gs:387
+      return;
+
+   21. table/client/ClientUtilities.gs:394
+      return;
+
+   22. table/client/ClientUtilities.gs:415
+      return;
+
+   23. table/client/ClientUtilities.gs:422
+      return;
+
+   24. table/client/ClientUtilities.gs:443
+      return;
+
+   25. table/client/ClientUtilities.gs:485
+      return;
+
+⚠️  НАЙДЕНО 36 ФУНКЦИЙ БЕЗ ВАЛИДАЦИИ (показаны первые 5):
+
+   1. table/server/SocialImportService.gs:125
+      function parseSource(source, explicitPlatform) {
+
+   2. table/server/SocialImportService.gs:221
+      function importVkPostsAdvanced(source, count) {
+
+   3. table/server/SocialImportService.gs:252
+      function importInstagramPosts(username, limit) {
+
+   4. table/server/SocialImportService.gs:423
+      function createStopWordsFormulas(sheet, totalRows) {
+
+   5. table/server/SocialImportService.gs:472
+      function applyUniformFormatting(sheet) {
+
+⚠️  НАЙДЕНО 5 ВЫЗОВОВ БЕЗ TRY-CATCH (показаны первые 5):
+
+   1. table/server/SocialImportService.gs:47
+      function() { return importVkPostsAdvanced(sourceInfo.value, count); },
+
+   2. table/server/VkImportService.gs:25
+      function handleWallGet_(owner, count) {
+
+   3. table/server/ServerEndpoints.gs:170
+      posts = importVkPostsAdvanced(sourceInfo.value, validatedInput.count);
+
+   4. table/client/SocialImportClient.gs:77
+      var result = callServer(serverRequest);
+
+   5. table/client/ClientUtilities.gs:22
+      var response = callServer({
+
+═══════════════════════════════════════════════════════
+
+🎯 СПЕЦИФИЧЕСКАЯ ДИАГНОСТИКА ДЛЯ ИМПОРТА:
+
+✅ importVkPostsAdvanced возвращает mapped posts
+✅ handleWallGet_ возвращает posts
+✅ SYSTEM_LOGS_NAME определена в Constants.gs
+
+═══════════════════════════════════════════════════════
+
+💡 КЛЮЧЕВЫЕ РЕКОМЕНДАЦИИ:
+
+1. Проверьте что VK_TOKEN настроен в Script Properties
+2. Проверьте что лист "Параметры" содержит:
+   - B1: источник (URL или username)
+   - B2: количество постов
+   - C1: платформа (опционально)
+3. Проверьте логи Google Apps Script для детальной ошибки
+4. Используйте функцию masterSystemCheck() для диагностики
+5. Проверьте что SERVER_API_URL правильный в Constants.gs
+
+═══════════════════════════════════════════════════════
+
+⚠️  НАЙДЕНО 69 ПОТЕНЦИАЛЬНЫХ ПРОБЛЕМ
+
+Рекомендуется исправить найденные проблемы.
+
