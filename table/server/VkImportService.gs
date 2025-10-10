@@ -275,3 +275,277 @@ function applyUniformFormatting(sheet) {
     logMessage('⚠️ Ошибка форматирования листа ' + sheet.getName() + ': ' + e.message, 'WARN');
   }
 }
+
+// ============ ВОССТАНОВЛЕННЫЕ ФУНКЦИИ ИЗ old/VK_PARSER.txt ============
+
+/**
+ * Парсинг альбомов VK (восстановлено из old/VK_PARSER.txt)
+ * @param {string} url - URL альбома VK
+ * @param {number} limit - лимит изображений
+ * @param {number} offset - смещение для пагинации
+ * @return {Object} - изображения и информация о пагинации
+ */
+function handleParseAlbum_(url, limit, offset) {
+  limit = parseInt(limit || '100', 10);
+  offset = parseInt(offset || '0', 10);
+  
+  if (!url) {
+    throw new Error('Не указан url альбома');
+  }
+  
+  var token = getVkToken_();
+  var v = '5.131';
+  
+  // Извлекаем owner_id и album_id из URL
+  var m = String(url).match(/vk\.com\/album(-?\d+)_([0-9]+)/i);
+  if (!m) {
+    throw new Error('Неверный формат URL альбома');
+  }
+  
+  var ownerId = parseInt(m[1], 10);
+  var albumId = parseInt(m[2], 10);
+  
+  var api = 'https://api.vk.com/method/photos.get'
+    + '?owner_id=' + ownerId
+    + '&album_id=' + albumId
+    + '&count=' + Math.max(1, Math.min(1000, limit))
+    + '&offset=' + Math.max(0, offset)
+    + '&photo_sizes=1'
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + v;
+  
+  var res = UrlFetchApp.fetch(api, { muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  var js = JSON.parse(res.getContentText());
+  
+  if (code !== 200 || js.error) {
+    throw new Error((js.error && js.error.error_msg) || ('HTTP_' + code));
+  }
+  
+  var resp = js.response;
+  var items = (resp && resp.items) || [];
+  var total = resp && resp.count || (offset + items.length);
+  
+  var images = items.map(function(ph) {
+    var sizes = ph.sizes || [];
+    var best = null;
+    for (var i = 0; i < sizes.length; i++) {
+      if (!best || (sizes[i].width * sizes[i].height > best.width * best.height)) {
+        best = sizes[i];
+      }
+    }
+    return { 
+      url: best ? best.url : '', 
+      w: best ? best.width : 0, 
+      h: best ? best.height : 0 
+    };
+  }).filter(function(x){ return !!x.url; });
+  
+  var hasMore = (offset + items.length) < total;
+  var nextOffset = offset + items.length;
+  
+  return { 
+    images: images, 
+    hasMore: hasMore, 
+    nextOffset: nextOffset, 
+    total: total 
+  };
+}
+
+/**
+ * Парсинг обсуждений VK (восстановлено из old/VK_PARSER.txt)
+ * @param {string} url - URL обсуждения
+ * @param {number} limit - лимит комментариев
+ * @param {number} offset - смещение для пагинации
+ * @return {Object} - тексты и информация о пагинации
+ */
+function handleParseDiscussion_(url, limit, offset) {
+  limit = parseInt(limit || '100', 10);
+  offset = parseInt(offset || '0', 10);
+  
+  if (!url) {
+    throw new Error('Не указан url темы');
+  }
+  
+  var token = getVkToken_();
+  var v = '5.131';
+  
+  // Извлекаем group_id и topic_id из URL
+  var m = String(url).match(/vk\.com\/topic(-?\d+)_([0-9]+)/i);
+  if (!m) {
+    throw new Error('Неверный формат URL темы');
+  }
+  
+  var ownerId = parseInt(m[1], 10); // может быть отрицательным (группа)
+  var groupId = Math.abs(ownerId);
+  var topicId = parseInt(m[2], 10);
+  
+  var api = 'https://api.vk.com/method/board.getComments'
+    + '?group_id=' + groupId
+    + '&topic_id=' + topicId
+    + '&count=' + Math.max(1, Math.min(100, limit))
+    + '&offset=' + Math.max(0, offset)
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + v;
+  
+  var res = UrlFetchApp.fetch(api, { muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  var js = JSON.parse(res.getContentText());
+  
+  if (code !== 200 || js.error) {
+    throw new Error((js.error && js.error.error_msg) || ('HTTP_' + code));
+  }
+  
+  var resp = js.response;
+  var items = (resp && resp.items) || [];
+  var total = resp && resp.count || (offset + items.length);
+  
+  var texts = items.map(function(c) { 
+    return String(c.text || '').trim(); 
+  }).filter(function(s){ return !!s; });
+  
+  var hasMore = (offset + items.length) < total;
+  var nextOffset = offset + items.length;
+  
+  return { 
+    texts: texts, 
+    hasMore: hasMore, 
+    nextOffset: nextOffset, 
+    total: total 
+  };
+}
+
+/**
+ * Парсинг отзывов VK (восстановлено из old/VK_PARSER.txt)
+ * @param {string} url - URL страницы с отзывами
+ * @param {number} limit - лимит отзывов
+ * @param {number} offset - смещение для пагинации
+ * @return {Object} - тексты и информация о пагинации
+ */
+function handleParseReviews_(url, limit, offset) {
+  limit = parseInt(limit || '100', 10);
+  offset = parseInt(offset || '0', 10);
+  
+  if (!url) {
+    throw new Error('Не указан url reviews-страницы');
+  }
+  
+  var token = getVkToken_();
+  var v = '5.131';
+  
+  // Извлекаем group_id из URL
+  var m = String(url).match(/vk\.com\/reviews-([0-9]+)/i);
+  if (!m) {
+    throw new Error('Неверный формат URL reviews-страницы');
+  }
+  
+  var groupId = parseInt(m[1], 10);
+  
+  // 1) Получаем темы обсуждений и фильтруем по ключевым словам "отзыв", "review", "feedback"
+  var topicsApi = 'https://api.vk.com/method/board.getTopics'
+    + '?group_id=' + groupId
+    + '&order=2&count=200'
+    + '&extended=0'
+    + '&access_token=' + encodeURIComponent(token)
+    + '&v=' + v;
+  
+  var tRes = UrlFetchApp.fetch(topicsApi, { muteHttpExceptions: true });
+  var tCode = tRes.getResponseCode();
+  var tJs = JSON.parse(tRes.getContentText());
+  
+  if (tCode !== 200 || tJs.error) {
+    throw new Error((tJs.error && tJs.error.error_msg) || ('HTTP_' + tCode));
+  }
+  
+  var topics = (tJs.response && tJs.response.items) || [];
+  var re = getReviewsRegex_();
+  topics = topics.filter(function(tp){ 
+    return re.test(String(tp.title || '')); 
+  });
+  
+  if (!topics.length) {
+    return { texts: [], hasMore: false, nextOffset: offset, total: 0 };
+  }
+  
+  // 2) Глобальная пагинация: offset относится к сумме комментариев по всем подходящим темам
+  var total = 0; 
+  for (var i=0; i<topics.length; i++) {
+    total += (topics[i].comments || 0);
+  }
+  
+  var texts = [];
+  var remain = Math.max(0, Math.min(1000, limit)); // защитный предел
+  var skip = Math.max(0, offset);
+  var idx = 0;
+  
+  while (idx < topics.length && remain > 0) {
+    var tp = topics[idx];
+    var cCount = tp.comments || 0;
+    
+    if (skip >= cCount) { 
+      skip -= cCount; 
+      idx++; 
+      continue; 
+    }
+    
+    // Берём из этой темы, начиная с skip, до remain
+    var take = Math.min(remain, 100); // API limit 100
+    var commentsApi = 'https://api.vk.com/method/board.getComments'
+      + '?group_id=' + groupId
+      + '&topic_id=' + tp.id
+      + '&count=' + take
+      + '&offset=' + skip
+      + '&access_token=' + encodeURIComponent(token)
+      + '&v=' + v;
+    
+    var cRes = UrlFetchApp.fetch(commentsApi, { muteHttpExceptions: true });
+    var cCode = cRes.getResponseCode();
+    var cJs = JSON.parse(cRes.getContentText());
+    
+    if (cCode !== 200 || cJs.error) {
+      throw new Error((cJs.error && cJs.error.error_msg) || ('HTTP_' + cCode));
+    }
+    
+    var items = (cJs.response && cJs.response.items) || [];
+    var parts = items.map(function(c){ 
+      return String(c.text || '').trim(); 
+    }).filter(function(s){ return !!s; });
+    
+    for (var k=0; k<parts.length && remain>0; k++) { 
+      texts.push(parts[k]); 
+      remain--; 
+    }
+    
+    // после первого захода по теме, дальше offset=0 (мы "съели" skip)
+    skip = 0;
+    
+    // если всё ещё есть место и комментарии закончились — двигаемся к следующей теме
+    if (parts.length < take) { 
+      idx++; 
+    }
+  }
+  
+  var nextOffset = offset + texts.length;
+  var hasMore = nextOffset < total;
+  
+  return { 
+    texts: texts, 
+    hasMore: hasMore, 
+    nextOffset: nextOffset, 
+    total: total, 
+    topicCount: topics.length 
+  };
+}
+
+/**
+ * Получение регулярного выражения для фильтрации отзывов
+ */
+function getReviewsRegex_() {
+  try {
+    var s = PropertiesService.getScriptProperties().getProperty('VK_REVIEWS_REGEX');
+    if (s && s.trim()) {
+      return new RegExp(s, 'i');
+    }
+  } catch (e) {}
+  return /(отзыв|reviews?|feedback|рейтинг|оценк|звезд)/i;
+}
