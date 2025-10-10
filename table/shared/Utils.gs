@@ -530,6 +530,15 @@ function processGeminiResponse(response) {
 }
 
 /**
+ * Алиас для addSystemLog для обратной совместимости
+ * @param {string} message - сообщение
+ * @param {string} level - уровень (INFO, WARN, ERROR, DEBUG)
+ */
+function logMessage(message, level) {
+  addSystemLog(message, level || 'INFO', 'SYSTEM');
+}
+
+/**
  * Обрезание строки с добавлением "..."
  */
 function truncateString(str, maxLength) {
