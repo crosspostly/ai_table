@@ -259,7 +259,7 @@ function importInstagramPosts(username, limit) {
     var response = fetchSocialApiWithRetry('instagram', profileUrl, {
       method: 'GET',
       headers: {
-        'X-IG-App-ID': '936619743392459' // Хардкод ок для веб-приложения
+        'X-IG-App-ID': PropertiesService.getScriptProperties().getProperty('X-IG-App-ID') || '936619743392459' // Из Properties или fallback
       }
     });
     addSystemLog('← Instagram API ответ: HTTP ' + response.getResponseCode(), 'DEBUG', 'INSTAGRAM_IMPORT');
