@@ -186,11 +186,12 @@ function importVkPostsThin() {
   
   try {
     var response = callServer({
-      action: 'vk_import',
+      action: 'social_import',  // ИСПРАВЛЕНО: используем правильное действие
       email: creds.email,
       token: creds.token,
-      ownerId: vkParams.ownerId,
-      count: vkParams.count
+      source: vkParams.ownerId,  // ИСПРАВЛЕНО: используем source вместо ownerId
+      count: vkParams.count,
+      platform: 'vk'  // ДОБАВЛЕНО: указываем платформу
     });
     
     if (response.valid && response.data) {
