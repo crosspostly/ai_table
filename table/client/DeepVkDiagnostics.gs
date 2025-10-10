@@ -282,8 +282,133 @@ function deepVkDiagnostics() {
 }
 
 /**
+ * 🔬 УПРОЩЁННАЯ ДИАГНОСТИКА - работает только через сервер
+ * НЕ требует обновления серверного кода
+ */
+function testSimplifiedVkDiagnostic() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  var diagnosticSheet = ss.getSheetByName('vk_упрощённая_диагностика');
+  if (!diagnosticSheet) {
+    diagnosticSheet = ss.insertSheet('vk_упрощённая_диагностика');
+  }
+  diagnosticSheet.clear();
+  
+  diagnosticSheet.getRange(1, 1, 1, 5).setValues([[
+    'Время', 'Шаг', 'Статус', 'Данные', 'Ошибка'
+  ]]);
+  diagnosticSheet.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#4285f4').setFontColor('#ffffff');
+  
+  var logRow = 2;
+  
+  function log(step, status, data, error) {
+    diagnosticSheet.getRange(logRow, 1, 1, 5).setValues([[
+      new Date().toLocaleString('ru-RU'),
+      step,
+      status,
+      JSON.stringify(data || {}).substring(0, 500),
+      error || ''
+    ]]);
+    
+    var statusCell = diagnosticSheet.getRange(logRow, 3);
+    if (status === 'OK') {
+      statusCell.setBackground('#d4edda');
+    } else if (status === 'FAIL') {
+      statusCell.setBackground('#f8d7da').setFontWeight('bold');
+    }
+    
+    logRow++;
+  }
+  
+  try {
+    log('START', 'INFO', {}, 'Упрощённая диагностика VK импорта');
+    
+    // Читаем параметры
+    var paramsSheet = ss.getSheetByName('Параметры');
+    if (!paramsSheet) {
+      throw new Error('Лист Параметры не найден');
+    }
+    
+    var owner = paramsSheet.getRange('B1').getValue();
+    var count = paramsSheet.getRange('B2').getValue() || 3;
+    
+    log('PARAMS', 'OK', { owner: owner, count: count }, 'B1=' + owner + ', B2=' + count);
+    
+    // Credentials
+    var creds = getClientCredentials();
+    if (!creds || !creds.ok) {
+      log('CREDENTIALS', 'FAIL', creds, 'Credentials не OK');
+      throw new Error('Credentials провалены');
+    }
+    
+    log('CREDENTIALS', 'OK', { email: creds.email }, 'Email: ' + creds.email);
+    
+    // Пробуем через обычный VK import
+    log('VK_IMPORT', 'INFO', {}, 'Запрос через action=vk_import');
+    
+    var vkRequest = {
+      action: 'vk_import',
+      email: creds.email,
+      token: creds.token,
+      owner: owner,
+      count: count
+    };
+    
+    log('REQUEST', 'INFO', vkRequest, 'Отправка запроса на сервер');
+    
+    var result = callServer(vkRequest);
+    
+    log('RESPONSE', 'INFO', result, 'Ответ от сервера получен');
+    
+    if (!result) {
+      log('VK_IMPORT', 'FAIL', {}, 'Сервер вернул null');
+      throw new Error('Сервер вернул null');
+    }
+    
+    if (!result.ok) {
+      log('VK_IMPORT', 'FAIL', result, 'Ошибка: ' + (result.error || 'unknown'));
+      throw new Error('VK импорт провален: ' + (result.error || 'unknown'));
+    }
+    
+    if (!result.data || !Array.isArray(result.data.data)) {
+      log('VK_IMPORT', 'FAIL', result, 'Данные не являются массивом');
+      throw new Error('Некорректный формат данных');
+    }
+    
+    var posts = result.data.data;
+    log('VK_IMPORT', 'OK', { postsCount: posts.length }, 'Получено постов: ' + posts.length);
+    
+    // Проверяем первый пост
+    if (posts.length > 0) {
+      var firstPost = posts[0];
+      log('FIRST_POST', 'OK', firstPost, 'Дата: ' + firstPost.date + ', Текст: ' + (firstPost.text || '').substring(0, 50));
+    }
+    
+    log('COMPLETE', 'OK', {}, 'VK ИМПОРТ РАБОТАЕТ! Получено ' + posts.length + ' постов');
+    
+    ui.alert('✅ VK импорт работает!', 
+      'Успешно получено ' + posts.length + ' постов\\n' +
+      'Источник: ' + owner + '\\n\\n' +
+      'Детали в листе "vk_упрощённая_диагностика"',
+      ui.ButtonSet.OK);
+    
+  } catch (error) {
+    log('ERROR', 'FAIL', {}, error.message + '\\n' + (error.stack || ''));
+    
+    ui.alert('❌ VK импорт провален', 
+      'Ошибка: ' + error.message + '\\n\\n' +
+      'Проверьте лист "vk_упрощённая_диагностика" для деталей',
+      ui.ButtonSet.OK);
+  } finally {
+    diagnosticSheet.autoResizeColumns(1, 5);
+  }
+}
+
+/**
  * 🔬 ДИАГНОСТИКА ПРЯМОГО VK API ВЫЗОВА
  * Тестирует прямое обращение к VK API БЕЗ сервера
+ * ТРЕБУЕТ обновления серверного кода (action=get_vk_token)
  */
 function testDirectVkApi() {
   var ui = SpreadsheetApp.getUi();
@@ -336,7 +461,7 @@ function testDirectVkApi() {
     log('PARAMS', 'OK', { owner: owner, count: count }, '');
     
     // Пробуем получить VK_TOKEN через сервер
-    log('TOKEN_REQUEST', 'INFO', {}, 'Запрос VK_TOKEN через сервер');
+    log('TOKEN_REQUEST', 'INFO', {}, 'Запрос VK_TOKEN через сервер (ТРЕБУЕТ обновлённого серверного кода!)');
     
     var creds = getClientCredentials();
     if (!creds || !creds.ok) {
@@ -352,8 +477,9 @@ function testDirectVkApi() {
     var tokenResult = callServer(tokenRequest);
     
     if (!tokenResult || !tokenResult.ok || !tokenResult.data) {
-      log('TOKEN', 'FAIL', tokenResult, 'Не удалось получить VK_TOKEN от сервера');
-      throw new Error('VK_TOKEN недоступен');
+      log('TOKEN', 'FAIL', tokenResult, 'Не удалось получить VK_TOKEN от сервера. ВЕРОЯТНО СЕРВЕР НЕ ОБНОВЛЁН!');
+      log('HINT', 'INFO', {}, 'Используйте "Упрощённая диагностика VK" вместо этого теста');
+      throw new Error('VK_TOKEN недоступен - сервер не обновлён с новым кодом');
     }
     
     var vkToken = tokenResult.data.token;
