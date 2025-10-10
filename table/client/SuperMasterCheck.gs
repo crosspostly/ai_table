@@ -35,7 +35,7 @@ function superMasterCheck() {
   
   try {
     // === ПРИВЕТСТВИЕ ===
-    ui.alert('🚀 СУПЕР МАСТЕР ПРОВЕРКА', 
+    var response = ui.alert('🚀 СУПЕР МАСТЕР ПРОВЕРКА', 
       '🎯 ПОЛНОЕ ТЕСТИРОВАНИЕ СИСТЕМЫ\\n\\n' +
       'Будут запущены:\\n' +
       '━━━━━━━━━━━━━━━━━━━━━━\\n' +
@@ -48,9 +48,18 @@ function superMasterCheck() {
       '7️⃣ Структура листов\\n' +
       '━━━━━━━━━━━━━━━━━━━━━━\\n\\n' +
       '⏱️ Это займёт 2-4 минуты\\n' +
-      '📊 Результаты будут в листе \"тест\"\\n\\n' +
+      '📊 Результаты будут в листе \"тест\"\\n' +
+      '🔧 Каждый проваленный тест получит РЕКОМЕНДАЦИИ\\n\\n' +
+      '💡 Все результаты будут ДЕТАЛЬНО задокументированы!\\n\\n' +
       'Готовы начать?',
       ui.ButtonSet.OK_CANCEL);
+    
+    // Если пользователь отменил
+    if (response === ui.Button.CANCEL) {
+      addSystemLog('🚫 СУПЕР МАСТЕР ПРОВЕРКА отменена пользователем', 'INFO', 'SUPER_MASTER_CHECK');
+      ui.alert('Отменено', 'СУПЕР МАСТЕР ПРОВЕРКА отменена.\\n\\nЗапустите снова когда будете готовы.', ui.ButtonSet.OK);
+      return;
+    }
     
     // === ПОДГОТОВКА ЛИСТА ТЕСТОВ ===
     logStep('ПОДГОТОВКА', 'Создание/получение листа \"тест\"', 'in_progress');
@@ -721,27 +730,44 @@ function ensureTestSheetSuper() {
     if (!testSheet) {
       testSheet = ss.insertSheet('тест');
       
-      // Заголовки
-      testSheet.getRange(1, 1, 1, 9).setValues([[
-        'Время', 'Секция', 'Тест', 'Статус', 'Результат', 'Детали', 'Ошибка', 'Stack Trace', 'Trace ID'
+      // Заголовки с новой колонкой "Рекомендации"
+      testSheet.getRange(1, 1, 1, 10).setValues([[
+        'Время', 'Секция', 'Тест', 'Статус', 'Результат', 'Детали', 'Ошибка', 'Stack Trace', 'Trace ID', 'Рекомендации 🔧'
       ]]);
       
-      // Форматирование
-      var headerRange = testSheet.getRange(1, 1, 1, 9);
+      // Форматирование заголовка
+      var headerRange = testSheet.getRange(1, 1, 1, 10);
       headerRange.setFontWeight('bold');
       headerRange.setBackground('#4285f4');
       headerRange.setFontColor('#ffffff');
+      headerRange.setFontSize(11);
+      headerRange.setWrap(true);
+      headerRange.setVerticalAlignment('middle');
       
-      // Ширина колонок
+      // Ширина колонок (оптимизированная для читаемости)
       testSheet.setColumnWidth(1, 150); // Время
       testSheet.setColumnWidth(2, 120); // Секция
-      testSheet.setColumnWidth(3, 250); // Тест
-      testSheet.setColumnWidth(4, 80);  // Статус
-      testSheet.setColumnWidth(5, 200); // Результат
-      testSheet.setColumnWidth(6, 300); // Детали
-      testSheet.setColumnWidth(7, 200); // Ошибка
+      testSheet.setColumnWidth(3, 280); // Тест
+      testSheet.setColumnWidth(4, 90);  // Статус
+      testSheet.setColumnWidth(5, 220); // Результат
+      testSheet.setColumnWidth(6, 320); // Детали
+      testSheet.setColumnWidth(7, 250); // Ошибка
       testSheet.setColumnWidth(8, 300); // Stack Trace
-      testSheet.setColumnWidth(9, 120); // Trace ID
+      testSheet.setColumnWidth(9, 130); // Trace ID
+      testSheet.setColumnWidth(10, 450); // Рекомендации (самая важная колонка!)
+      
+      // Закрепляем первую строку для удобства навигации
+      testSheet.setFrozenRows(1);
+    } else {
+      // Если лист уже существует, обновляем заголовки если нужно
+      var existingHeaders = testSheet.getRange(1, 1, 1, testSheet.getLastColumn()).getValues()[0];
+      if (existingHeaders.length < 10) {
+        // Добавляем недостающие колонки
+        testSheet.getRange(1, 1, 1, 10).setValues([[
+          'Время', 'Секция', 'Тест', 'Статус', 'Результат', 'Детали', 'Ошибка', 'Stack Trace', 'Trace ID', 'Рекомендации 🔧'
+        ]]);
+        testSheet.setColumnWidth(10, 450);
+      }
     }
     
     return testSheet;
@@ -752,7 +778,7 @@ function ensureTestSheetSuper() {
   }
 }
 
-function writeTestResultToSheet(testSheet, testName, status, result, details, error, stack) {
+function writeTestResultToSheet(testSheet, testName, status, result, details, error, stack, duration) {
   try {
     if (!testSheet) return;
     
@@ -760,34 +786,114 @@ function writeTestResultToSheet(testSheet, testName, status, result, details, er
     var timestamp = new Date().toLocaleString('ru-RU');
     var traceId = 'SMC_' + Math.random().toString(36).substr(2, 9);
     
-    testSheet.getRange(lastRow, 1, 1, 9).setValues([[
+    // Добавляем рекомендации по исправлению для проваленных тестов
+    var recommendations = '';
+    if (status.includes('❌')) {
+      recommendations = getRecommendations(testName, error, result);
+    }
+    
+    // Форматируем детали с добавлением времени выполнения
+    var formattedDetails = details || '';
+    if (duration !== undefined && duration !== null) {
+      formattedDetails = (formattedDetails ? formattedDetails + ' | ' : '') + '⏱️ ' + duration + 'мс';
+    }
+    
+    testSheet.getRange(lastRow, 1, 1, 10).setValues([[
       timestamp,
       '', // Секция будет заполнена отдельно
       testName,
       status,
       result || '',
-      details || '',
+      formattedDetails,
       error || '',
       stack || '',
-      traceId
+      traceId,
+      recommendations
     ]]);
     
-    // Цветовая индикация
-    var statusCell = testSheet.getRange(lastRow, 4);
+    // Цветовая индикация всей строки для лучшей видимости
+    var rowRange = testSheet.getRange(lastRow, 1, 1, 10);
     if (status.includes('✅')) {
-      statusCell.setBackground('#d4edda');
-      statusCell.setFontColor('#155724');
+      rowRange.setBackground('#d4edda');
+      rowRange.setFontColor('#155724');
     } else if (status.includes('❌')) {
-      statusCell.setBackground('#f8d7da');
-      statusCell.setFontColor('#721c24');
+      rowRange.setBackground('#f8d7da');
+      rowRange.setFontColor('#721c24');
+      rowRange.setFontWeight('bold');
     } else if (status.includes('⚠️')) {
-      statusCell.setBackground('#fff3cd');
-      statusCell.setFontColor('#856404');
+      rowRange.setBackground('#fff3cd');
+      rowRange.setFontColor('#856404');
     }
+    
+    // Добавляем wrap для лучшей читаемости длинных текстов
+    testSheet.getRange(lastRow, 6).setWrap(true); // Детали
+    testSheet.getRange(lastRow, 7).setWrap(true); // Ошибка
+    testSheet.getRange(lastRow, 10).setWrap(true); // Рекомендации
     
   } catch (e) {
     addSystemLog('⚠️ Ошибка записи результата теста: ' + e.message, 'WARN', 'SUPER_MASTER_CHECK');
   }
+}
+
+/**
+ * Генерирует рекомендации по исправлению проваленного теста
+ */
+function getRecommendations(testName, error, result) {
+  var recommendations = '';
+  
+  // CLIENT credentials
+  if (testName.includes('CLIENT credentials')) {
+    recommendations = '🔧 Решение: Настройте LICENSE_EMAIL и LICENSE_TOKEN в Script Properties (Расширения → Apps Script → Настройки проекта → Свойства скрипта)';
+  }
+  
+  // Лист Параметры
+  else if (testName.includes('Параметры')) {
+    recommendations = '🔧 Решение: Создайте лист "Параметры" и заполните ячейки F1 (Gemini API key) и G1 (Email)';
+  }
+  
+  // Сервер
+  else if (testName.includes('Соединение с сервером') || testName.includes('сервером')) {
+    recommendations = '🔧 Решение: Проверьте SERVER_URL в Constants.gs и убедитесь что сервер развернут и доступен';
+  }
+  
+  // VK API
+  else if (testName.includes('VK') || testName.includes('vk')) {
+    if (error && error.includes('VK_TOKEN')) {
+      recommendations = '🔧 Решение: Установите VK_TOKEN на сервере через Script Properties. Получите токен на https://vk.com/dev';
+    } else if (error && error.includes('null') || error.includes('Error: null')) {
+      recommendations = '🔧 Решение: VK_TOKEN некорректен или истёк. Обновите токен на https://vk.com/dev (нужны права: wall,offline)';
+    } else {
+      recommendations = '🔧 Решение: Проверьте что VK_TOKEN настроен на СЕРВЕРЕ (не в клиенте) и имеет права: wall,offline';
+    }
+  }
+  
+  // Gemini API
+  else if (testName.includes('Gemini')) {
+    if (error && error.includes('API key')) {
+      recommendations = '🔧 Решение: Установите корректный Gemini API key в F1 листа "Параметры". Получите на https://makersuite.google.com/app/apikey';
+    } else if (error && error.includes('quota') || error.includes('limit')) {
+      recommendations = '🔧 Решение: Превышена квота API. Подождите или используйте другой API key';
+    } else {
+      recommendations = '🔧 Решение: Проверьте Gemini API key в F1 и убедитесь что Generative Language API включен в Google Cloud Console';
+    }
+  }
+  
+  // Функции
+  else if (testName.includes('функци')) {
+    recommendations = '🔧 Решение: Проверьте что все файлы .gs загружены в проект. Откройте Apps Script Editor и пересохраните проект';
+  }
+  
+  // Логирование
+  else if (testName.includes('Логирование')) {
+    recommendations = '🔧 Решение: Создайте лист "системные_логи" или проверьте функцию addSystemLog() в ClientUtilities.gs';
+  }
+  
+  // По умолчанию
+  else {
+    recommendations = '🔧 Решение: См. детали в колонках "Ошибка" и "Stack Trace". Проверьте логи системы через меню DEV → Просмотр логов';
+  }
+  
+  return recommendations;
 }
 
 function logSection(testSheet, sectionTitle) {
@@ -797,17 +903,18 @@ function logSection(testSheet, sectionTitle) {
     var lastRow = testSheet.getLastRow() + 1;
     var timestamp = new Date().toLocaleString('ru-RU');
     
-    testSheet.getRange(lastRow, 1, 1, 9).setValues([[
+    testSheet.getRange(lastRow, 1, 1, 10).setValues([[
       timestamp,
       sectionTitle,
-      '', '', '', '', '', '', 'SECTION_HEADER'
+      '', '', '', '', '', '', 'SECTION_HEADER', ''
     ]]);
     
-    // Форматирование секции
-    var sectionRange = testSheet.getRange(lastRow, 1, 1, 9);
+    // Форматирование секции - делаем яркий разделитель
+    var sectionRange = testSheet.getRange(lastRow, 1, 1, 10);
     sectionRange.setFontWeight('bold');
     sectionRange.setBackground('#e8f0fe');
     sectionRange.setFontColor('#1a73e8');
+    sectionRange.setFontSize(11);
     
     addSystemLog('📋 ' + sectionTitle, 'INFO', 'SUPER_MASTER_CHECK');
     
@@ -894,7 +1001,8 @@ function showFinalResults(overallResults) {
   
   var status = successRate >= 90 ? '🎉 ОТЛИЧНО!' : 
                successRate >= 70 ? '✅ ХОРОШО' : 
-               '⚠️ ТРЕБУЕТ ВНИМАНИЯ';
+               successRate >= 50 ? '⚠️ ТРЕБУЕТ ВНИМАНИЯ' :
+               '❌ КРИТИЧНО';
   
   var message = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n';
   message += '📊 СУПЕР МАСТЕР ПРОВЕРКА ЗАВЕРШЕНА\\n';
@@ -902,21 +1010,24 @@ function showFinalResults(overallResults) {
   message += '🎯 СТАТУС: ' + status + '\\n\\n';
   message += '📈 ОБЩАЯ СТАТИСТИКА:\\n';
   message += '• Успешность: ' + successRate + '% (' + overallResults.passed + '/' + overallResults.total + ')\\n';
-  message += '• Прошло: ' + overallResults.passed + ' тестов\\n';
-  message += '• Провалено: ' + overallResults.failed + ' тестов\\n';
-  message += '• Пропущено: ' + overallResults.skipped + ' тестов\\n';
-  message += '• Время выполнения: ' + overallResults.duration + ' сек\\n\\n';
+  message += '• ✅ Прошло: ' + overallResults.passed + ' тестов\\n';
+  message += '• ❌ Провалено: ' + overallResults.failed + ' тестов\\n';
+  message += '• ⚠️ Пропущено: ' + overallResults.skipped + ' тестов\\n';
+  message += '• ⏱️ Время выполнения: ' + overallResults.duration + ' сек\\n';
+  message += '• 📅 Завершено: ' + overallResults.endTime.toLocaleString('ru-RU') + '\\n\\n';
   message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n';
   message += '📋 РЕЗУЛЬТАТЫ ПО СЕКЦИЯМ:\\n';
   message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n';
   
   overallResults.sections.forEach(function(section, index) {
     var sectionRate = section.total > 0 ? Math.round(section.passed / section.total * 100) : 0;
-    var sectionStatus = sectionRate >= 90 ? '✅' : sectionRate >= 70 ? '⚠️' : '❌';
+    var sectionStatus = sectionRate === 100 ? '🎉' : 
+                        sectionRate >= 90 ? '✅' : 
+                        sectionRate >= 70 ? '⚠️' : '❌';
     message += (index + 1) + '. ' + sectionStatus + ' ' + section.name + '\\n';
-    message += '   • ' + section.passed + '/' + section.total + ' (' + sectionRate + '%)\\n';
+    message += '   • Результат: ' + section.passed + '/' + section.total + ' (' + sectionRate + '%)\\n';
     if (section.failed > 0) {
-      message += '   • ❌ Ошибок: ' + section.failed + '\\n';
+      message += '   • ❌ Провалено: ' + section.failed + '\\n';
     }
     if (section.skipped > 0) {
       message += '   • ⚠️ Пропущено: ' + section.skipped + '\\n';
@@ -925,21 +1036,58 @@ function showFinalResults(overallResults) {
   });
   
   message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n';
-  message += '📊 Полный отчёт записан в лист \"тест\"\\n';
-  message += '📋 Логи доступны через меню DEV\\n\\n';
+  message += '📊 ДЕТАЛЬНЫЙ ОТЧЁТ:\\n';
+  message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n';
+  message += '📄 Полная информация в листе \"тест\":\\n';
+  message += '   • Временные метки каждого теста\\n';
+  message += '   • Детальные ошибки и Stack Traces\\n';
+  message += '   • 🔧 Рекомендации по исправлению\\n';
+  message += '   • Trace ID для отладки\\n\\n';
+  message += '📋 Системные логи: DEV → Просмотр логов\\n';
+  message += '📖 Документация: SUPER_MASTER_CHECK_DETAILED_REPORT.md\\n\\n';
   
   if (overallResults.failed > 0) {
+    message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n';
     message += '⚠️ НАЙДЕНЫ ПРОБЛЕМЫ:\\n';
-    message += 'Проверьте детали в листе \"тест\"\\n';
-    message += 'и логах системы для диагностики.\\n\\n';
+    message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n';
+    message += '🔍 ШАГ 1: Откройте лист \"тест\"\\n';
+    message += '🔍 ШАГ 2: Найдите строки с ❌ FAIL (выделены красным)\\n';
+    message += '🔍 ШАГ 3: Читайте колонку \"Рекомендации 🔧\"\\n';
+    message += '🔍 ШАГ 4: Следуйте инструкциям для исправления\\n';
+    message += '🔍 ШАГ 5: Повторите проверку\\n\\n';
   }
   
-  if (successRate >= 90) {
-    message += '🎉 Поздравляем! Система работает отлично!';
+  message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n';
+  message += '💡 РЕКОМЕНДАЦИЯ:\\n';
+  message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n';
+  
+  if (successRate === 100) {
+    message += '🎉🎉🎉 ИДЕАЛЬНО! 🎉🎉🎉\\n';
+    message += 'Все системы работают безупречно!\\n';
+    message += 'Система готова к продакшену! 🚀';
+  } else if (successRate >= 90) {
+    message += '✅ ОТЛИЧНО!\\n';
+    message += 'Система работает стабильно.\\n';
+    if (overallResults.failed > 0) {
+      message += 'Исправьте ' + overallResults.failed + ' проблем для 100%.';
+    }
+    if (overallResults.skipped > 0) {
+      message += '\\nНастройте пропущенные тесты для полной функциональности.';
+    }
   } else if (successRate >= 70) {
-    message += '✅ Система работает хорошо, но есть что улучшить.';
+    message += '⚠️ ХОРОШО, НО НУЖНЫ УЛУЧШЕНИЯ\\n';
+    message += 'Основной функционал работает.\\n';
+    message += 'Рекомендуется исправить ' + overallResults.failed + ' проблем.';
+  } else if (successRate >= 50) {
+    message += '⚠️ ТРЕБУЕТСЯ ВНИМАНИЕ!\\n';
+    message += 'Много проблем (' + overallResults.failed + ').\\n';
+    message += 'Система может работать нестабильно.\\n';
+    message += 'СРОЧНО исправьте критические ошибки!';
   } else {
-    message += '⚠️ Требуется внимание к проваленным тестам.';
+    message += '❌ КРИТИЧНО!\\n';
+    message += 'Большинство тестов провалено!\\n';
+    message += 'Система НЕ готова к работе.\\n';
+    message += 'Проверьте конфигурацию и credentials!';
   }
   
   ui.alert(status, message, ui.ButtonSet.OK);
