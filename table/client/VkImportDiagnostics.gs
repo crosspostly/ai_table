@@ -225,31 +225,51 @@ function checkServerConnection() {
       };
     }
     
-    // Пробуем ping сервера
+    // Показываем используемый URL (для отладки)
+    var shortUrl = SERVER_API_URL.length > 70 ? 
+      SERVER_API_URL.substring(0, 67) + '...' : 
+      SERVER_API_URL;
+    
+    // Пробуем GET запрос (health check)
     try {
-      var response = UrlFetchApp.fetch(SERVER_API_URL + '?ping=1', {
+      var response = UrlFetchApp.fetch(SERVER_API_URL, {
         method: 'get',
         muteHttpExceptions: true,
         timeout: 10
       });
       
       var code = response.getResponseCode();
-      if (code === 200 || code === 404 || code === 405) {
-        // 200 = OK, 404/405 = сервер жив но нет ping endpoint (это нормально)
+      var responseText = response.getContentText();
+      
+      // Проверяем что сервер вернул JSON
+      var serverInfo = '';
+      try {
+        var json = JSON.parse(responseText);
+        if (json.service) {
+          serverInfo = '\\n✅ Сервис: ' + json.service;
+        }
+        if (json.version) {
+          serverInfo += '\\n✅ Версия: ' + json.version;
+        }
+      } catch (jsonError) {
+        // Не JSON ответ - возможно другой сервер
+      }
+      
+      if (code === 200) {
         return {
           ok: true,
-          message: '✅ Сервер доступен\\n✅ URL: ' + SERVER_API_URL.substring(0, 50) + '...\\n✅ Код ответа: ' + code
+          message: '✅ Сервер доступен\\n✅ URL: ' + shortUrl + '\\n✅ Код ответа: ' + code + serverInfo
         };
       } else {
         return {
           ok: false,
-          message: '⚠️ Сервер ответил с кодом ' + code + '\\n   URL: ' + SERVER_API_URL + '\\n   Может работать, но требует проверки'
+          message: '⚠️ Сервер ответил с кодом ' + code + '\\n   URL: ' + shortUrl + '\\n   Возможно сервер не поддерживает GET'
         };
       }
     } catch (fetchError) {
       return {
         ok: false,
-        message: '❌ Не удалось подключиться к серверу\\n   URL: ' + SERVER_API_URL + '\\n   Ошибка: ' + fetchError.message
+        message: '❌ Не удалось подключиться к серверу\\n   URL: ' + shortUrl + '\\n   Ошибка: ' + fetchError.message
       };
     }
     
@@ -404,9 +424,20 @@ function getRecommendations(issues) {
       recs.push('→ Убедитесь что сервер задеплоен');
     }
     if (issue.indexOf('VK API') >= 0) {
-      recs.push('→ Проверьте логи сервера (он получает запрос?)');
-      recs.push('→ Возможно проблема в VK_TOKEN на сервере');
-      recs.push('→ Или VK API временно недоступен');
+      recs.push('→ ОШИБКА UNKNOWN_ACTION означает:');
+      recs.push('   Сервер не распознаёт action="social_import"');
+      recs.push('');
+      recs.push('→ ПРИЧИНА:');
+      recs.push('   SERVER_API_URL указывает на ДРУГОЙ скрипт,');
+      recs.push('   который НЕ ИМЕЕТ нового кода ServerEndpoints.gs');
+      recs.push('');
+      recs.push('→ РЕШЕНИЕ:');
+      recs.push('   1. Задеплойте текущий код в НОВЫЙ скрипт');
+      recs.push('   2. Обновите SERVER_API_URL в Constants.gs');
+      recs.push('   3. Или обновите код СТАРОГО сервера');
+      recs.push('');
+      recs.push('→ VK_TOKEN проверьте в Script Properties');
+      recs.push('   того скрипта, на который указывает SERVER_API_URL');
     }
   });
   
