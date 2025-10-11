@@ -529,7 +529,12 @@ function testHealthCheck() {
 
 function testCredentialsRetrieval() {
   var creds = getClientCredentials();
-  return creds && typeof creds.valid === 'boolean';
+  // ОБНОВЛЕНО: Проверяем наличие ОБОИХ полей (ok и valid) для совместимости
+  // После унификации getClientCredentials() возвращает оба поля
+  return creds && 
+         typeof creds.ok === 'boolean' && 
+         typeof creds.valid === 'boolean' &&
+         creds.ok === creds.valid;  // Проверяем что значения синхронизированы
 }
 
 function testConditionNormalization() {

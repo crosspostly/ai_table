@@ -145,6 +145,115 @@ function onOpen() {
 }
 
 /**
+ * Настройка параметров импорта из социальных сетей
+ * НОВАЯ ФУНКЦИЯ: Позволяет пользователю настроить параметры через UI
+ */
+function configureSocialImport() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActive();
+  
+  // Проверяем существование листа Параметры
+  var paramsSheet = ss.getSheetByName('Параметры');
+  if (!paramsSheet) {
+    // Создаём лист с заголовками
+    paramsSheet = ss.insertSheet('Параметры');
+    paramsSheet.getRange('A1').setValue('Описание');
+    paramsSheet.getRange('A2').setValue('Количество');
+    paramsSheet.getRange('B1').setValue('Источник');
+    paramsSheet.getRange('C1').setValue('Платформа (опционально)');
+    
+    // Форматирование
+    paramsSheet.getRange('A1:C1').setFontWeight('bold').setBackground('#4285f4').setFontColor('white');
+    paramsSheet.setColumnWidth(1, 150);
+    paramsSheet.setColumnWidth(2, 300);
+    paramsSheet.setColumnWidth(3, 200);
+    
+    addSystemLog('Created new Параметры sheet for social import', 'INFO', 'SOCIAL');
+  }
+  
+  // Читаем текущие значения
+  var currentSource = paramsSheet.getRange('B1').getValue() || '';
+  var currentCount = paramsSheet.getRange('B2').getValue() || 20;
+  var currentPlatform = paramsSheet.getRange('C1').getValue() || '';
+  
+  // Запрашиваем источник
+  var sourcePrompt = 'Введите источник постов:\n\n' +
+                    'Примеры:\n' +
+                    '• https://vk.com/username\n' +
+                    '• https://instagram.com/username\n' +
+                    '• https://t.me/channel\n' +
+                    '• @username (нужна платформа в следующем шаге)\n\n' +
+                    'Текущее значение: ' + (currentSource || '(не задано)');
+  
+  var sourceResponse = ui.prompt('📱 Источник постов', sourcePrompt, ui.ButtonSet.OK_CANCEL);
+  
+  if (sourceResponse.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+  
+  var source = (sourceResponse.getResponseText() || '').trim();
+  if (!source) {
+    ui.alert('❌ Ошибка', 'Источник не может быть пустым', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Запрашиваем количество
+  var countPrompt = 'Сколько постов импортировать?\n\n' +
+                   'Минимум: 1\n' +
+                   'Максимум: 100\n' +
+                   'Рекомендуется: 20-50\n\n' +
+                   'Текущее значение: ' + currentCount;
+  
+  var countResponse = ui.prompt('📊 Количество постов', countPrompt, ui.ButtonSet.OK_CANCEL);
+  
+  if (countResponse.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+  
+  var count = parseInt(countResponse.getResponseText()) || 20;
+  if (count < 1) count = 1;
+  if (count > 100) count = 100;
+  
+  // Запрашиваем платформу (опционально)
+  var platformPrompt = 'Укажите платформу (опционально):\n\n' +
+                      'Если источник - полная ссылка, платформа определится автоматически.\n' +
+                      'Если простой username, укажите:\n' +
+                      '• вк / vk\n' +
+                      '• инста / instagram\n' +
+                      '• тг / telegram\n\n' +
+                      'Можно оставить пустым для автоопределения.\n\n' +
+                      'Текущее значение: ' + (currentPlatform || '(автоопределение)');
+  
+  var platformResponse = ui.prompt('🌐 Платформа', platformPrompt, ui.ButtonSet.OK_CANCEL);
+  
+  var platform = '';
+  if (platformResponse.getSelectedButton() === ui.Button.OK) {
+    platform = (platformResponse.getResponseText() || '').trim();
+  }
+  
+  // Сохраняем настройки
+  try {
+    paramsSheet.getRange('B1').setValue(source);
+    paramsSheet.getRange('B2').setValue(count);
+    paramsSheet.getRange('C1').setValue(platform);
+    
+    var summary = '✅ Настройки сохранены!\n\n' +
+                 'Источник: ' + source + '\n' +
+                 'Количество: ' + count + '\n' +
+                 'Платформа: ' + (platform || '(автоопределение)') + '\n\n' +
+                 'Теперь используйте:\n' +
+                 '🤖 Table AI → 📱 Социальные сети → 📱 Импорт постов';
+    
+    addSystemLog('Social import configured: source=' + source + ', count=' + count + ', platform=' + platform, 'INFO', 'SOCIAL');
+    ui.alert('✅ Готово!', summary, ui.ButtonSet.OK);
+    
+  } catch (e) {
+    addSystemLog('Error saving social import config: ' + e.message, 'ERROR', 'SOCIAL');
+    ui.alert('❌ Ошибка', 'Не удалось сохранить настройки: ' + e.message, ui.ButtonSet.OK);
+  }
+}
+
+/**
  * Получение информации о версии для отображения в меню
  */
 function getVersionDisplayInfo() {
