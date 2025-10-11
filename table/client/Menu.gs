@@ -97,6 +97,13 @@ function onOpen() {
   // Получаем версию для отображения в меню
   var versionInfo = getVersionDisplayInfo();
   
+  // АВТОМАТИЧЕСКИ СОЗДАЁМ КНОПКИ
+  try {
+    createButtonsOnOpen();
+  } catch (e) {
+    console.log('Не удалось создать кнопки: ' + e.message);
+  }
+  
   // Веб версия (пока заглушка)
   var webMenuItem = '🌐 Веб версия';
   
@@ -118,23 +125,121 @@ function onOpen() {
       .addItem('📊 Проверить статус системы', 'checkSystemStatus')
       .addItem('📋 Очистить ячейки', 'clearChainForA3'))
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
-      .addItem('🚀 СУПЕР МАСТЕР ПРОВЕРКА', 'superMasterCheck')
-      .addItem('🎯 Мастер проверка (старая)', 'masterSystemCheck')
-      .addSeparator()
-      .addItem('⚡ УПРОЩЁННАЯ VK ДИАГНОСТИКА', 'testSimplifiedVkDiagnostic')
-      .addItem('🔬 Глубокая диагностика VK', 'deepVkDiagnostics')
-      .addItem('🧪 Прямой VK API тест', 'testDirectVkApi')
-      .addSeparator()
-      .addItem('🔑 Проверить VK_TOKEN', 'showVkTokenDiagnosis')
-      .addItem('⚡ Быстрая проверка VK', 'checkVkTokenValidity')
-      .addSeparator()
+      .addItem('🚀 Супер проверка системы', 'superMasterCheck')
+      .addItem('🔬 Диагностика VK импорта', 'diagnoseVkImport')
       .addItem('📊 Открыть логи', 'openLogsSheetWithCreation')
-      .addItem('📋 Статус логов', 'showLogsSheetStatus')
-      .addItem('🧪 Тестовые логи', 'writeTestLogMessage')
-      .addSeparator()
-      .addItem('🔧 Диагностика', 'callServerDevFunction')
+      .addItem('🔧 Диагностика системы', 'callServerDevFunction')
       .addItem('📋 Версия', 'showCurrentVersionInfo'))
     .addToUi();
+}
+
+/**
+ * Настройка параметров импорта из социальных сетей
+ * НОВАЯ ФУНКЦИЯ: Позволяет пользователю настроить параметры через UI
+ */
+function configureSocialImport() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActive();
+  
+  // Проверяем существование листа Параметры
+  var paramsSheet = ss.getSheetByName('Параметры');
+  if (!paramsSheet) {
+    // Создаём лист с заголовками
+    paramsSheet = ss.insertSheet('Параметры');
+    paramsSheet.getRange('A1').setValue('Описание');
+    paramsSheet.getRange('A2').setValue('Количество');
+    paramsSheet.getRange('B1').setValue('Источник');
+    paramsSheet.getRange('C1').setValue('Платформа (опционально)');
+    
+    // Форматирование
+    paramsSheet.getRange('A1:C1').setFontWeight('bold').setBackground('#4285f4').setFontColor('white');
+    paramsSheet.setColumnWidth(1, 150);
+    paramsSheet.setColumnWidth(2, 300);
+    paramsSheet.setColumnWidth(3, 200);
+    
+    addSystemLog('Created new Параметры sheet for social import', 'INFO', 'SOCIAL');
+  }
+  
+  // Читаем текущие значения
+  var currentSource = paramsSheet.getRange('B1').getValue() || '';
+  var currentCount = paramsSheet.getRange('B2').getValue() || 20;
+  var currentPlatform = paramsSheet.getRange('C1').getValue() || '';
+  
+  // Запрашиваем источник
+  var sourcePrompt = 'Введите источник постов:\n\n' +
+                    'Примеры:\n' +
+                    '• https://vk.com/username\n' +
+                    '• https://instagram.com/username\n' +
+                    '• https://t.me/channel\n' +
+                    '• @username (нужна платформа в следующем шаге)\n\n' +
+                    'Текущее значение: ' + (currentSource || '(не задано)');
+  
+  var sourceResponse = ui.prompt('📱 Источник постов', sourcePrompt, ui.ButtonSet.OK_CANCEL);
+  
+  if (sourceResponse.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+  
+  var source = (sourceResponse.getResponseText() || '').trim();
+  if (!source) {
+    ui.alert('❌ Ошибка', 'Источник не может быть пустым', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Запрашиваем количество
+  var countPrompt = 'Сколько постов импортировать?\n\n' +
+                   'Минимум: 1\n' +
+                   'Максимум: 100\n' +
+                   'Рекомендуется: 20-50\n\n' +
+                   'Текущее значение: ' + currentCount;
+  
+  var countResponse = ui.prompt('📊 Количество постов', countPrompt, ui.ButtonSet.OK_CANCEL);
+  
+  if (countResponse.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+  
+  var count = parseInt(countResponse.getResponseText()) || 20;
+  if (count < 1) count = 1;
+  if (count > 100) count = 100;
+  
+  // Запрашиваем платформу (опционально)
+  var platformPrompt = 'Укажите платформу (опционально):\n\n' +
+                      'Если источник - полная ссылка, платформа определится автоматически.\n' +
+                      'Если простой username, укажите:\n' +
+                      '• вк / vk\n' +
+                      '• инста / instagram\n' +
+                      '• тг / telegram\n\n' +
+                      'Можно оставить пустым для автоопределения.\n\n' +
+                      'Текущее значение: ' + (currentPlatform || '(автоопределение)');
+  
+  var platformResponse = ui.prompt('🌐 Платформа', platformPrompt, ui.ButtonSet.OK_CANCEL);
+  
+  var platform = '';
+  if (platformResponse.getSelectedButton() === ui.Button.OK) {
+    platform = (platformResponse.getResponseText() || '').trim();
+  }
+  
+  // Сохраняем настройки
+  try {
+    paramsSheet.getRange('B1').setValue(source);
+    paramsSheet.getRange('B2').setValue(count);
+    paramsSheet.getRange('C1').setValue(platform);
+    
+    var summary = '✅ Настройки сохранены!\n\n' +
+                 'Источник: ' + source + '\n' +
+                 'Количество: ' + count + '\n' +
+                 'Платформа: ' + (platform || '(автоопределение)') + '\n\n' +
+                 'Теперь используйте:\n' +
+                 '🤖 Table AI → 📱 Социальные сети → 📱 Импорт постов';
+    
+    addSystemLog('Social import configured: source=' + source + ', count=' + count + ', platform=' + platform, 'INFO', 'SOCIAL');
+    ui.alert('✅ Готово!', summary, ui.ButtonSet.OK);
+    
+  } catch (e) {
+    addSystemLog('Error saving social import config: ' + e.message, 'ERROR', 'SOCIAL');
+    ui.alert('❌ Ошибка', 'Не удалось сохранить настройки: ' + e.message, ui.ButtonSet.OK);
+  }
 }
 
 /**
@@ -145,32 +250,22 @@ function getVersionDisplayInfo() {
     // Получаем версию
     var version = getCurrentVersion ? getCurrentVersion() : '2.0.1';
     
-    // ВСЕГДА показываем ТЕКУЩЕЕ время (время открытия меню)
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit'
-    });
-    var timeStr = now.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    // ДАТА И ВРЕМЯ ДЕПЛОЯ (обновляется при деплое через GitHub Actions)
+    var deployTimestamp = '2024-10-11T14:30:00';  // Будет обновляться автоматически
+    
+    // Форматируем дату и время
+    var parts = deployTimestamp.split('T');
+    var dateParts = parts[0].split('-');
+    var timeParts = parts[1].split(':');
+    
+    var dateStr = dateParts[2] + '.' + dateParts[1];  // DD.MM формат
+    var timeStr = timeParts[0] + ':' + timeParts[1];  // HH:MM формат
     
     return 'v' + version + ' от ' + dateStr + ' ' + timeStr;
     
   } catch (error) {
-    // В случае любой ошибки возвращаем базовую информацию с текущим временем
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit'
-    });
-    var timeStr = now.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    return 'v2.0.1 от ' + dateStr + ' ' + timeStr;
+    // В случае ошибки возвращаем базовую информацию
+    return 'v2.1.0 от 11.10 14:30';
   }
 }
 

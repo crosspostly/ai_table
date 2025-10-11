@@ -259,7 +259,7 @@ function importInstagramPosts(username, limit) {
     var response = fetchSocialApiWithRetry('instagram', profileUrl, {
       method: 'GET',
       headers: {
-        'X-IG-App-ID': '936619743392459' // Хардкод ок для веб-приложения
+        'X-IG-App-ID': PropertiesService.getScriptProperties().getProperty('X-IG-App-ID') || '936619743392459' // Из Properties или fallback
       }
     });
     addSystemLog('← Instagram API ответ: HTTP ' + response.getResponseCode(), 'DEBUG', 'INSTAGRAM_IMPORT');
@@ -302,7 +302,14 @@ function importInstagramPosts(username, limit) {
       // Пауза для избежания блокировок
       Utilities.sleep(2000);
       
-      var response2 = UrlFetchApp.fetch(gqlUrl, options);
+      var paginationOptions = {
+        method: 'GET',
+        headers: {
+          'X-IG-App-ID': PropertiesService.getScriptProperties().getProperty('X-IG-App-ID') || '936619743392459'
+        }
+      };
+      
+      var response2 = UrlFetchApp.fetch(gqlUrl, paginationOptions);
       
       if (response2.getResponseCode() !== 200) {
         addSystemLog('⚠️ Instagram пагинация прервана: HTTP ' + response2.getResponseCode(), 'WARN', 'INSTAGRAM_IMPORT');

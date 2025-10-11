@@ -7,29 +7,26 @@
  * Validate and sanitize inputs
  */
 function validateAndSanitizeInputs(sourceUrl, count, platform) {
-  var result = {
-    ok: true,
-    errors: [],
-    sanitized: {}
-  };
-  
   try {
-    result.sanitized.sourceUrl = validateSourceUrl(sourceUrl);
+    var cleanSourceUrl = validateSourceUrl(sourceUrl);
+    var cleanCount = validateCount(count);
+    var cleanPlatform = platform || '';
+    
+    return {
+      isValid: true,
+      sourceUrl: cleanSourceUrl,
+      count: cleanCount,
+      platform: cleanPlatform
+    };
   } catch (e) {
-    result.ok = false;
-    result.errors.push(e.message);
+    return {
+      isValid: false,
+      error: e.message,
+      sourceUrl: sourceUrl || '',
+      count: 10,
+      platform: platform || ''
+    };
   }
-  
-  try {
-    result.sanitized.count = validateCount(count);
-  } catch (e) {
-    result.ok = false;
-    result.errors.push(e.message);
-  }
-  
-  result.sanitized.platform = platform || 'unknown';
-  
-  return result;
 }
 
 /**
