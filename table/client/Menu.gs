@@ -126,8 +126,9 @@ function onOpen() {
       .addItem('📋 Очистить ячейки', 'clearChainForA3'))
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
       .addItem('🚀 Супер проверка системы', 'superMasterCheck')
+      .addItem('🔬 Диагностика VK импорта', 'diagnoseVkImport')
       .addItem('📊 Открыть логи', 'openLogsSheetWithCreation')
-      .addItem('🔧 Диагностика', 'callServerDevFunction')
+      .addItem('🔧 Диагностика системы', 'callServerDevFunction')
       .addItem('📋 Версия', 'showCurrentVersionInfo'))
     .addToUi();
 }
@@ -249,32 +250,22 @@ function getVersionDisplayInfo() {
     // Получаем версию
     var version = getCurrentVersion ? getCurrentVersion() : '2.0.1';
     
-    // ВСЕГДА показываем ТЕКУЩЕЕ время (время открытия меню)
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit'
-    });
-    var timeStr = now.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    // ДАТА И ВРЕМЯ ДЕПЛОЯ (обновляется при деплое через GitHub Actions)
+    var deployTimestamp = '2024-10-11T14:30:00';  // Будет обновляться автоматически
+    
+    // Форматируем дату и время
+    var parts = deployTimestamp.split('T');
+    var dateParts = parts[0].split('-');
+    var timeParts = parts[1].split(':');
+    
+    var dateStr = dateParts[2] + '.' + dateParts[1];  // DD.MM формат
+    var timeStr = timeParts[0] + ':' + timeParts[1];  // HH:MM формат
     
     return 'v' + version + ' от ' + dateStr + ' ' + timeStr;
     
   } catch (error) {
-    // В случае любой ошибки возвращаем базовую информацию с текущим временем
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit'
-    });
-    var timeStr = now.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    return 'v2.0.1 от ' + dateStr + ' ' + timeStr;
+    // В случае ошибки возвращаем базовую информацию
+    return 'v2.1.0 от 11.10 14:30';
   }
 }
 
