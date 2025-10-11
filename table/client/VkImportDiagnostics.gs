@@ -310,34 +310,51 @@ function testVkApiCall(ss) {
       };
     }
     
-    // Пробуем минимальный запрос (1 пост)
-    var testRequest = {
-      action: 'social_import',
-      email: creds.email,
-      token: creds.token,
-      source: source,
-      count: 1
-    };
+    // ИСПРАВЛЕНО: Прямой GET запрос к VK Parser (как в old/Main.txt)
+    var serverUrl = getServerApiUrl();
+    var testUrl = serverUrl + '?action=wall&owner=' + encodeURIComponent(source) + '&count=1';
+    
+    addSystemLog('VK Diagnostics: Testing GET ' + testUrl, 'INFO', 'DIAGNOSTICS');
     
     try {
-      var result = callServer(testRequest);
+      var response = UrlFetchApp.fetch(testUrl, {
+        muteHttpExceptions: true,
+        timeout: 15
+      });
       
-      if (result && result.ok && result.data) {
-        return {
-          ok: true,
-          message: '✅ Тестовый запрос успешен!\\n✅ Получено постов: ' + result.data.length + '\\n✅ Платформа: ' + (result.platform || 'unknown')
-        };
-      } else {
-        var errorMsg = result && result.error ? result.error : 'Неизвестная ошибка';
+      var code = response.getResponseCode();
+      var responseText = response.getContentText();
+      
+      if (code !== 200) {
         return {
           ok: false,
-          message: '❌ Сервер вернул ошибку:\\n   ' + errorMsg + '\\n\\n   💡 ЭТО КЛЮЧЕВАЯ ИНФОРМАЦИЯ!'
+          message: '❌ HTTP ошибка: ' + code + '\\n   Ответ: ' + responseText.substring(0, 100) + '\\n\\n   💡 Сервер недоступен или вернул ошибку'
+        };
+      }
+      
+      var result = JSON.parse(responseText);
+      
+      // Проверяем формат ответа
+      if (result.error) {
+        return {
+          ok: false,
+          message: '❌ VK API вернул ошибку:\\n   ' + result.error + '\\n\\n   💡 Проверьте VK_TOKEN на сервере\\n   💡 Проверьте что source существует: ' + source
+        };
+      } else if (Array.isArray(result)) {
+        return {
+          ok: true,
+          message: '✅ Тестовый запрос успешен!\\n✅ Получено постов: ' + result.length + '\\n✅ Платформа: VK\\n✅ Формат: массив объектов'
+        };
+      } else {
+        return {
+          ok: false,
+          message: '❌ Неожиданный формат ответа:\\n   ' + responseText.substring(0, 100) + '...\\n\\n   💡 Сервер вернул не массив постов'
         };
       }
     } catch (callError) {
       return {
         ok: false,
-        message: '❌ Ошибка при вызове сервера:\\n   ' + callError.message + '\\n\\n   💡 Проверьте логи сервера'
+        message: '❌ Ошибка при вызове сервера:\\n   ' + callError.message + '\\n\\n   💡 Проверьте что сервер доступен\\n   💡 URL: ' + testUrl.substring(0, 70) + '...'
       };
     }
     
