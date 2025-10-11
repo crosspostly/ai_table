@@ -306,45 +306,18 @@ function normalizeCondition(condition) {
 }
 
 /**
- * Get client credentials from script properties
- * ВОЗВРАЩЕНО К OLD СТРУКТУРЕ: valid, geminiApiKey
+ * УДАЛЕНО: Дублирующая функция getClientCredentials()
+ * Используйте единственную реализацию из table/client/CredentialsManager.gs
+ * 
+ * Причина удаления:
+ * - Конфликт с CredentialsManager.gs
+ * - Несовместимая структура данных (valid vs ok)
+ * - Ложное требование GEMINI_API_KEY для импорта постов
+ * 
+ * Миграция:
+ * - Все вызовы getClientCredentials() теперь используют CredentialsManager.gs
+ * - Поддерживаются оба варианта полей: ok/valid, apiKey/geminiApiKey
  */
-function getClientCredentials() {
-  try {
-    var props = PropertiesService.getScriptProperties();
-    
-    var email = props.getProperty('LICENSE_EMAIL');
-    var token = props.getProperty('LICENSE_TOKEN');
-    var geminiApiKey = props.getProperty('GEMINI_API_KEY');
-    
-    if (!email || !token) {
-      return {
-        valid: false,
-        error: 'LICENSE_EMAIL или LICENSE_TOKEN не настроены'
-      };
-    }
-    
-    if (!geminiApiKey) {
-      return {
-        valid: false,
-        error: 'GEMINI_API_KEY не настроен'
-      };
-    }
-    
-    return {
-      valid: true,
-      email: email,
-      token: token,
-      geminiApiKey: geminiApiKey
-    };
-    
-  } catch (e) {
-    return {
-      valid: false,
-      error: 'Ошибка чтения credentials: ' + e.message
-    };
-  }
-}
 
 /**
  * Get VK import parameters

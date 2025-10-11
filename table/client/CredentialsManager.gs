@@ -21,6 +21,10 @@ function getLicenseToken() {
 /**
  * Полная проверка лицензии (credentials)
  * ВОЗВРАЩЕНО ИЗ СТАРОЙ ВЕРСИИ!
+ * УНИФИЦИРОВАННАЯ ВЕРСИЯ: Единственная реализация в проекте
+ * 
+ * ВАЖНО: Импорт постов НЕ требует GEMINI_API_KEY (только email и token)
+ * GEMINI_API_KEY требуется только для AI-функций (GM, GM_STATIC и т.д.)
  */
 function getClientCredentials() {
   var email = getLicenseEmail();
@@ -33,22 +37,28 @@ function getClientCredentials() {
     // Ignore
   }
   
-  // Проверяем основные credentials
+  // Проверяем ТОЛЬКО email и token (лицензионные credentials)
+  // GEMINI_API_KEY опционален - требуется только для AI-функций
   if (!email || !token) {
     return {
       ok: false,
+      valid: false,  // Alias для совместимости с ThinClient
       error: 'License credentials not set (email or token missing)',
       email: email,
       token: token ? '***' + token.slice(-4) : '',
-      apiKey: apiKey ? '***' + apiKey.slice(-4) : ''
+      apiKey: apiKey ? '***' + apiKey.slice(-4) : '',
+      geminiApiKey: apiKey ? '***' + apiKey.slice(-4) : ''  // Alias для ThinClient
     };
   }
   
+  // Успешная проверка - возвращаем оба варианта полей для совместимости
   return {
     ok: true,
+    valid: true,  // Alias для совместимости с ThinClient и тестами
     email: email,
     token: token,
-    apiKey: apiKey
+    apiKey: apiKey,
+    geminiApiKey: apiKey  // Alias для ThinClient
   };
 }
 

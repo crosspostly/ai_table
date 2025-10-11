@@ -76,59 +76,19 @@ function testGeminiConnection() {
 }
 
 /**
- * Исправленная проверка credentials для веб-интерфейса
+ * УДАЛЕНО: Дублирующая функция getClientCredentials()
+ * Используйте единственную реализацию из table/client/CredentialsManager.gs
+ * 
+ * Причина удаления:
+ * - Конфликт с CredentialsManager.gs
+ * - Ложное требование GEMINI_API_KEY для импорта постов
+ * - Нарушение принципа единого источника правды (Single Source of Truth)
+ * 
+ * Миграция:
+ * - Все вызовы getClientCredentials() теперь используют CredentialsManager.gs
+ * - Поддерживаются оба варианта полей: ok/valid, apiKey/geminiApiKey
+ * - Импорт постов НЕ требует GEMINI_API_KEY
  */
-function getClientCredentials() {
-  try {
-    var props = PropertiesService.getScriptProperties();
-    var email = props.getProperty('LICENSE_EMAIL');
-    var token = props.getProperty('LICENSE_TOKEN');
-    var apiKey = props.getProperty('GEMINI_API_KEY');
-    
-    // ВАЖНО БЕЗОПАСНОСТЬ: правильная проверка наличия credentials
-    var hasEmail = email && email.trim() !== '';
-    var hasToken = token && token.trim() !== '';
-    var hasApiKey = apiKey && apiKey.trim() !== '';
-    
-    if (!hasEmail || !hasToken) {
-      return {
-        ok: false,
-        error: 'Настройте license email и token в меню\n🔧 Настройки → 🔑 API Лицензия',
-        email: email,
-        token: token,
-        apiKey: apiKey
-      };
-    }
-    
-    if (!hasApiKey) {
-      return {
-        ok: false,
-        error: 'Настройте Gemini API Key в меню\n🔧 Настройки → 🤖 API ключ Gemini',
-        email: email,
-        token: token,
-        apiKey: apiKey
-      };
-    }
-    
-    return {
-      ok: true,
-      error: null,
-      email: email,
-      token: token,
-      apiKey: apiKey
-    };
-    
-  } catch (error) {
-    addSystemLog('Error checking credentials: ' + error.message, 'ERROR', 'WEB_INTERFACE');
-    return {
-      ok: false,
-      error: 'Ошибка проверки credentials: ' + error.message,
-      email: null,
-      token: null,
-      apiKey: null
-    };
-  }
-}
 
 /**
  * Валидация промпта для веб-интерфейса  
