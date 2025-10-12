@@ -74,10 +74,37 @@ function createButtonInCell(sheet, cellA1, buttonText, scriptFunction) {
   labelCell.setFontStyle('italic');
 }
 
-// DEPRECATED: Удалено при рефакторинге - используйте ClientUtilities.importSocialPosts()
-// Эта функция была дубликатом (есть в ClientUtilities.gs)
-// Принцип DRY (Don't Repeat Yourself) - один код в одном месте
-// function importSocialPosts() { ... }
+/**
+ * Wrapper функция для кнопки импорта
+ * ВАЖНО: Кнопка в A1 вызывает эту функцию
+ * Это не дубликат, а необходимый wrapper для AutoButton
+ */
+function importSocialPosts() {
+  try {
+    // Вызываем универсальный импорт
+    if (typeof importSocialPostsClient === 'function') {
+      importSocialPostsClient();
+    } else {
+      // Fallback на importVkPosts если основная функция недоступна
+      if (typeof importVkPosts === 'function') {
+        importVkPosts();
+      } else {
+        SpreadsheetApp.getUi().alert(
+          '❌ Ошибка',
+          'Функция импорта не найдена. Попробуйте через меню:\n' +
+          '🤖 Table AI → 📱 Социальные сети → 📱 Импорт постов',
+          SpreadsheetApp.getUi().ButtonSet.OK
+        );
+      }
+    }
+  } catch (error) {
+    SpreadsheetApp.getUi().alert(
+      '❌ Ошибка импорта',
+      'Произошла ошибка: ' + error.message,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  }
+}
 
 /**
  * Показывает диалог выбора источника для импорта
