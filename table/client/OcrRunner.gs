@@ -3,6 +3,23 @@
  * АККУРАТНО восстановлено со старой версии
  */
 
+/**
+ * Удаляет эмодзи и смайлики из текста (локальная копия)
+ * @param {string} text - Исходный текст
+ * @return {string} - Текст без эмодзи
+ */
+function removeEmojis(text) {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+  
+  var emojiPattern = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2300-\u23FF]|[\u2B50]|[\uFE00-\uFE0F]|[\u200D]|[\u20E3]/g;
+  var cleaned = text.replace(emojiPattern, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
 // Constants
 var OCR2_BATCH_LIMIT = 50;  // Максимум изображений за прогон
 var OCR2_CHUNK_SIZE = 8;    // Размер чанка для batch OCR

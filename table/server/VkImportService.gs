@@ -5,6 +5,23 @@
  */
 
 /**
+ * Удаляет эмодзи и смайлики из текста (локальная копия)
+ * @param {string} text - Исходный текст
+ * @return {string} - Текст без эмодзи
+ */
+function removeEmojis(text) {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+  
+  var emojiPattern = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2300-\u23FF]|[\u2B50]|[\uFE00-\uFE0F]|[\u200D]|[\u20E3]/g;
+  var cleaned = text.replace(emojiPattern, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+/**
  * Получение VK токена из Properties
  * @return {string} VK токен
  */
@@ -206,38 +223,6 @@ function createStopWordsFormulas(sheet, totalRows) {
   } catch (e) {
     logMessage('❌ Ошибка создания формул: ' + e.message, 'ERROR');
     SpreadsheetApp.getUi().alert('Ошибка создания формул: ' + e.message);
-  }
-}
-
-/**
- * Преобразует формулы в значения в колонках F, G, I, J
- * @param {Sheet} sheet - лист с формулами
- * @param {number} totalRows - количество строк
- */
-function convertFormulasToValues_(sheet, totalRows) {
-  try {
-    logMessage('→ Преобразование формул в значения', 'INFO');
-    
-    // Колонки с формулами: F (6), G (7), I (9), J (10)
-    var columnsToConvert = [6, 7, 9, 10];
-    
-    for (var i = 0; i < columnsToConvert.length; i++) {
-      var col = columnsToConvert[i];
-      
-      // Получаем диапазон со строки 2 до totalRows
-      var range = sheet.getRange(2, col, totalRows - 1, 1);
-      
-      // Получаем значения (результаты формул)
-      var values = range.getValues();
-      
-      // Записываем значения обратно (это удаляет формулы)
-      range.setValues(values);
-    }
-    
-    logMessage('✅ Формулы преобразованы в значения (колонки F, G, I, J)', 'INFO');
-  } catch (e) {
-    logMessage('❌ Ошибка преобразования формул: ' + e.message, 'ERROR');
-    // Не бросаем ошибку дальше, чтобы не сломать весь импорт
   }
 }
 
