@@ -198,10 +198,46 @@ function createStopWordsFormulas(sheet, totalRows) {
     // Автоширина колонок
     sheet.autoResizeColumns(5, 6);
     
-    logMessage('✅ Формулы фильтрации созданы', 'INFO');
+    // ПРЕОБРАЗОВАНИЕ ФОРМУЛ В ЗНАЧЕНИЯ
+    // Чтобы при копировании копировались значения, а не формулы
+    convertFormulasToValues_(sheet, totalRows);
+    
+    logMessage('✅ Формулы фильтрации созданы и преобразованы в значения', 'INFO');
   } catch (e) {
     logMessage('❌ Ошибка создания формул: ' + e.message, 'ERROR');
     SpreadsheetApp.getUi().alert('Ошибка создания формул: ' + e.message);
+  }
+}
+
+/**
+ * Преобразует формулы в значения в колонках F, G, I, J
+ * @param {Sheet} sheet - лист с формулами
+ * @param {number} totalRows - количество строк
+ */
+function convertFormulasToValues_(sheet, totalRows) {
+  try {
+    logMessage('→ Преобразование формул в значения', 'INFO');
+    
+    // Колонки с формулами: F (6), G (7), I (9), J (10)
+    var columnsToConvert = [6, 7, 9, 10];
+    
+    for (var i = 0; i < columnsToConvert.length; i++) {
+      var col = columnsToConvert[i];
+      
+      // Получаем диапазон со строки 2 до totalRows
+      var range = sheet.getRange(2, col, totalRows - 1, 1);
+      
+      // Получаем значения (результаты формул)
+      var values = range.getValues();
+      
+      // Записываем значения обратно (это удаляет формулы)
+      range.setValues(values);
+    }
+    
+    logMessage('✅ Формулы преобразованы в значения (колонки F, G, I, J)', 'INFO');
+  } catch (e) {
+    logMessage('❌ Ошибка преобразования формул: ' + e.message, 'ERROR');
+    // Не бросаем ошибку дальше, чтобы не сломать весь импорт
   }
 }
 
