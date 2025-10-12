@@ -140,21 +140,7 @@ function prepareChainForA3() {
   SpreadsheetApp.getUi().alert('✅ Готово: формулы B3..G3 проставлены.\\nЗаполните A3 — шаги пойдут по очереди.');
 }
 
-/**
- * Очистка цепочки для A3
- */
-function clearChainForA3() {
-  var ss = SpreadsheetApp.getActive();
-  var sheet = ss.getSheetByName('Распаковка');
-  
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('Лист "Распаковка" не найден');
-    return;
-  }
-  
-  sheet.getRange(3, 2, 1, 6).clearContent(); // B3..G3
-  SpreadsheetApp.getUi().alert('🧹 Очищено: B3..G3');
-}
+// clearChainForA3() теперь в table/client/ClientUtilities.gs
 
 /**
  * Обновление текущей ячейки с GM функцией

@@ -913,36 +913,7 @@ function configureSmartChain() {
   ui.alert('Настройка умной цепочки', instructions.join('\n'), ui.ButtonSet.OK);
 }
 
-/**
- * Очистить ячейки (восстановлено из old/Main.txt)
- */
-function clearChainForA3() {
-  try {
-    var ui = SpreadsheetApp.getUi();
-    var ss = SpreadsheetApp.getActive();
-    var sheet = ss.getSheetByName('Распаковка');
-    
-    if (!sheet) {
-      ui.alert('⚠️ Лист не найден', 'Лист "Распаковка" не найден. Создайте лист для работы с цепочками.', ui.ButtonSet.OK);
-      return;
-    }
-    
-    var result = ui.alert('📋 Очистить ячейки', 
-      'Очистить формулы в B3..G3?\n\nЭто удалит все промпты из строки 3.',
-      ui.ButtonSet.YES_NO);
-    
-    if (result === ui.Button.YES) {
-      // Очищаем B3..G3 как в оригинале
-      sheet.getRange(3, 2, 1, 6).clearContent();
-      ui.alert('🧹 Очищено', 'Ячейки B3..G3 очищены', ui.ButtonSet.OK);
-      addSystemLog('🧹 Очищены ячейки B3..G3', 'INFO', 'CLEAR_CHAIN');
-    }
-    
-  } catch (error) {
-    addSystemLog('❌ Ошибка очистки ячеек: ' + error.message, 'ERROR', 'CLEAR_CHAIN');
-    SpreadsheetApp.getUi().alert('Ошибка очистки', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
+// clearChainForA3() теперь в ClientUtilities.gs
 
 // ============================================================================
 // ВОССТАНОВЛЕННЫЕ ФУНКЦИИ ИЗ ОРИГИНАЛЬНОГО МЕНЮ

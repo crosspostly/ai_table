@@ -409,15 +409,7 @@ function detectPlatform(source, platformHint) {
   return 'auto';
 }
 
-/**
- * Маскировка email для безопасности
- */
-function maskEmail(email) {
-  if (!email) return '(пусто)';
-  var parts = String(email).split('@');
-  if (parts.length !== 2) return email.substring(0, 5) + '***';
-  return parts[0].substring(0, 3) + '***@' + parts[1];
-}
+// maskEmail() теперь в shared/LoggingService.gs
 
 /**
  * Маскировка токена для безопасности
