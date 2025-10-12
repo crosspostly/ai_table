@@ -4,37 +4,11 @@
  */
 
 /**
- * Универсальная функция логирования (серверная и клиентская)
- * @param {string} message - сообщение лога
- * @param {string} level - уровень (DEBUG, INFO, WARN, ERROR, CRITICAL)
- * @param {string} component - компонент системы
+/**
+ * addSystemLog() - основная реализация находится в Utils.gs:219
+ * Использует CacheService для временного хранения логов
  */
-function addSystemLog(message, level, component) {
-  level = level || 'INFO';
-  component = component || 'SYSTEM';
-  
-  var timestamp = new Date().toISOString();
-  var logEntry = `[${timestamp}] [${level}] [${component}] ${message}`;
-  
-  // 1. Logger.log instead of console.log (Google Apps Script compatible)
-  Logger.log(logEntry);
-  
-  // 2. PropertiesService для persistence
-  try {
-    var cache = PropertiesService.getScriptProperties();
-    var logKey = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    cache.setProperty(logKey, JSON.stringify({
-      timestamp: timestamp,
-      level: level,
-      component: component,
-      message: message
-    }));
-    
-  } catch (error) {
-    // Fallback - только Logger если Properties недоступен
-    Logger.log('PropertiesService logging failed: ' + error.message);
-  }
+
   
   // 3. Для критических ошибок - также в Google Sheets
   if (level === 'CRITICAL' || level === 'ERROR') {

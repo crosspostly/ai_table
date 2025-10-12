@@ -7,42 +7,8 @@
  * Check License Status UI
  * Shows license information dialog
  */
-function checkLicenseStatusUI() {
-  var ui = SpreadsheetApp.getUi();
-  
-  try {
-    var creds = getClientCredentials();
-    
-    if (!creds.ok) {
-      ui.alert('Ошибка credentials', 'Настройте license email и token в меню\\n⚙️ Настройки → 🔐 Лицензия', ui.ButtonSet.OK);
-      return;
-    }
-    
-    // Call server to check license
-    var response = callServer({
-      action: 'check_license',
-      email: creds.email,
-      token: creds.token
-    });
-    
-    if (response.ok && response.data) {
-      var data = response.data;
-      var statusMsg = '📊 Статус лицензии\\n\\n' +
-        '📧 Email: ' + creds.email + '\\n' +
-        '✅ Статус: ' + (data.valid ? 'Активна' : 'Неактивна') + '\\n' +
-        '📅 Действует до: ' + (data.expiresAt || 'N/A') + '\\n' +
-        '🔢 Запросов за час: ' + (data.requestsThisHour || 0) + '/' + (data.hourlyLimit || 100) + '\\n' +
-        '📊 Всего запросов: ' + (data.totalRequests || 0);
-      
-      ui.alert('Статус лицензии', statusMsg, ui.ButtonSet.OK);
-    } else {
-      ui.alert('Ошибка', 'Не удалось проверить лицензию: ' + (response.error || 'Unknown error'), ui.ButtonSet.OK);
-    }
-    
-  } catch (e) {
-    ui.alert('Ошибка проверки лицензии', e.message, ui.ButtonSet.OK);
-  }
-}
+// checkLicenseStatusUI() - основная реализация в CredentialsManager.gs
+
 
 /**
  * Set License Credentials UI
@@ -448,13 +414,8 @@ function columnToLetter(col) {
 /**
  * Helper: Get completion phrase
  */
-function getCompletionPhrase() {
-  try {
-    return COMPLETION_PHRASE;
-  } catch (e) {
-    return 'Отчёт готов';
-  }
-}
+// getCompletionPhrase() - основная реализация в CompletionPhraseService.gs
+
 
 /**
  * Refresh Current GM Cell - Force recalculation
@@ -487,30 +448,8 @@ function refreshCurrentGMCell() {
 /**
  * Init Gemini Key - Prompt for API key
  */
-function initGeminiKey() {
-  var ui = SpreadsheetApp.getUi();
-  
-  var result = ui.prompt('Gemini API Key', 'Введите ваш Gemini API ключ:\\n\\nПолучить можно на: https://aistudio.google.com/app/apikey', ui.ButtonSet.OK_CANCEL);
-  
-  if (result.getSelectedButton() !== ui.Button.OK) {
-    return;
-  }
-  
-  var apiKey = result.getResponseText().trim();
-  
-  if (!apiKey) {
-    ui.alert('API ключ не может быть пустым');
-    return;
-  }
-  
-  // Save to Script Properties
-  var props = PropertiesService.getScriptProperties();
-  props.setProperty('GEMINI_API_KEY', apiKey);
-  
-  ui.alert('✅ API ключ сохранен', 'Gemini API ключ успешно сохранен', ui.ButtonSet.OK);
-  
-  logClient('Gemini API key updated');
-}
+// initGeminiKey() - основная реализация в GeminiClient.gs
+
 
 /**
  * Set Completion Phrase UI
@@ -563,25 +502,8 @@ function clearChainForA3() {
 /**
  * Cleanup Old Triggers - Remove stuck triggers
  */
-function cleanupOldTriggers() {
-  var triggers = ScriptApp.getProjectTriggers();
-  var deleted = 0;
-  
-  for (var i = 0; i < triggers.length; i++) {
-    var handlerFunction = triggers[i].getHandlerFunction();
-    
-    // Delete only chain-related triggers, keep onEdit/onOpen
-    if (handlerFunction === 'checkStepCompletion' || handlerFunction === 'continueAutoProcessingChain') {
-      ScriptApp.deleteTrigger(triggers[i]);
-      deleted++;
-    }
-  }
-  
-  var message = '✅ Очистка завершена\\n\\nУдалено триггеров: ' + deleted;
-  SpreadsheetApp.getUi().alert('Очистка триггеров', message, SpreadsheetApp.getUi().ButtonSet.OK);
-  
-  logClient('Old triggers cleaned: ' + deleted + ' deleted');
-}
+// cleanupOldTriggers() - основная реализация в TriggerManager.gs
+
 
 /**
  * Show Active Triggers Dialog
