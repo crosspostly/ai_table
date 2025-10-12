@@ -728,41 +728,74 @@ function showCurrentVersionInfo() {
 // ОБЕРТКИ ДЛЯ ФУНКЦИЙ ИЗ МЕНЮ (восстановлены из старых версий)
 // ============================================================================
 
+// DEPRECATED: Удалено при рефакторинге - используйте ClientUtilities.importVkPosts()
+// Старая функция была дубликатом и нарушала принцип DRY (Don't Repeat Yourself)
+// function importVkPosts() { ... }
+
 /**
- * Импорт VK постов (обертка для тонкого клиента)
+ * Импорт Instagram постов - использует универсальный импорт
+ * ИСПРАВЛЕНО: Теперь работает через универсальный импорт вместо заглушки
  */
-function importVkPosts() {
+function importInstagramPosts() {
   try {
-    addSystemLog('🔄 Запуск импорта VK постов', 'INFO', 'VK_IMPORT');
-    if (typeof importVkPostsThin === 'function') {
-      importVkPostsThin();
-    } else {
-      SpreadsheetApp.getUi().alert('Ошибка', 'Функция importVkPostsThin не найдена', SpreadsheetApp.getUi().ButtonSet.OK);
+    addSystemLog('🔄 Запуск импорта Instagram', 'INFO', 'INSTAGRAM_IMPORT');
+    
+    // Проверяем параметры
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var paramsSheet = ss.getSheetByName('Параметры');
+    
+    if (!paramsSheet) {
+      SpreadsheetApp.getUi().alert(
+        '📸 Instagram импорт',
+        'Создайте лист "Параметры" и укажите:\\n\\n' +
+        'B1: username или https://instagram.com/username\\n' +
+        'B2: количество постов (например: 20)\\n' +
+        'C1: instagram (опционально)',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+      return;
     }
+    
+    // Используем универсальный импорт
+    importSocialPostsClient();
+    
   } catch (error) {
-    addSystemLog('❌ Ошибка импорта VK: ' + error.message, 'ERROR', 'VK_IMPORT');
-    SpreadsheetApp.getUi().alert('Ошибка импорта VK', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    addSystemLog('❌ Ошибка импорта Instagram: ' + error.message, 'ERROR', 'INSTAGRAM_IMPORT');
+    SpreadsheetApp.getUi().alert('Ошибка импорта Instagram', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
   }
 }
 
 /**
- * Импорт Instagram постов (заглушка)
- */
-function importInstagramPosts() {
-  var ui = SpreadsheetApp.getUi();
-  ui.alert('🚧 В разработке', 
-    'Instagram импорт планируется в следующих версиях\\n\\nТекущие возможности:\\n• VK импорт (📱 Получить VK посты)\\n• Telegram каналы (скоро)',
-    ui.ButtonSet.OK);
-}
-
-/**
- * Импорт Telegram постов (заглушка)
+ * Импорт Telegram постов - использует универсальный импорт
+ * ИСПРАВЛЕНО: Теперь работает через универсальный импорт вместо заглушки
  */
 function importTelegramPosts() {
-  var ui = SpreadsheetApp.getUi();
-  ui.alert('🚧 В разработке', 
-    'Telegram импорт планируется в следующих версиях\\n\\nТекущие возможности:\\n• VK импорт (📱 Получить VK посты)\\n• Instagram (скоро)',
-    ui.ButtonSet.OK);
+  try {
+    addSystemLog('🔄 Запуск импорта Telegram', 'INFO', 'TELEGRAM_IMPORT');
+    
+    // Проверяем параметры
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var paramsSheet = ss.getSheetByName('Параметры');
+    
+    if (!paramsSheet) {
+      SpreadsheetApp.getUi().alert(
+        '💬 Telegram импорт',
+        'Создайте лист "Параметры" и укажите:\\n\\n' +
+        'B1: @channel или https://t.me/channel\\n' +
+        'B2: количество постов (например: 20)\\n' +
+        'C1: telegram (опционально)',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
+      return;
+    }
+    
+    // Используем универсальный импорт
+    importSocialPostsClient();
+    
+  } catch (error) {
+    addSystemLog('❌ Ошибка импорта Telegram: ' + error.message, 'ERROR', 'TELEGRAM_IMPORT');
+    SpreadsheetApp.getUi().alert('Ошибка импорта Telegram', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
 }
 
 /**

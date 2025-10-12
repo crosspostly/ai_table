@@ -74,41 +74,10 @@ function createButtonInCell(sheet, cellA1, buttonText, scriptFunction) {
   labelCell.setFontStyle('italic');
 }
 
-/**
- * УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ИМПОРТА
- * Эта функция вызывается кнопкой и определяет, что импортировать
- */
-function importSocialPosts() {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var ui = SpreadsheetApp.getUi();
-    
-    // Проверяем лист "Параметры"
-    var paramsSheet = ss.getSheetByName('Параметры');
-    if (paramsSheet) {
-      // Если есть лист Параметры - используем его настройки
-      var source = paramsSheet.getRange('B1').getValue();
-      var count = paramsSheet.getRange('B2').getValue();
-      var platform = paramsSheet.getRange('C1').getValue();
-      
-      if (source) {
-        // Вызываем импорт через клиент
-        importSocialPostsClient();
-        return;
-      }
-    }
-    
-    // Если нет параметров - показываем диалог выбора
-    showImportDialog();
-    
-  } catch (error) {
-    SpreadsheetApp.getUi().alert(
-      '❌ Ошибка импорта',
-      'Произошла ошибка: ' + error.message,
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-  }
-}
+// DEPRECATED: Удалено при рефакторинге - используйте ClientUtilities.importSocialPosts()
+// Эта функция была дубликатом (есть в ClientUtilities.gs)
+// Принцип DRY (Don't Repeat Yourself) - один код в одном месте
+// function importSocialPosts() { ... }
 
 /**
  * Показывает диалог выбора источника для импорта
@@ -282,6 +251,7 @@ function createAllButtons() {
 /**
  * Алиас для обратной совместимости
  */
-function importVkPosts() {
-  importSocialPosts();
-}
+// DEPRECATED: Удалено при рефакторинге - используйте ClientUtilities.importVkPosts()
+// function importVkPosts() {
+//   importSocialPosts();
+// }
