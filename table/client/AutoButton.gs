@@ -77,25 +77,20 @@ function createButtonInCell(sheet, cellA1, buttonText, scriptFunction) {
 /**
  * Wrapper функция для кнопки импорта
  * ВАЖНО: Кнопка в A1 вызывает эту функцию
- * Это не дубликат, а необходимый wrapper для AutoButton
+ * ПРЯМОЙ ВЫЗОВ VK ИМПОРТА - БЕЗ УНИВЕРСАЛЬНОГО
  */
 function importSocialPosts() {
   try {
-    // Вызываем универсальный импорт
-    if (typeof importSocialPostsClient === 'function') {
-      importSocialPostsClient();
+    // ПРЯМОЙ ВЫЗОВ VK ИМПОРТА
+    if (typeof importVkPosts === 'function') {
+      importVkPosts(); 
     } else {
-      // Fallback на importVkPosts если основная функция недоступна
-      if (typeof importVkPosts === 'function') {
-        importVkPosts();
-      } else {
-        SpreadsheetApp.getUi().alert(
-          '❌ Ошибка',
-          'Функция импорта не найдена. Попробуйте через меню:\n' +
-          '🤖 Table AI → 📱 Социальные сети → 📱 Импорт постов',
-          SpreadsheetApp.getUi().ButtonSet.OK
-        );
-      }
+      SpreadsheetApp.getUi().alert(
+        '❌ Ошибка',
+        'Функция VK импорта не найдена. Попробуйте через меню:\n' +
+        '🤖 Table AI → 📱 Социальные сети → 📱 VK импорт',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
     }
   } catch (error) {
     SpreadsheetApp.getUi().alert(
@@ -210,8 +205,8 @@ function importWithParams(source, count, platform) {
   paramsSheet.getRange('B2').setValue(count);
   paramsSheet.getRange('C1').setValue(platform || '');
   
-  // Вызываем импорт
-  importSocialPostsClient();
+  // Вызываем VK импорт
+  importVkPosts();
 }
 
 /**

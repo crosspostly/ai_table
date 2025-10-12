@@ -96,18 +96,7 @@ function ocrReviews() {
   ocrReviewsThin();
 }
 
-/**
- * Import VK Posts - Wrapper for actual function
- * This is the function called from menu
- */
-function importVkPosts() {
-  // Use the universal social import from old/Main.txt
-  try {
-    importSocialPostsClient();
-  } catch (e) {
-    SpreadsheetApp.getUi().alert('Ошибка импорта', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
+// importVkPosts теперь в SocialImportClient.gs - прямой VK импорт
 
 /**
  * Initialize Chat Mode

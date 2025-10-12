@@ -5,10 +5,11 @@
  */
 
 /**
- * Универсальный импорт постов из социальных сетей (клиентский интерфейс)
- * ВОССТАНОВЛЕНО ИЗ old/Main.txt - РАБОЧАЯ ВЕРСИЯ С ЛИСТОМ "Параметры"
+ * ПРЯМОЙ VK ИМПОРТ - БЕЗ УНИВЕРСАЛЬНОГО SOCIAL_IMPORT
+ * Импорт постов из VK через VK_PARSER_URL
+ * Читает из листа "Параметры" B1, B2
  */
-function importSocialPostsClient() {
+function importVkPosts() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActive();
   
@@ -60,46 +61,60 @@ function importSocialPostsClient() {
   
   try {
     // Показываем процесс
-    ui.alert('🚀 Импорт запущен', 
-      'Импорт ' + count + ' постов из:\n' + source + '\n\n' +
-      'Это может занять до 2 минут...', 
+    ui.alert('🚀 VK импорт запущен', 
+      'Импорт ' + count + ' постов из VK:\n' + source + '\n\n' +
+      'Это может занять до 30 секунд...', 
       ui.ButtonSet.OK);
     
-    // УНИВЕРСАЛЬНЫЙ ИМПОРТ через сервер (поддерживает VK, Instagram, Telegram)
-    // Сервер автоматически определяет платформу по source или использует platform
-    var serverRequest = {
-      action: 'social_import',
-      email: credentials.email,
-      token: credentials.token,
-      source: source,
-      count: count,
-      platform: platform || ''  // Передаём платформу если указана
+    // ПРЯМОЙ ВЫЗОВ VK ПАРСЕРА БЕЗ УНИВЕРСАЛЬНОГО ИМПОРТА
+    // Используем прямой GET запрос к VK_PARSER_URL
+    var vkParserUrl = 'https://vk-scraper-seven.vercel.app/api/posts';
+    
+    // Подготавливаем параметры для VK парсера
+    var params = {
+      source: source.toString().replace(/[^a-zA-Z0-9_\-]/g, ''), // очищаем источник  
+      count: count.toString()
     };
     
-    addSystemLog('Universal social import request: source=' + source + ', count=' + count + ', platform=' + (platform || 'auto'), 'INFO', 'SOCIAL');
+    // Формируем URL с параметрами
+    var url = vkParserUrl + '?' + 
+              'source=' + encodeURIComponent(params.source) + 
+              '&count=' + encodeURIComponent(params.count);
     
-    var result = callServer(serverRequest);
+    addSystemLog('Direct VK import via GET: ' + url, 'INFO', 'VK');
     
-    if (result && result.ok && result.data && result.data.length) {
-      // Записываем результаты в лист
-      var detectedPlatform = result.platform || 'social';
-      writeSocialPostsToSheet(ss, result.data, detectedPlatform);
+    // Делаем прямой GET запрос к VK парсеру
+    var response = UrlFetchApp.fetch(url, {
+      method: 'GET',
+      muteHttpExceptions: true,
+      followRedirects: true,
+      validateHttpsCertificates: false
+    });
+    
+    var responseCode = response.getResponseCode();
+    var responseText = response.getContentText();
+    
+    if (responseCode === 200) {
+      var result = JSON.parse(responseText);
       
-      var summary = '✅ Импорт завершён успешно!\n\n' +
-                   'Платформа: ' + detectedPlatform.toUpperCase() + '\n' +
-                   'Импортировано: ' + result.data.length + ' постов\n' +
-                   'Источник: ' + source + '\n\n' +
-                   'Данные записаны в лист "посты".';
-      
-      addSystemLog('Social import success: platform=' + detectedPlatform + ', posts=' + result.data.length, 'INFO', 'SOCIAL');
-      ui.alert('✅ Успех!', summary, ui.ButtonSet.OK);
-      
+      if (result && result.posts && result.posts.length > 0) {
+        // Записываем результаты в лист
+        writeSocialPostsToSheet(ss, result.posts, 'vk');
+        
+        var summary = '✅ VK импорт завершён успешно!\n\n' +
+                     'Платформа: VK\n' +
+                     'Импортировано: ' + result.posts.length + ' постов\n' +
+                     'Источник: ' + source + '\n\n' +
+                     'Данные записаны в лист "посты".';
+        
+        addSystemLog('VK import success: posts=' + result.posts.length, 'INFO', 'VK');
+        ui.alert('✅ Успех!', summary, ui.ButtonSet.OK);
+        
+      } else {
+        throw new Error('Пустой ответ от VK парсера');
+      }
     } else {
-      var errorMsg = result && result.error ? result.error : 'Неизвестная ошибка сервера';
-      addSystemLog('Social import failed: ' + errorMsg, 'ERROR', 'SOCIAL');
-      ui.alert('❌ Ошибка импорта', 
-        'Не удалось импортировать посты:\n' + errorMsg + '\n\n💡 Проверьте:\n• Доступность источника\n• Правильность ссылки\n• Указание платформы в C1 (для @username и ID)', 
-        ui.ButtonSet.OK);
+      throw new Error('HTTP ' + responseCode + ': ' + responseText);
     }
     
   } catch (e) {
@@ -162,10 +177,6 @@ function writeSocialPostsToSheet(ss, posts, platform) {
   }
 }
 
-/**
- * Импорт постов VK (алиас для универсального импорта)
- * ВОССТАНОВЛЕНО ИЗ old/Main.txt
- */
-function importVkPostsClient() {
-  importSocialPostsClient();
-}
+// Instagram и Telegram временно отключены - используем только VK
+// function importInstagramPosts() { /* TODO: реализовать */ }
+// function importTelegramPosts() { /* TODO: реализовать */ }
