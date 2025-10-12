@@ -266,3 +266,46 @@ function initializeSmartRules() {
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * Открыть лист "Правила"
+ * Если не существует - предложить создать
+ */
+function openRulesSheet() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var rulesSheet = ss.getSheetByName('Правила');
+    
+    if (!rulesSheet) {
+      var ui = SpreadsheetApp.getUi();
+      var response = ui.alert('Лист "Правила" не найден',
+        'Лист "Правила" ещё не создан.\n\nСоздать сейчас?',
+        ui.ButtonSet.YES_NO);
+      
+      if (response === ui.Button.YES) {
+        initializeSmartRules();
+      }
+      return;
+    }
+    
+    // Активируем лист
+    ss.setActiveSheet(rulesSheet);
+    
+    SpreadsheetApp.getUi().alert('✅ Готово',
+      'Лист "Правила" открыт!\n\n' +
+      'Здесь вы можете:\n' +
+      '• Просмотреть существующие правила\n' +
+      '• Добавить свои правила\n' +
+      '• Изменить правила\n\n' +
+      'Формат:\n' +
+      'A - Ключевое слово\n' +
+      'B - Ссылка на ячейку\n' +
+      'C - Описание',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('❌ Ошибка',
+      'Не удалось открыть лист "Правила":\n\n' + error.message,
+      SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
