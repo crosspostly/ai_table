@@ -1,4 +1,25 @@
 /**
+ * НЕДОСТАЮЩИЕ ФУНКЦИИ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+ * Только уникальные функции без дублей
+ * 
+ * УДАЛЕНЫ заглушки (есть реализация в других файлах):
+ *   - openWebInterface() → ClientUtilities.gs:611
+ *   - analyzeLogsAndFixErrors() → GoogleSheetsLogger.gs
+ *   - forceFlushAllLogs() → GoogleSheetsLogger.gs
+ *   - openLogsSheet() → Menu.gs:289
+ *   - configureSocialImport() → Menu.gs
+ *   - callServerDevFunction() → Menu.gs
+ *   - callServerTestFunction() → Menu.gs
+ *   - showDeveloperDashboard() → Menu.gs
+ *   - showVersionInstructions() → Menu.gs
+ *   - showCurrentVersionInfo() → Menu.gs
+ *   - importInstagramPosts() → SocialImportService.gs
+ *   - importTelegramPosts() → TelegramImportService.gs
+ *   - runChainCurrentRow() → ClientUtilities.gs
+ *   - manualAnalyzeLogsAndFixErrors() → обертка удалена
+ */
+
+/**
  * НЕДОСТАЮЩИЕ ФУНКЦИИ ИЗ МЕНЮ
  * Автоматически созданы после анализа
  */
@@ -37,6 +58,7 @@ function toggleDeveloperModeWithHelp() {
     ui.alert('🔧 Режим изменён', message, ui.ButtonSet.OK);
   }
 }
+
 
 /**
  * Проверить статус системы
@@ -113,33 +135,6 @@ function checkSystemStatus() {
   addSystemLog('System status checked', 'INFO', 'SYSTEM');
 }
 
-/**
- * Открыть веб-интерфейс
- */
-function openWebInterface() {
-  try {
-    addSystemLog('Opening web interface', 'INFO', 'WEB_INTERFACE');
-    
-    // Проверяем есть ли HTML файл веб-интерфейса
-    try {
-      var htmlOutput = HtmlService.createHtmlOutputFromFile('WebApp')
-          .setWidth(1000)
-          .setHeight(600);
-      
-      SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'AI_TABLE Web Interface');
-    } catch (e) {
-      // Если HTML файла нет, показываем заглушку
-      var ui = SpreadsheetApp.getUi();
-      ui.alert('🌐 Веб-интерфейс', 
-        'Веб-интерфейс находится в разработке.\n\nВ следующих версиях здесь будет:\n• Графический интерфейс для настроек\n• Визуальный редактор промптов\n• Мониторинг системы\n• Управление импортом данных',
-        ui.ButtonSet.OK);
-    }
-    
-  } catch (error) {
-    addSystemLog('Web interface error: ' + error.message, 'ERROR', 'WEB_INTERFACE');
-    SpreadsheetApp.getUi().alert('Ошибка', 'Не удалось открыть веб-интерфейс: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
 
 /**
  * Запустить все комплексные тесты
@@ -180,122 +175,6 @@ function runComprehensiveTests() {
   }
 }
 
-/**
- * Анализ логов и исправление ошибок
- */
-function analyzeLogsAndFixErrors() {
-  try {
-    addSystemLog('📈 ЗАПУСК АНАЛИЗА ЛОГОВ', 'INFO', 'LOG_ANALYSIS');
-    
-    var ui = SpreadsheetApp.getUi();
-    
-    // Проверяем доступность листа логов
-    try {
-      var ss = SpreadsheetApp.openById(SHEETS_LOGGER_CONFIG.spreadsheetId);
-      var logsSheet = ss.getSheetByName('Логи');
-      
-      if (!logsSheet) {
-        throw new Error('Лист "Логи" не найден');
-      }
-      
-      // Получаем данные из логов
-      var data = logsSheet.getDataRange().getValues();
-      var logCount = data.length - 1; // Исключаем заголовок
-      
-      // Анализируем логи
-      var errors = 0;
-      var warnings = 0;
-      var recentErrors = [];
-      
-      for (var i = 1; i < Math.min(data.length, 101); i++) { // Последние 100 записей
-        var logLevel = data[i][1]; // Предполагаем что level во второй колонке
-        if (logLevel === 'ERROR') {
-          errors++;
-          if (recentErrors.length < 5) {
-            recentErrors.push(data[i][3] || data[i][0]); // message или первая колонка
-          }
-        } else if (logLevel === 'WARN') {
-          warnings++;
-        }
-      }
-      
-      var report = '📈 АНАЛИЗ ЛОГОВ ЗАВЕРШЕН\n\n';
-      report += '📊 Статистика (последние 100 записей):\n';
-      report += '• Всего записей: ' + logCount + '\n';
-      report += '• Ошибки: ' + errors + ' ❌\n';
-      report += '• Предупреждения: ' + warnings + ' ⚠️\n\n';
-      
-      if (recentErrors.length > 0) {
-        report += '🔍 Последние ошибки:\n';
-        for (var i = 0; i < recentErrors.length; i++) {
-          report += '• ' + (recentErrors[i] || 'Unknown error').substring(0, 50) + '...\n';
-        }
-        report += '\n📋 Полные логи: Меню → 📊 Открыть лист "Логи"';
-      } else {
-        report += '✅ Ошибок в последних записях не найдено!';
-      }
-      
-      ui.alert('Анализ логов', report, ui.ButtonSet.OK);
-      
-      addSystemLog('✅ Анализ логов завершен: ' + errors + ' ошибок, ' + warnings + ' предупреждений', 'INFO', 'LOG_ANALYSIS');
-      
-    } catch (logError) {
-      throw new Error('Не удалось проанализировать логи: ' + logError.message);
-    }
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА АНАЛИЗА ЛОГОВ: ' + error.message, 'ERROR', 'LOG_ANALYSIS');
-    SpreadsheetApp.getUi().alert('Log Analysis Failed', 'Failed to analyze logs. Check the "Логи" sheet for error details.\n\nError: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Ручной анализ логов (дублирует analyzeLogsAndFixErrors для совместимости)
- */
-function manualAnalyzeLogsAndFixErrors() {
-  analyzeLogsAndFixErrors();
-}
-
-/**
- * Принудительная очистка всех логов
- */
-function forceFlushAllLogs() {
-  try {
-    addSystemLog('🔧 ПРИНУДИТЕЛЬНАЯ ОЧИСТКА ЛОГОВ', 'INFO', 'LOG_MANAGEMENT');
-    
-    var ui = SpreadsheetApp.getUi();
-    var result = ui.alert('⚠️ Подтверждение', 
-      'Вы уверены что хотите очистить ВСЕ логи?\n\nЭто действие нельзя отменить!', 
-      ui.ButtonSet.YES_NO);
-    
-    if (result === ui.Button.YES) {
-      // Пытаемся очистить лист логов
-      try {
-        var ss = SpreadsheetApp.openById(SHEETS_LOGGER_CONFIG.spreadsheetId);
-        var logsSheet = ss.getSheetByName('Логи');
-        
-        if (logsSheet) {
-          // Очищаем все кроме заголовков
-          var lastRow = logsSheet.getLastRow();
-          if (lastRow > 1) {
-            logsSheet.getRange(2, 1, lastRow - 1, logsSheet.getLastColumn()).clear();
-          }
-          
-          ui.alert('✅ Логи очищены', 'Все логи успешно удалены из листа "Логи"', ui.ButtonSet.OK);
-          addSystemLog('✅ Все логи очищены пользователем', 'INFO', 'LOG_MANAGEMENT');
-        } else {
-          throw new Error('Лист "Логи" не найден');
-        }
-      } catch (logError) {
-        ui.alert('❌ Ошибка очистки', 'Не удалось очистить логи: ' + logError.message, ui.ButtonSet.OK);
-      }
-    }
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА ОЧИСТКИ ЛОГОВ: ' + error.message, 'ERROR', 'LOG_MANAGEMENT');
-    SpreadsheetApp.getUi().alert('Ошибка', 'Ошибка при очистке логов: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
 
 /**
  * Показать статистику логов
@@ -375,441 +254,6 @@ function showLogStatistics() {
   }
 }
 
-/**
- * Открыть лист логов напрямую
- */
-function openLogsSheet() {
-  try {
-    addSystemLog('📊 Открытие листа логов', 'INFO', 'LOGS_SHEET');
-
-/**
- * ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ НОВОГО МЕНЮ
- */
-
-/**
- * Настройки социальных сетей
- */
-function configureSocialImport() {
-  var ui = SpreadsheetApp.getUi();
-  ui.alert('📊 Настройки соцсетей', 
-    'Настройки для импорта из социальных сетей:\\n\\n' +
-    '📱 VK - работает через importVkPosts()\\n' +
-    '📸 Instagram - в разработке\\n' +
-    '💬 Telegram - в разработке\\n\\n' +
-    'Пока доступен только VK импорт.',
-    ui.ButtonSet.OK);
-  addSystemLog('Открыты настройки соцсетей', 'INFO', 'SOCIAL');
-}
-
-/**
- * Настройка умной цепочки
- */
-function configureSmartChain() {
-  var ui = SpreadsheetApp.getUi();
-  ui.alert('🔧 Настроить цепочку', 
-    'Настройка умной цепочки обработки:\\n\\n' +
-    '⚙️ Доступные настройки:\\n' +
-    '• Автоматический запуск при изменении\\n' +
-    '• Настройка промптов\\n' +
-    '• Выбор модели AI\\n' +
-    '• Фильтры данных\\n\\n' +
-    '💡 Используйте runSmartChain() для запуска.',
-    ui.ButtonSet.OK);
-  addSystemLog('Открыты настройки цепочки', 'INFO', 'CHAIN');
-}
-
-/**
- * Инициализация режима чата
- */
-// initializeChatMode() - реальная функция в ChatMode.gs:28
-// setupSmartPromptTrigger() - реальная функция в SmartPromptProcessor.gs:217
-    
-    var ui = SpreadsheetApp.getUi();
-    var logsUrl = 'https://docs.google.com/spreadsheets/d/' + SHEETS_LOGGER_CONFIG.spreadsheetId + '/edit#gid=0';
-    
-    // Показываем диалог с ссылкой (так как не можем открыть в новой вкладке)
-    var message = '📊 ЛИСТ ЛОГОВ\n\n';
-    message += 'Ссылка на лист логов:\n';
-    message += logsUrl + '\n\n';
-    message += '🔗 Скопируйте ссылку и откройте в новой вкладке.\n\n';
-    message += '📋 В листе "Логи" вы найдете:\n';
-    message += '• Все системные события\n';
-    message += '• Ошибки и предупреждения\n';
-    message += '• Результаты тестов\n';
-    message += '• Performance метрики\n';
-    
-    ui.alert('📊 Лист логов', message, ui.ButtonSet.OK);
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА ОТКРЫТИЯ ЛИСТА ЛОГОВ: ' + error.message, 'ERROR', 'LOGS_SHEET');
-    SpreadsheetApp.getUi().alert('Ошибка', 'Не удалось открыть лист логов: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * DEV функции - диагностика системы
- */
-function callServerDevFunction() {
-  try {
-    addSystemLog('🔍 ДИАГНОСТИКА СИСТЕМЫ (DEV)', 'INFO', 'DEV_DIAGNOSTICS');
-    
-    var ui = SpreadsheetApp.getUi();
-    var diagnostic = [];
-    
-    diagnostic.push('🔍 ДИАГНОСТИКА СИСТЕМЫ');
-    diagnostic.push('='.repeat(30));
-    diagnostic.push('');
-    
-    // Проверяем основные компоненты
-    diagnostic.push('📊 СОСТОЯНИЕ КОМПОНЕНТОВ:');
-    
-    // Cache
-    try {
-      var cache = CacheService.getScriptCache();
-      cache.put('test_key', 'test_value', 10);
-      var testValue = cache.get('test_key');
-      diagnostic.push('✅ CacheService: ' + (testValue === 'test_value' ? 'OK' : 'ERROR'));
-    } catch (e) {
-      diagnostic.push('❌ CacheService: ERROR - ' + e.message);
-    }
-    
-    // Properties
-    try {
-      var props = PropertiesService.getScriptProperties();
-      diagnostic.push('✅ PropertiesService: OK');
-    } catch (e) {
-      diagnostic.push('❌ PropertiesService: ERROR - ' + e.message);
-    }
-    
-    // Sheets Access
-    try {
-      var sheet = SpreadsheetApp.getActiveSheet();
-      diagnostic.push('✅ Sheet Access: OK (' + sheet.getName() + ')');
-    } catch (e) {
-      diagnostic.push('❌ Sheet Access: ERROR - ' + e.message);
-    }
-    
-    // GM Function
-    try {
-      if (typeof GM === 'function') {
-        diagnostic.push('✅ GM Function: Available');
-      } else {
-        diagnostic.push('❌ GM Function: Not found');
-      }
-    } catch (e) {
-      diagnostic.push('❌ GM Function: ERROR - ' + e.message);
-    }
-    
-    diagnostic.push('');
-    
-    // Memory usage (безопасно - без Drive API)
-    try {
-      var memoryInfo = 'N/A (Google Apps Script sandbox)';
-      diagnostic.push('⏱️ Memory usage: ' + memoryInfo);
-    } catch (e) {
-      diagnostic.push('⏱️ Memory usage: Unable to access');
-    }
-    
-    diagnostic.push('📅 Current time: ' + new Date().toLocaleString('ru-RU'));
-    
-    ui.alert('🔍 Диагностика системы', diagnostic.join('\n'), ui.ButtonSet.OK);
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА ДИАГНОСТИКИ: ' + error.message, 'ERROR', 'DEV_DIAGNOSTICS');
-    SpreadsheetApp.getUi().alert('Ошибка диагностики', 'Ошибка при диагностике: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * DEV функции - локальные тесты
- */
-function callServerTestFunction() {
-  try {
-    addSystemLog('🧪 ЛОКАЛЬНЫЕ ТЕСТЫ (DEV)', 'INFO', 'DEV_TESTS');
-    
-    // Запускаем быструю проверку функций
-    var result = quickFunctionCheck();
-    
-    var ui = SpreadsheetApp.getUi();
-    var message = '🧪 ЛОКАЛЬНЫЕ ТЕСТЫ ЗАВЕРШЕНЫ\n\n';
-    
-    if (result) {
-      message += '✅ Все критичные функции работают\n\n';
-      message += '📊 Дополнительно проверено:\n';
-      message += '• GM function availability\n';
-      message += '• getCurrentVersion function\n'; 
-      message += '• addSystemLog function\n';
-      message += '• quickTest function\n\n';
-      message += '🔧 Для полного тестирования запустите:\n';
-      message += 'Меню → 🧪 Тестирование → 🚀 Запустить все тесты';
-    } else {
-      message += '❌ Найдены проблемы с критичными функциями\n\n';
-      message += '🔧 Запустите полную проверку:\n';
-      message += 'Меню → 🧪 Тестирование → 🚀 Запустить все тесты';
-    }
-    
-    ui.alert('🧪 Локальные тесты', message, ui.ButtonSet.OK);
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА ЛОКАЛЬНЫХ ТЕСТОВ: ' + error.message, 'ERROR', 'DEV_TESTS');
-    SpreadsheetApp.getUi().alert('Ошибка тестирования', 'Ошибка при выполнении тестов: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * DEV функции - dashboard разработчика
- */
-function showDeveloperDashboard() {
-  try {
-    addSystemLog('📊 DASHBOARD РАЗРАБОТЧИКА', 'INFO', 'DEV_DASHBOARD');
-    
-    var ui = SpreadsheetApp.getUi();
-    var props = PropertiesService.getScriptProperties();
-    
-    var dashboard = [];
-    dashboard.push('📊 DEVELOPER DASHBOARD');
-    dashboard.push('='.repeat(40));
-    dashboard.push('');
-    
-    // System Info
-    dashboard.push('🔧 SYSTEM INFO:');
-    dashboard.push('• Version: ' + (getCurrentVersion ? getCurrentVersion() : 'Unknown'));
-    dashboard.push('• Dev Mode: ' + (props.getProperty('DEVELOPER_MODE') === 'true' ? '✅ ON' : '❌ OFF'));
-    dashboard.push('• Time: ' + new Date().toLocaleString('ru-RU'));
-    dashboard.push('');
-    
-    // Credentials Status
-    dashboard.push('🔑 CREDENTIALS:');
-    dashboard.push('• License Email: ' + (props.getProperty('LICENSE_EMAIL') ? '✅' : '❌'));
-    dashboard.push('• License Token: ' + (props.getProperty('LICENSE_TOKEN') ? '✅' : '❌'));
-    dashboard.push('• Gemini API: ' + (props.getProperty('GEMINI_API_KEY') ? '✅' : '❌'));
-    dashboard.push('');
-    
-    // Functions Status
-    dashboard.push('⚙️ FUNCTIONS STATUS:');
-    var criticalFunctions = ['GM', 'getCurrentVersion', 'addSystemLog', 'quickTest'];
-    for (var i = 0; i < criticalFunctions.length; i++) {
-      var funcName = criticalFunctions[i];
-      try {
-        var exists = typeof eval(funcName) === 'function';
-        dashboard.push('• ' + funcName + ': ' + (exists ? '✅' : '❌'));
-      } catch (e) {
-        dashboard.push('• ' + funcName + ': ❌ Error');
-      }
-    }
-    dashboard.push('');
-    
-    dashboard.push('📋 Полную диагностику см. в:');
-    dashboard.push('🔍 DEV → Диагностика системы');
-    
-    ui.alert('📊 Developer Dashboard', dashboard.join('\n'), ui.ButtonSet.OK);
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА DASHBOARD: ' + error.message, 'ERROR', 'DEV_DASHBOARD');
-    SpreadsheetApp.getUi().alert('Ошибка dashboard', 'Ошибка при отображении dashboard: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Показать инструкции по версии
- */
-function showVersionInstructions() {
-  try {
-    var ui = SpreadsheetApp.getUi();
-    var versionInfo = getVersionInfo();
-    
-    var instructions = [];
-    instructions.push('📋 ИНСТРУКЦИИ ПО ВЕРСИИ ' + versionInfo.version.current);
-    instructions.push('='.repeat(50));
-    instructions.push('');
-    
-    instructions.push('🆕 НОВЫЕ ВОЗМОЖНОСТИ:');
-    var features = versionInfo.features;
-    for (var key in features) {
-      var feature = features[key];
-      if (feature.added_in === versionInfo.version.current) {
-        instructions.push('✨ ' + feature.name);
-        instructions.push('   ' + feature.description);
-        instructions.push('');
-      }
-    }
-    
-    instructions.push('🔧 ОСНОВНЫЕ КОМАНДЫ:');
-    instructions.push('• 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ - unified credentials');
-    instructions.push('• 📊 Проверить статус системы - system health');
-    instructions.push('• 🚀 Запустить все тесты - comprehensive testing');
-    instructions.push('• 📈 Анализ логов - error analysis');
-    instructions.push('');
-    
-    instructions.push('📖 Полная документация:');
-    instructions.push(versionInfo.project.repository + '/blob/main/README.md');
-    
-    ui.alert('📋 Инструкции по версии', instructions.join('\n'), ui.ButtonSet.OK);
-    
-    addSystemLog('Version instructions shown', 'INFO', 'VERSION_INFO');
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА ИНСТРУКЦИЙ: ' + error.message, 'ERROR', 'VERSION_INFO');
-    SpreadsheetApp.getUi().alert('Ошибка', 'Не удалось показать инструкции: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Показать детальную информацию о версии
- */
-function showCurrentVersionInfo() {
-  try {
-    var ui = SpreadsheetApp.getUi();
-    var versionInfo = getVersionInfo();
-    
-    var details = [];
-    details.push('🔢 ДЕТАЛЬНАЯ ИНФОРМАЦИЯ О ВЕРСИИ');
-    details.push('='.repeat(45));
-    details.push('');
-    
-    details.push('📊 PROJECT INFO:');
-    details.push('• Name: ' + versionInfo.project.name);
-    details.push('• Description: ' + versionInfo.project.description);
-    details.push('• Repository: ' + versionInfo.project.repository);
-    details.push('');
-    
-    details.push('🔢 VERSION INFO:');
-    details.push('• Current: ' + versionInfo.version.current);
-    details.push('• Previous: ' + versionInfo.version.previous);
-    details.push('• Release Date: ' + versionInfo.version.releaseDate);
-    details.push('• Status: ' + versionInfo.version.status);
-    details.push('');
-    
-    details.push('🏗️ BUILD INFO:');
-    details.push('• Build Number: ' + versionInfo.build.number);
-    details.push('• Environment: ' + versionInfo.build.environment);
-    details.push('• Platform: ' + versionInfo.build.platform);
-    details.push('• Deployed By: ' + versionInfo.build.deployedBy);
-    
-    ui.alert('🔢 Информация о версии', details.join('\n'), ui.ButtonSet.OK);
-    
-    addSystemLog('Detailed version info shown', 'INFO', 'VERSION_INFO');
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА ИНФОРМАЦИИ О ВЕРСИИ: ' + error.message, 'ERROR', 'VERSION_INFO');
-    SpreadsheetApp.getUi().alert('Ошибка', 'Не удалось показать информацию о версии: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-// ============================================================================
-// ОБЕРТКИ ДЛЯ ФУНКЦИЙ ИЗ МЕНЮ (восстановлены из старых версий)
-// ============================================================================
-
-
-
-/**
- * Импорт Instagram постов - использует универсальный импорт
- * ИСПРАВЛЕНО: Теперь работает через универсальный импорт вместо заглушки
- */
-function importInstagramPosts() {
-  try {
-    addSystemLog('🔄 Запуск импорта Instagram', 'INFO', 'INSTAGRAM_IMPORT');
-    
-    // Проверяем параметры
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var paramsSheet = ss.getSheetByName('Параметры');
-    
-    if (!paramsSheet) {
-      SpreadsheetApp.getUi().alert(
-        '📸 Instagram импорт',
-        'Создайте лист "Параметры" и укажите:\\n\\n' +
-        'B1: username или https://instagram.com/username\\n' +
-        'B2: количество постов (например: 20)\\n' +
-        'C1: instagram (опционально)',
-        SpreadsheetApp.getUi().ButtonSet.OK
-      );
-      return;
-    }
-    
-    // Используем универсальный импорт
-    importSocialPostsClient();
-    
-  } catch (error) {
-    addSystemLog('❌ Ошибка импорта Instagram: ' + error.message, 'ERROR', 'INSTAGRAM_IMPORT');
-    SpreadsheetApp.getUi().alert('Ошибка импорта Instagram', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Импорт Telegram постов - использует универсальный импорт
- * ИСПРАВЛЕНО: Теперь работает через универсальный импорт вместо заглушки
- */
-function importTelegramPosts() {
-  try {
-    addSystemLog('🔄 Запуск импорта Telegram', 'INFO', 'TELEGRAM_IMPORT');
-    
-    // Проверяем параметры
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var paramsSheet = ss.getSheetByName('Параметры');
-    
-    if (!paramsSheet) {
-      SpreadsheetApp.getUi().alert(
-        '💬 Telegram импорт',
-        'Создайте лист "Параметры" и укажите:\\n\\n' +
-        'B1: @channel или https://t.me/channel\\n' +
-        'B2: количество постов (например: 20)\\n' +
-        'C1: telegram (опционально)',
-        SpreadsheetApp.getUi().ButtonSet.OK
-      );
-      return;
-    }
-    
-    // Используем универсальный импорт
-    importSocialPostsClient();
-    
-  } catch (error) {
-    addSystemLog('❌ Ошибка импорта Telegram: ' + error.message, 'ERROR', 'TELEGRAM_IMPORT');
-    SpreadsheetApp.getUi().alert('Ошибка импорта Telegram', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-// runSmartChain() - реальная функция в ClientUtilities.gs (и ещё одна копия ниже в этом файле)
-
-/**
- * Обновить текущую ячейку
- */
-function runChainCurrentRow() {
-  try {
-    var ui = SpreadsheetApp.getUi();
-    var sheet = SpreadsheetApp.getActiveSheet();
-    var currentRow = sheet.getActiveCell().getRow();
-    
-    if (currentRow < 3) {
-      ui.alert('⚠️ Неверная строка', 
-        'Выберите строку данных (3 или больше).\nСтроки 1-2 используются для заголовков и промптов.',
-        ui.ButtonSet.OK);
-      return;
-    }
-    
-    addSystemLog('⚡ Обновление строки ' + currentRow, 'INFO', 'CHAIN_UPDATE');
-    
-    var result = ui.alert('⚡ Обновить ячейку', 
-      'Обновить данные в строке ' + currentRow + '?\n\nИспользует промпты из строки 2.',
-      ui.ButtonSet.YES_NO);
-    
-    if (result === ui.Button.YES) {
-      // Простая обработка текущей строки
-      var range = sheet.getRange(currentRow, 1);
-      var value = range.getValue();
-      
-      if (value) {
-        ui.alert('✅ Готово', 'Строка ' + currentRow + ' обработана', ui.ButtonSet.OK);
-        addSystemLog('✅ Строка ' + currentRow + ' обновлена', 'INFO', 'CHAIN_UPDATE');
-      } else {
-        ui.alert('⚠️ Пустая ячейка', 'В A' + currentRow + ' нет данных для обработки', ui.ButtonSet.OK);
-      }
-    }
-    
-  } catch (error) {
-    addSystemLog('❌ Ошибка обновления ячейки: ' + error.message, 'ERROR', 'CHAIN_UPDATE');
-    SpreadsheetApp.getUi().alert('Ошибка обновления', error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
 
 /**
  * Настроить цепочку
@@ -849,11 +293,6 @@ function configureSmartChain() {
   ui.alert('Настройка умной цепочки', instructions.join('\n'), ui.ButtonSet.OK);
 }
 
-// clearChainForA3() теперь в ClientUtilities.gs
-
-// ============================================================================
-// ВОССТАНОВЛЕННЫЕ ФУНКЦИИ ИЗ ОРИГИНАЛЬНОГО МЕНЮ
-// ============================================================================
 
 /**
  * Настройка Gemini API ключа с инструкциями
@@ -887,6 +326,7 @@ function initGeminiKeyWithHelp() {
   }
 }
 
+
 /**
  * Настройка фразы готовности с инструкциями
  */
@@ -919,6 +359,7 @@ function setCompletionPhraseUIWithHelp() {
   }
 }
 
+
 /**
  * Настройка лицензии с инструкциями
  */
@@ -943,6 +384,7 @@ function setLicenseCredentialsUIWithHelp() {
   }
 }
 
+
 /**
  * Проверка статуса лицензии с инструкциями
  */
@@ -964,6 +406,7 @@ function checkLicenseStatusUIWithHelp() {
     checkSystemStatus(); // Используем unified status check
   }
 }
+
 
 /**
  * Очистка старых триггеров с инструкциями
@@ -1028,6 +471,7 @@ function cleanupOldTriggersWithHelp() {
   }
 }
 
+
 /**
  * Показать активные триггеры с инструкциями
  */
@@ -1086,3 +530,4 @@ function showActiveTriggersDialogWithHelp() {
     }
   }
 }
+
