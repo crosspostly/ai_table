@@ -5,6 +5,23 @@
  */
 
 /**
+ * Удаляет эмодзи и смайлики из текста (локальная копия)
+ * @param {string} text - Исходный текст
+ * @return {string} - Текст без эмодзи
+ */
+function removeEmojis(text) {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+  
+  var emojiPattern = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2300-\u23FF]|[\u2B50]|[\uFE00-\uFE0F]|[\u200D]|[\u20E3]/g;
+  var cleaned = text.replace(emojiPattern, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+/**
  * Получение VK токена из Properties
  * @return {string} VK токен
  */
@@ -64,10 +81,13 @@ function handleWallGet_(owner, count) {
     
     // Преобразуем в формат совместимый с существующим кодом
     var posts = jsonResponse.response.items.map(function(post, index) {
+      var rawText = String(post.text || '').replace(/\\n/g, ' ');
+      var cleanText = removeEmojis(rawText);  // Удаляем эмодзи из текста поста
+      
       return {
         date: new Date(post.date * 1000).toLocaleString(),
         link: 'https://vk.com/wall' + post.owner_id + '_' + post.id,
-        text: String(post.text || '').replace(/\\n/g, ' '),
+        text: cleanText,
         number: index + 1,
         comments: (post.comments && post.comments.count) || 0,
         likes: (post.likes && post.likes.count) || 0
@@ -195,7 +215,11 @@ function createStopWordsFormulas(sheet, totalRows) {
     // Автоширина колонок
     sheet.autoResizeColumns(5, 6);
     
-    logMessage('✅ Формулы фильтрации созданы', 'INFO');
+    // ПРЕОБРАЗОВАНИЕ ФОРМУЛ В ЗНАЧЕНИЯ
+    // Чтобы при копировании копировались значения, а не формулы
+    convertFormulasToValues_(sheet, totalRows);
+    
+    logMessage('✅ Формулы фильтрации созданы и преобразованы в значения', 'INFO');
   } catch (e) {
     logMessage('❌ Ошибка создания формул: ' + e.message, 'ERROR');
     SpreadsheetApp.getUi().alert('Ошибка создания формул: ' + e.message);
