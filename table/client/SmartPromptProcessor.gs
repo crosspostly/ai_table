@@ -229,6 +229,7 @@ function setupSmartPromptTrigger() {
     
     // Создаем новый триггер на изменение
     ScriptApp.newTrigger('onSmartPromptEdit')
+      .forSpreadsheet(ss)
       .onEdit()
       .create();
     
