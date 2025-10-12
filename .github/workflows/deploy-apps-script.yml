@@ -148,6 +148,32 @@ jobs:
             clasp list || true
           fi
 
+      - name: Update Deploy Timestamps
+        run: |
+          echo "📅 Updating deployment timestamps..."
+          
+          # Get current timestamp in ISO 8601 format
+          DEPLOY_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          DEPLOY_BUILD=$(date -u +"%Y%m%d%H%M%S")
+          
+          echo "Timestamp: $DEPLOY_TIMESTAMP"
+          echo "Build: $DEPLOY_BUILD"
+          
+          # Update version.json
+          sed -i "s/DEPLOY_TIMESTAMP_PLACEHOLDER/$DEPLOY_TIMESTAMP/g" version.json
+          sed -i "s/DEPLOY_BUILD_NUMBER_PLACEHOLDER/$DEPLOY_BUILD/g" version.json
+          
+          # Update Menu.gs  
+          sed -i "s/DEPLOY_TIMESTAMP_PLACEHOLDER/$DEPLOY_TIMESTAMP/g" table/client/Menu.gs
+          
+          echo "✅ Timestamps updated in version.json and Menu.gs"
+          echo ""
+          echo "Updated version.json:"
+          grep -A 2 "updateTimestamp" version.json
+          echo ""
+          echo "Updated Menu.gs:"
+          grep "var deployTimestamp" table/client/Menu.gs
+
       - name: Deploy Server Project
         run: |
           echo "📦 Deploying Server project..."
