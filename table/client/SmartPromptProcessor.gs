@@ -238,20 +238,22 @@ function setupSmartPromptTrigger() {
       paramsSheet = ss.insertSheet('Параметры');
     }
     
-    // Добавляем заголовок и чекбокс для контекста в D1
-    var d1 = paramsSheet.getRange('D1');
-    d1.setValue('Контекст чата');
-    d1.setFontWeight('bold');
-    d1.setBackground('#f3f4f6');
+    // ИСПРАВЛЕНО: Добавляем заголовок в C1, чекбокс в D1
+    var c1 = paramsSheet.getRange('C1');
+    c1.setValue('Контекст чата');
+    c1.setFontWeight('bold');
+    c1.setBackground('#f3f4f6');
     
-    // Создаем чекбокс в D1 (прямо в заголовке)
+    // Создаем чекбокс в D1 (рядом с заголовком)
+    var d1 = paramsSheet.getRange('D1');
     var rule = SpreadsheetApp.newDataValidation()
       .requireCheckbox()
       .setAllowInvalid(false)
       .build();
     d1.setDataValidation(rule);
+    d1.setValue(false);  // По умолчанию выключен
     
-    // Добавляем комментарий
+    // Добавляем комментарий к чекбоксу
     d1.setNote('✓ = Включить сохранение контекста разговора в Chat Mode\n(чат будет помнить предыдущие сообщения)');
       
     addSystemLog('✓ Триггер умных промптов установлен + чекбокс D1 создан', 'INFO', 'SETUP');

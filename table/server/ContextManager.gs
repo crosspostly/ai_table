@@ -34,7 +34,7 @@ function isContextEnabled() {
       return false;
     }
     
-    var cellValue = sheet.getRange('C1').getValue();
+    var cellValue = sheet.getRange('D1').getValue();  // ИСПРАВЛЕНО: было C1
     
     // Проверяем различные варианты \"включено\"
     if (typeof cellValue === 'boolean') {
