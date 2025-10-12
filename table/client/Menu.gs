@@ -133,7 +133,6 @@ function onOpen() {
       .addItem('📋 Очистить ячейки', 'clearChainForA3'))
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
       .addItem('🚀 Супер проверка системы', 'superMasterCheck')
-      .addItem('🔬 Диагностика VK импорта', 'diagnoseVkImport')
       .addItem('📊 Открыть логи', 'openLogsSheetWithCreation')
       .addItem('🔧 Диагностика системы', 'callServerDevFunction')
       .addItem('📋 Версия', 'showCurrentVersionInfo'))
