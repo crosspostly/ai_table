@@ -246,40 +246,7 @@ function writeVkPosts(spreadsheet, posts) {
   sheet.autoResizeColumns(1, headers.length);
 }
 
-/**
- * Static Gemini call - replaces formula with result
- */
-function GM_STATIC(prompt, maxTokens, temperature) {
-  if (!prompt) return '';
-  
-  var creds = getClientCredentials();
-  if (!creds.valid) return 'ERROR: ' + creds.error;
-  
-  try {
-    var response = callServer({
-      action: 'gm',
-      email: creds.email,
-      token: creds.token,
-      geminiApiKey: creds.geminiApiKey,
-      prompt: String(prompt),
-      maxTokens: maxTokens || 1000,
-      temperature: temperature || 0.7
-    });
-    
-    if (response.valid && response.text) {
-      // Replace formula with static value
-      var range = SpreadsheetApp.getActiveRange();
-      if (range) {
-        range.setValue(response.text);
-      }
-      return response.text;
-    }
-    
-    return 'ERROR: ' + (response.error || 'No response');
-  } catch (e) {
-    return 'ERROR: ' + e.message;
-  }
-}
+// DEPRECATED: Удален дубликат - используйте GM_STATIC из GeminiClient.gs
 
 /**
  * Conditional static Gemini call

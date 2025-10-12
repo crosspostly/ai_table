@@ -275,10 +275,3 @@ function createAllButtons() {
   addSystemLog('Создано кнопок: ' + created.length, 'INFO', 'AUTO_BUTTON');
 }
 
-/**
- * Алиас для обратной совместимости
- */
-// DEPRECATED: Удалено при рефакторинге - используйте ClientUtilities.importVkPosts()
-// function importVkPosts() {
-//   importSocialPosts();
-// }
