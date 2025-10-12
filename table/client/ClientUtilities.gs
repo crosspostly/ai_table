@@ -7,42 +7,8 @@
  * Check License Status UI
  * Shows license information dialog
  */
-function checkLicenseStatusUI() {
-  var ui = SpreadsheetApp.getUi();
-  
-  try {
-    var creds = getClientCredentials();
-    
-    if (!creds.ok) {
-      ui.alert('Ошибка credentials', 'Настройте license email и token в меню\\n⚙️ Настройки → 🔐 Лицензия', ui.ButtonSet.OK);
-      return;
-    }
-    
-    // Call server to check license
-    var response = callServer({
-      action: 'check_license',
-      email: creds.email,
-      token: creds.token
-    });
-    
-    if (response.ok && response.data) {
-      var data = response.data;
-      var statusMsg = '📊 Статус лицензии\\n\\n' +
-        '📧 Email: ' + creds.email + '\\n' +
-        '✅ Статус: ' + (data.valid ? 'Активна' : 'Неактивна') + '\\n' +
-        '📅 Действует до: ' + (data.expiresAt || 'N/A') + '\\n' +
-        '🔢 Запросов за час: ' + (data.requestsThisHour || 0) + '/' + (data.hourlyLimit || 100) + '\\n' +
-        '📊 Всего запросов: ' + (data.totalRequests || 0);
-      
-      ui.alert('Статус лицензии', statusMsg, ui.ButtonSet.OK);
-    } else {
-      ui.alert('Ошибка', 'Не удалось проверить лицензию: ' + (response.error || 'Unknown error'), ui.ButtonSet.OK);
-    }
-    
-  } catch (e) {
-    ui.alert('Ошибка проверки лицензии', e.message, ui.ButtonSet.OK);
-  }
-}
+// checkLicenseStatusUI() - основная реализация в CredentialsManager.gs
+
 
 /**
  * Set License Credentials UI
@@ -102,86 +68,8 @@ function ocrReviews() {
  * Initialize Chat Mode
  * Creates a chat sheet with A/B columns for conversation
  */
-function initializeChatMode() {
-  var ss = SpreadsheetApp.getActive();
-  var ui = SpreadsheetApp.getUi();
-  
-  // Check if Chat sheet exists
-  var chatSheet = ss.getSheetByName('Чат') || ss.getSheetByName('Chat');
-  
-  if (chatSheet) {
-    var result = ui.alert('Лист \"Чат\" уже существует', 'Хотите очистить и пересоздать?', ui.ButtonSet.YES_NO);
-    if (result !== ui.Button.YES) {
-      return;
-    }
-    ss.deleteSheet(chatSheet);
-  }
-  
-  // Create new chat sheet
-  chatSheet = ss.insertSheet('Чат');
-  
-  // Setup headers
-  chatSheet.getRange('A1').setValue('Ваше сообщение');
-  chatSheet.getRange('B1').setValue('Ответ ассистента');
-  
-  // Format headers
-  chatSheet.getRange('A1:B1')
-    .setFontWeight('bold')
-    .setBackground('#4285f4')
-    .setFontColor('white');
-  
-  // Setup first row
-  chatSheet.getRange('A2').setValue('Напишите ваш вопрос здесь...');
-  
-  // Auto-resize columns
-  chatSheet.setColumnWidth(1, 400);
-  chatSheet.setColumnWidth(2, 600);
-  
-  ui.alert('✅ Режим чата создан', 'Лист \"Чат\" готов к использованию\\n\\nНапишите вопрос в A2 и нажмите Enter', ui.ButtonSet.OK);
-  
-  logClient('Chat mode initialized');
-}
-
-/**
- * Setup Smart Prompt Trigger
- * Creates trigger for automatic prompt conversion
- */
-function setupSmartPromptTrigger() {
-  var ui = SpreadsheetApp.getUi();
-  
-  // Check if trigger already exists
-  var triggers = ScriptApp.getProjectTriggers();
-  var existingTrigger = false;
-  
-  for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'onSmartPromptEdit') {
-      existingTrigger = true;
-      break;
-    }
-  }
-  
-  if (existingTrigger) {
-    var result = ui.alert('Триггер уже существует', 'Умные промпты уже активированы', ui.ButtonSet.OK);
-    return;
-  }
-  
-  // Create trigger
-  try {
-    ScriptApp.newTrigger('onSmartPromptEdit')
-      .forSpreadsheet(SpreadsheetApp.getActive())
-      .onEdit()
-      .create();
-    
-    // Create rules sheet if not exists
-    createSmartPromptRulesSheet();
-    
-    ui.alert('✅ Умные промпты активированы', 'Теперь вы можете использовать \"Промпт: текст\" в любой ячейке\\n\\nПравила замены находятся в листе \"Правила\"', ui.ButtonSet.OK);
-    
-    logClient('Smart prompt trigger created');
-  } catch (e) {
-    ui.alert('Ошибка создания триггера', e.message, ui.ButtonSet.OK);
-  }
-}
+// initializeChatMode() moved to ChatMode.gs (line 28)
+// setupSmartPromptTrigger() moved to SmartPromptProcessor.gs (line 217)
 
 /**
  * Create Smart Prompt Rules Sheet
@@ -471,22 +359,7 @@ function prepareChainForA3() {
   SpreadsheetApp.getUi().alert('✅ Готово: формулы B3..G3 проставлены.\\nЗаполните A3 — шаги пойдут по очереди.');
 }
 
-/**
- * Clear Chain For A3
- * ВОССТАНОВЛЕНО ИЗ old/Main.txt строки 549-553
- */
-function clearChainForA3() {
-  var ss = SpreadsheetApp.getActive();
-  var sheet = ss.getSheetByName('Распаковка');
-  
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('Лист "Распаковка" не найден');
-    return;
-  }
-  
-  sheet.getRange(3, 2, 1, 6).clearContent(); // B3..G3
-  SpreadsheetApp.getUi().alert('🧹 Очищено: B3..G3');
-}
+// clearChainForA3() - дублирующая функция удалена, оставлена одна версия ниже
 
 /**
  * Helper: Parse Target A1 notation
@@ -541,13 +414,8 @@ function columnToLetter(col) {
 /**
  * Helper: Get completion phrase
  */
-function getCompletionPhrase() {
-  try {
-    return COMPLETION_PHRASE;
-  } catch (e) {
-    return 'Отчёт готов';
-  }
-}
+// getCompletionPhrase() - основная реализация в CompletionPhraseService.gs
+
 
 /**
  * Refresh Current GM Cell - Force recalculation
@@ -580,30 +448,8 @@ function refreshCurrentGMCell() {
 /**
  * Init Gemini Key - Prompt for API key
  */
-function initGeminiKey() {
-  var ui = SpreadsheetApp.getUi();
-  
-  var result = ui.prompt('Gemini API Key', 'Введите ваш Gemini API ключ:\\n\\nПолучить можно на: https://aistudio.google.com/app/apikey', ui.ButtonSet.OK_CANCEL);
-  
-  if (result.getSelectedButton() !== ui.Button.OK) {
-    return;
-  }
-  
-  var apiKey = result.getResponseText().trim();
-  
-  if (!apiKey) {
-    ui.alert('API ключ не может быть пустым');
-    return;
-  }
-  
-  // Save to Script Properties
-  var props = PropertiesService.getScriptProperties();
-  props.setProperty('GEMINI_API_KEY', apiKey);
-  
-  ui.alert('✅ API ключ сохранен', 'Gemini API ключ успешно сохранен', ui.ButtonSet.OK);
-  
-  logClient('Gemini API key updated');
-}
+// initGeminiKey() - основная реализация в GeminiClient.gs
+
 
 /**
  * Set Completion Phrase UI
@@ -656,25 +502,8 @@ function clearChainForA3() {
 /**
  * Cleanup Old Triggers - Remove stuck triggers
  */
-function cleanupOldTriggers() {
-  var triggers = ScriptApp.getProjectTriggers();
-  var deleted = 0;
-  
-  for (var i = 0; i < triggers.length; i++) {
-    var handlerFunction = triggers[i].getHandlerFunction();
-    
-    // Delete only chain-related triggers, keep onEdit/onOpen
-    if (handlerFunction === 'checkStepCompletion' || handlerFunction === 'continueAutoProcessingChain') {
-      ScriptApp.deleteTrigger(triggers[i]);
-      deleted++;
-    }
-  }
-  
-  var message = '✅ Очистка завершена\\n\\nУдалено триггеров: ' + deleted;
-  SpreadsheetApp.getUi().alert('Очистка триггеров', message, SpreadsheetApp.getUi().ButtonSet.OK);
-  
-  logClient('Old triggers cleaned: ' + deleted + ' deleted');
-}
+// cleanupOldTriggers() - основная реализация в TriggerManager.gs
+
 
 /**
  * Show Active Triggers Dialog
@@ -818,152 +647,10 @@ function getOcrOverwrite_() {
 function importSocialPosts() {
   importSocialPostsClient();
 }
+// showVkTokenDiagnosis() - реализация в VkTokenValidator.gs
 
-/**
- * VK Token Validation Wrappers - для вызова из меню
- * КРИТИЧНО: Серверные функции НЕ ВИДНЫ из клиента напрямую!
- */
+// checkVkTokenValidity() - реализация в VkTokenValidator.gs
 
-/**
- * Show VK Token Diagnosis - wrapper для серверной функции
- */
-function showVkTokenDiagnosis() {
-  try {
-    var creds = getClientCredentials();
-    
-    if (!creds.ok) {
-      SpreadsheetApp.getUi().alert('❌ Ошибка', 'Настройте credentials в меню\\n⚙️ Настройки → 🔐 Лицензия', SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Call server to diagnose VK token
-    var response = callServer({
-      action: 'vk_token_diagnosis',
-      email: creds.email,
-      token: creds.token
-    });
-    
-    if (response.ok && response.data) {
-      var diagnosis = response.data;
-      
-      var lines = [];
-      lines.push('🔍 ПОЛНАЯ ДИАГНОСТИКА VK_TOKEN');
-      lines.push('═'.repeat(45));
-      lines.push('');
-      lines.push('📊 СТАТУС:');
-      lines.push('• Существует: ' + (diagnosis.exists ? '✅' : '❌'));
-      lines.push('• Валидный: ' + (diagnosis.valid ? '✅' : '❌'));
-      lines.push('• Права wall: ' + (diagnosis.permissions && diagnosis.permissions.wall ? '✅' : '❌'));
-      lines.push('');
-      
-      if (diagnosis.errors && diagnosis.errors.length > 0) {
-        lines.push('❌ ОШИБКИ:');
-        diagnosis.errors.forEach(function(err) {
-          lines.push('• ' + err);
-        });
-        lines.push('');
-      }
-      
-      if (diagnosis.warnings && diagnosis.warnings.length > 0) {
-        lines.push('⚠️ ПРЕДУПРЕЖДЕНИЯ:');
-        diagnosis.warnings.forEach(function(warn) {
-          lines.push('• ' + warn);
-        });
-        lines.push('');
-      }
-      
-      if (diagnosis.recommendations && diagnosis.recommendations.length > 0) {
-        lines.push('💡 РЕКОМЕНДАЦИИ:');
-        diagnosis.recommendations.forEach(function(rec) {
-          lines.push('• ' + rec);
-        });
-      }
-      
-      SpreadsheetApp.getUi().alert('VK Token Diagnosis', lines.join('\\n'), SpreadsheetApp.getUi().ButtonSet.OK);
-      
-    } else {
-      SpreadsheetApp.getUi().alert('❌ Ошибка', 'Не удалось получить диагностику: ' + (response.error || 'Unknown error'), SpreadsheetApp.getUi().ButtonSet.OK);
-    }
-    
-  } catch (e) {
-    SpreadsheetApp.getUi().alert('❌ Ошибка диагностики', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Check VK Token Validity - wrapper для серверной функции
- */
-function checkVkTokenValidity() {
-  try {
-    var creds = getClientCredentials();
-    
-    if (!creds.ok) {
-      SpreadsheetApp.getUi().alert('❌ Ошибка', 'Настройте credentials в меню\\n⚙️ Настройки → 🔐 Лицензия', SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Call server to validate VK token
-    var response = callServer({
-      action: 'vk_token_validate',
-      email: creds.email,
-      token: creds.token
-    });
-    
-    if (response.ok && response.data) {
-      var result = response.data;
-      
-      var report = [];
-      report.push('🔍 ПРОВЕРКА VK_TOKEN');
-      report.push('═'.repeat(40));
-      report.push('');
-      
-      if (result.valid) {
-        report.push('✅ СТАТУС: ВАЛИДНЫЙ!');
-        report.push('');
-        report.push('📊 ДЕТАЛИ:');
-        report.push('• Токен: ' + (result.token || 'скрыт'));
-        if (result.details) {
-          report.push('• HTTP Code: ' + result.details.httpCode);
-          report.push('• Тестовый запрос: users.get(id=1)');
-          report.push('• Результат: ' + result.details.testUserName);
-        }
-        report.push('');
-        if (result.details && result.details.recommendation) {
-          report.push('🎉 ' + result.details.recommendation);
-        }
-        
-      } else {
-        report.push('❌ СТАТУС: НЕВАЛИДНЫЙ!');
-        report.push('');
-        report.push('🔴 ОШИБКА:');
-        report.push(result.error || 'Неизвестная ошибка');
-        report.push('');
-        
-        if (result.details) {
-          report.push('📋 ДЕТАЛИ:');
-          report.push('• Этап: ' + result.details.step);
-          if (result.details.httpCode) {
-            report.push('• HTTP Code: ' + result.details.httpCode);
-          }
-          if (result.details.vkError) {
-            report.push('• VK Error: ' + result.details.vkError.error_code + ' - ' + result.details.vkError.error_msg);
-          }
-          report.push('');
-          report.push('💡 РЕКОМЕНДАЦИЯ:');
-          report.push(result.details.recommendation || 'Проверьте настройки VK_TOKEN');
-        }
-      }
-      
-      SpreadsheetApp.getUi().alert('VK Token Validation', report.join('\\n'), SpreadsheetApp.getUi().ButtonSet.OK);
-      
-    } else {
-      SpreadsheetApp.getUi().alert('❌ Ошибка', 'Не удалось проверить токен: ' + (response.error || 'Unknown error'), SpreadsheetApp.getUi().ButtonSet.OK);
-    }
-    
-  } catch (e) {
-    SpreadsheetApp.getUi().alert('❌ Ошибка проверки', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
 
 /**
  * Smart Chain Functions

@@ -200,24 +200,7 @@ function checkRateLimit(token) {
   }
 }
 
-/**
- * Маскирование email для логов
- */
-function maskEmail(email) {
-  if (!email || typeof email !== 'string') return 'invalid';
-  
-  var parts = email.split('@');
-  if (parts.length !== 2) return 'invalid';
-  
-  var local = parts[0];
-  var domain = parts[1];
-  
-  if (local.length <= 3) {
-    return local.charAt(0) + '***@' + domain;
-  }
-  
-  return local.slice(0, 3) + '***@' + domain;
-}
+// maskEmail() теперь в shared/LoggingService.gs
 
 /**
  * Логирование лицензионной активности в серверную таблицу

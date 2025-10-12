@@ -414,15 +414,7 @@ function getVkParserUrl() {
   }
 }
 
-/**
- * Маскировка email для логов
- */
-function maskEmail(email) {
-  if (!email || typeof email !== 'string') return 'unknown';
-  var parts = email.split('@');
-  if (parts.length !== 2) return email.substring(0, 3) + '***';
-  return parts[0].substring(0, 2) + '***@' + parts[1];
-}
+// maskEmail() теперь в shared/LoggingService.gs
 
 /**
  * Вызов Gemini API (упрощенная версия для GM функций)
