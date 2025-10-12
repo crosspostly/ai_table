@@ -64,10 +64,13 @@ function handleWallGet_(owner, count) {
     
     // Преобразуем в формат совместимый с существующим кодом
     var posts = jsonResponse.response.items.map(function(post, index) {
+      var rawText = String(post.text || '').replace(/\\n/g, ' ');
+      var cleanText = removeEmojis(rawText);  // Удаляем эмодзи из текста поста
+      
       return {
         date: new Date(post.date * 1000).toLocaleString(),
         link: 'https://vk.com/wall' + post.owner_id + '_' + post.id,
-        text: String(post.text || '').replace(/\\n/g, ' '),
+        text: cleanText,
         number: index + 1,
         comments: (post.comments && post.comments.count) || 0,
         likes: (post.likes && post.likes.count) || 0

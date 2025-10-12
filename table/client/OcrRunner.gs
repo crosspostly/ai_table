@@ -222,8 +222,10 @@ function ocrRun() {
         addSystemLog('OCR row ' + r + ': inserted ' + (texts.length - 1) + ' additional rows', 'DEBUG', 'OCR');
       }
       
-      // Записываем все результаты
-      var matrix = texts.map(function(x) { return [x]; });
+      // Записываем все результаты (с удалением эмодзи)
+      var matrix = texts.map(function(x) { 
+        return [removeEmojis(x)];  // Удаляем эмодзи из расшифрованного текста
+      });
       sh.getRange(writeRow, 2, texts.length, 1).setValues(matrix);
       
       // Если записывали в ту же строку и добавили строки - сдвигаем счетчик
@@ -321,7 +323,8 @@ function gmOcrFromBlob_(blob, lang) {
     var part = cand && cand.content && cand.content.parts && cand.content.parts[0];
     var text = part && part.text ? part.text : '';
     
-    return text;
+    // Удаляем эмодзи из распознанного текста
+    return removeEmojis(text);
     
   } catch (e) {
     addSystemLog('gmOcrFromBlob_ error: ' + e.message, 'ERROR', 'OCR');
