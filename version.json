@@ -6,14 +6,14 @@
     "homepage": "https://aitables.com"
   },
   "version": {
-    "current": "2.0.1",
-    "previous": "2.0.0",
-    "releaseDate": "2024-10-09",
-    "updateTimestamp": "2024-10-09T15:30:00Z",
+    "current": "2.1.0",
+    "previous": "2.0.1",
+    "releaseDate": "2025-10-11",
+    "updateTimestamp": "DEPLOY_TIMESTAMP_PLACEHOLDER",
     "status": "stable"
   },
   "build": {
-    "number": "20241009",
+    "number": "DEPLOY_BUILD_NUMBER_PLACEHOLDER",
     "environment": "production",
     "platform": "Google Apps Script",
     "deployedBy": "GitHub Actions"

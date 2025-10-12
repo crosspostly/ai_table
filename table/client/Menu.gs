@@ -244,14 +244,16 @@ function configureSocialImport() {
 
 /**
  * Получение информации о версии для отображения в меню
+ * АВТОМАТИЧЕСКИ обновляется при каждом деплое через GitHub Actions
  */
 function getVersionDisplayInfo() {
   try {
     // Получаем версию
-    var version = getCurrentVersion ? getCurrentVersion() : '2.0.1';
+    var version = getCurrentVersion ? getCurrentVersion() : '2.1.0';
     
-    // ДАТА И ВРЕМЯ ДЕПЛОЯ (обновляется при деплое через GitHub Actions)
-    var deployTimestamp = '2024-10-11T14:30:00';  // Будет обновляться автоматически
+    // ДАТА И ВРЕМЯ ПОСЛЕДНЕГО ДЕПЛОЯ
+    // Обновляется автоматически через GitHub Actions
+    var deployTimestamp = 'DEPLOY_TIMESTAMP_PLACEHOLDER';
     
     // Форматируем дату и время
     var parts = deployTimestamp.split('T');
@@ -264,8 +266,13 @@ function getVersionDisplayInfo() {
     return 'v' + version + ' от ' + dateStr + ' ' + timeStr;
     
   } catch (error) {
-    // В случае ошибки возвращаем базовую информацию
-    return 'v2.1.0 от 11.10 14:30';
+    // В случае ошибки возвращаем текущее время
+    var now = new Date();
+    var dateStr = now.getDate().toString().padStart(2, '0') + '.' + 
+                  (now.getMonth() + 1).toString().padStart(2, '0');
+    var timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                  now.getMinutes().toString().padStart(2, '0');
+    return 'v' + version + ' от ' + dateStr + ' ' + timeStr;
   }
 }
 

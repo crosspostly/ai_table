@@ -225,31 +225,51 @@ function checkServerConnection() {
       };
     }
     
-    // Пробуем ping сервера
+    // Показываем используемый URL (для отладки)
+    var shortUrl = SERVER_API_URL.length > 70 ? 
+      SERVER_API_URL.substring(0, 67) + '...' : 
+      SERVER_API_URL;
+    
+    // Пробуем GET запрос (health check)
     try {
-      var response = UrlFetchApp.fetch(SERVER_API_URL + '?ping=1', {
+      var response = UrlFetchApp.fetch(SERVER_API_URL, {
         method: 'get',
         muteHttpExceptions: true,
         timeout: 10
       });
       
       var code = response.getResponseCode();
-      if (code === 200 || code === 404 || code === 405) {
-        // 200 = OK, 404/405 = сервер жив но нет ping endpoint (это нормально)
+      var responseText = response.getContentText();
+      
+      // Проверяем что сервер вернул JSON
+      var serverInfo = '';
+      try {
+        var json = JSON.parse(responseText);
+        if (json.service) {
+          serverInfo = '\\n✅ Сервис: ' + json.service;
+        }
+        if (json.version) {
+          serverInfo += '\\n✅ Версия: ' + json.version;
+        }
+      } catch (jsonError) {
+        // Не JSON ответ - возможно другой сервер
+      }
+      
+      if (code === 200) {
         return {
           ok: true,
-          message: '✅ Сервер доступен\\n✅ URL: ' + SERVER_API_URL.substring(0, 50) + '...\\n✅ Код ответа: ' + code
+          message: '✅ Сервер доступен\\n✅ URL: ' + shortUrl + '\\n✅ Код ответа: ' + code + serverInfo
         };
       } else {
         return {
           ok: false,
-          message: '⚠️ Сервер ответил с кодом ' + code + '\\n   URL: ' + SERVER_API_URL + '\\n   Может работать, но требует проверки'
+          message: '⚠️ Сервер ответил с кодом ' + code + '\\n   URL: ' + shortUrl + '\\n   Возможно сервер не поддерживает GET'
         };
       }
     } catch (fetchError) {
       return {
         ok: false,
-        message: '❌ Не удалось подключиться к серверу\\n   URL: ' + SERVER_API_URL + '\\n   Ошибка: ' + fetchError.message
+        message: '❌ Не удалось подключиться к серверу\\n   URL: ' + shortUrl + '\\n   Ошибка: ' + fetchError.message
       };
     }
     
@@ -290,34 +310,60 @@ function testVkApiCall(ss) {
       };
     }
     
-    // Пробуем минимальный запрос (1 пост)
-    var testRequest = {
-      action: 'social_import',
-      email: creds.email,
-      token: creds.token,
-      source: source,
-      count: 1
-    };
+    // УНИВЕРСАЛЬНЫЙ ЗАПРОС через сервер (поддерживает VK, Instagram, Telegram)
+    addSystemLog('VK Diagnostics: Testing universal social_import', 'INFO', 'DIAGNOSTICS');
     
     try {
+      var testRequest = {
+        action: 'social_import',
+        email: creds.email,
+        token: creds.token,
+        source: source,
+        count: 1,
+        platform: 'vk'  // Указываем VK явно для теста
+      };
+      
       var result = callServer(testRequest);
       
       if (result && result.ok && result.data) {
         return {
           ok: true,
-          message: '✅ Тестовый запрос успешен!\\n✅ Получено постов: ' + result.data.length + '\\n✅ Платформа: ' + (result.platform || 'unknown')
+          message: '✅ Тестовый запрос успешен!\\n✅ Получено постов: ' + result.data.length + '\\n✅ Платформа: ' + (result.platform || 'VK').toUpperCase() + '\\n✅ Формат: универсальный через сервер'
         };
-      } else {
-        var errorMsg = result && result.error ? result.error : 'Неизвестная ошибка';
+      } else if (result && result.error) {
+        // Детальный анализ ошибки
+        var errorMsg = result.error;
+        var recommendations = [];
+        
+        if (errorMsg.indexOf('VK_TOKEN') >= 0 || errorMsg.indexOf('access_token') >= 0) {
+          recommendations.push('→ Проверьте VK_TOKEN в Script Properties сервера');
+          recommendations.push('→ Токен должен иметь доступ к wall.get');
+        }
+        
+        if (errorMsg.indexOf('Invalid user') >= 0 || errorMsg.indexOf('not found') >= 0) {
+          recommendations.push('→ Проверьте что source корректен: ' + source);
+          recommendations.push('→ Для ID используйте формат: -123456');
+          recommendations.push('→ Для username используйте: durov');
+        }
+        
+        if (errorMsg.indexOf('укажите платформу') >= 0) {
+          recommendations.push('→ Укажите платформу в ячейке C1: "вк"');
+        }
+        
         return {
           ok: false,
-          message: '❌ Сервер вернул ошибку:\\n   ' + errorMsg + '\\n\\n   💡 ЭТО КЛЮЧЕВАЯ ИНФОРМАЦИЯ!'
+          message: '❌ Сервер вернул ошибку:\\n   ' + errorMsg + '\\n\\n💡 Рекомендации:\\n' + recommendations.join('\\n')
+        };
+      } else {
+        return {
+          ok: false,
+          message: '❌ Неожиданный ответ сервера\\n   Получено: ' + JSON.stringify(result).substring(0, 100) + '...'
         };
       }
     } catch (callError) {
       return {
         ok: false,
-        message: '❌ Ошибка при вызове сервера:\\n   ' + callError.message + '\\n\\n   💡 Проверьте логи сервера'
+        message: '❌ Ошибка при вызове сервера:\\n   ' + callError.message + '\\n\\n   💡 Проверьте что сервер доступен\\n   💡 Проверьте ServerEndpoints.gs задеплоен'
       };
     }
     
@@ -404,9 +450,20 @@ function getRecommendations(issues) {
       recs.push('→ Убедитесь что сервер задеплоен');
     }
     if (issue.indexOf('VK API') >= 0) {
-      recs.push('→ Проверьте логи сервера (он получает запрос?)');
-      recs.push('→ Возможно проблема в VK_TOKEN на сервере');
-      recs.push('→ Или VK API временно недоступен');
+      recs.push('→ ОШИБКА UNKNOWN_ACTION означает:');
+      recs.push('   Сервер не распознаёт action="social_import"');
+      recs.push('');
+      recs.push('→ ПРИЧИНА:');
+      recs.push('   SERVER_API_URL указывает на ДРУГОЙ скрипт,');
+      recs.push('   который НЕ ИМЕЕТ нового кода ServerEndpoints.gs');
+      recs.push('');
+      recs.push('→ РЕШЕНИЕ:');
+      recs.push('   1. Задеплойте текущий код в НОВЫЙ скрипт');
+      recs.push('   2. Обновите SERVER_API_URL в Constants.gs');
+      recs.push('   3. Или обновите код СТАРОГО сервера');
+      recs.push('');
+      recs.push('→ VK_TOKEN проверьте в Script Properties');
+      recs.push('   того скрипта, на который указывает SERVER_API_URL');
     }
   });
   

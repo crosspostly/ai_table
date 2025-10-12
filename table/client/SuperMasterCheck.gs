@@ -859,12 +859,23 @@ function getRecommendations(testName, error, result) {
   
   // VK API
   else if (testName.includes('VK') || testName.includes('vk')) {
-    if (error && error.includes('VK_TOKEN')) {
-      recommendations = '🔧 Решение: Установите VK_TOKEN на сервере через Script Properties. Получите токен на https://vk.com/dev';
+    if (error && (error.includes('UNKNOWN_ACTION') || error.includes('Unknown action'))) {
+      recommendations = '❌ ПРОБЛЕМА: Сервер не распознаёт action=\"social_import\"\\n' +
+        '🔧 ПРИЧИНА: SERVER_API_URL указывает на ДРУГОЙ скрипт без нового кода\\n' +
+        '\\n' +
+        '🔧 РЕШЕНИЕ:\\n' +
+        '1. Откройте скрипт по адресу из SERVER_API_URL\\n' +
+        '2. Скопируйте туда ВСЕ файлы из table/server/\\n' +
+        '3. Добавьте VK_TOKEN в Script Properties\\n' +
+        '4. Сделайте новый Deploy\\n' +
+        '\\n' +
+        '💡 Используйте: Меню → DEV → Диагностика VK импорта';
+    } else if (error && error.includes('VK_TOKEN')) {
+      recommendations = '🔧 Решение: Установите VK_TOKEN на СЕРВЕРЕ (не клиенте) через Script Properties. Получите токен на https://vk.com/dev';
     } else if (error && error.includes('null') || error.includes('Error: null')) {
       recommendations = '🔧 Решение: VK_TOKEN некорректен или истёк. Обновите токен на https://vk.com/dev (нужны права: wall,offline)';
     } else {
-      recommendations = '🔧 Решение: Проверьте что VK_TOKEN настроен на СЕРВЕРЕ (не в клиенте) и имеет права: wall,offline';
+      recommendations = '🔧 Решение: Запустите Меню → DEV → Диагностика VK импорта для точной диагностики. Ошибка: ' + (error || 'неизвестная');
     }
   }
   

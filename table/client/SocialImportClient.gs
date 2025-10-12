@@ -65,35 +65,40 @@ function importSocialPostsClient() {
       'Это может занять до 2 минут...', 
       ui.ButtonSet.OK);
     
-    // Вызов серверного API (действие social_import на сервере)
+    // УНИВЕРСАЛЬНЫЙ ИМПОРТ через сервер (поддерживает VK, Instagram, Telegram)
+    // Сервер автоматически определяет платформу по source или использует platform
     var serverRequest = {
       action: 'social_import',
       email: credentials.email,
       token: credentials.token,
       source: source,
-      count: count
+      count: count,
+      platform: platform || ''  // Передаём платформу если указана
     };
+    
+    addSystemLog('Universal social import request: source=' + source + ', count=' + count + ', platform=' + (platform || 'auto'), 'INFO', 'SOCIAL');
     
     var result = callServer(serverRequest);
     
     if (result && result.ok && result.data && result.data.length) {
       // Записываем результаты в лист
-      writeSocialPostsToSheet(ss, result.data, result.platform || 'social');
+      var detectedPlatform = result.platform || 'social';
+      writeSocialPostsToSheet(ss, result.data, detectedPlatform);
       
       var summary = '✅ Импорт завершён успешно!\n\n' +
-                   'Платформа: ' + (result.platform || 'unknown').toUpperCase() + '\n' +
+                   'Платформа: ' + detectedPlatform.toUpperCase() + '\n' +
                    'Импортировано: ' + result.data.length + ' постов\n' +
                    'Источник: ' + source + '\n\n' +
-                   'Данные записаны в активный лист.';
+                   'Данные записаны в лист "посты".';
       
-      addSystemLog('Social import success: platform=' + result.platform + ', posts=' + result.data.length, 'INFO', 'SOCIAL');
+      addSystemLog('Social import success: platform=' + detectedPlatform + ', posts=' + result.data.length, 'INFO', 'SOCIAL');
       ui.alert('✅ Успех!', summary, ui.ButtonSet.OK);
       
     } else {
       var errorMsg = result && result.error ? result.error : 'Неизвестная ошибка сервера';
       addSystemLog('Social import failed: ' + errorMsg, 'ERROR', 'SOCIAL');
       ui.alert('❌ Ошибка импорта', 
-        'Не удалось импортировать посты:\n' + errorMsg, 
+        'Не удалось импортировать посты:\n' + errorMsg + '\n\n💡 Проверьте:\n• Доступность источника\n• Правильность ссылки\n• Указание платформы в C1 (для @username и ID)', 
         ui.ButtonSet.OK);
     }
     
