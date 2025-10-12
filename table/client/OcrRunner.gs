@@ -3,6 +3,23 @@
  * АККУРАТНО восстановлено со старой версии
  */
 
+/**
+ * Удаляет эмодзи и смайлики из текста (локальная копия)
+ * @param {string} text - Исходный текст
+ * @return {string} - Текст без эмодзи
+ */
+function removeEmojis(text) {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+  
+  var emojiPattern = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2300-\u23FF]|[\u2B50]|[\uFE00-\uFE0F]|[\u200D]|[\u20E3]/g;
+  var cleaned = text.replace(emojiPattern, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
 // Constants
 var OCR2_BATCH_LIMIT = 50;  // Максимум изображений за прогон
 var OCR2_CHUNK_SIZE = 8;    // Размер чанка для batch OCR
@@ -222,8 +239,10 @@ function ocrRun() {
         addSystemLog('OCR row ' + r + ': inserted ' + (texts.length - 1) + ' additional rows', 'DEBUG', 'OCR');
       }
       
-      // Записываем все результаты
-      var matrix = texts.map(function(x) { return [x]; });
+      // Записываем все результаты (с удалением эмодзи)
+      var matrix = texts.map(function(x) { 
+        return [removeEmojis(x)];  // Удаляем эмодзи из расшифрованного текста
+      });
       sh.getRange(writeRow, 2, texts.length, 1).setValues(matrix);
       
       // Если записывали в ту же строку и добавили строки - сдвигаем счетчик
@@ -321,7 +340,8 @@ function gmOcrFromBlob_(blob, lang) {
     var part = cand && cand.content && cand.content.parts && cand.content.parts[0];
     var text = part && part.text ? part.text : '';
     
-    return text;
+    // Удаляем эмодзи из распознанного текста
+    return removeEmojis(text);
     
   } catch (e) {
     addSystemLog('gmOcrFromBlob_ error: ' + e.message, 'ERROR', 'OCR');
