@@ -761,13 +761,24 @@ function ensureTestSheetSuper() {
       testSheet.setFrozenRows(1);
     } else {
       // Если лист уже существует, обновляем заголовки если нужно
-      var existingHeaders = testSheet.getRange(1, 1, 1, testSheet.getLastColumn()).getValues()[0];
-      if (existingHeaders.length < 10) {
-        // Добавляем недостающие колонки
+      var lastColumn = testSheet.getLastColumn();
+      
+      // ИСПРАВЛЕНО: проверяем что есть хотя бы 1 колонка (иначе getRange выдаст ошибку)
+      if (lastColumn === 0) {
+        // Лист пустой - создаём заголовки
         testSheet.getRange(1, 1, 1, 10).setValues([[
           'Время', 'Секция', 'Тест', 'Статус', 'Результат', 'Детали', 'Ошибка', 'Stack Trace', 'Trace ID', 'Рекомендации 🔧'
         ]]);
         testSheet.setColumnWidth(10, 450);
+      } else {
+        var existingHeaders = testSheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+        if (existingHeaders.length < 10) {
+          // Добавляем недостающие колонки
+          testSheet.getRange(1, 1, 1, 10).setValues([[
+            'Время', 'Секция', 'Тест', 'Статус', 'Результат', 'Детали', 'Ошибка', 'Stack Trace', 'Trace ID', 'Рекомендации 🔧'
+          ]]);
+          testSheet.setColumnWidth(10, 450);
+        }
       }
     }
     

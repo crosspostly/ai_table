@@ -75,32 +75,23 @@ function createButtonInCell(sheet, cellA1, buttonText, scriptFunction) {
 }
 
 /**
- * УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ИМПОРТА
- * Эта функция вызывается кнопкой и определяет, что импортировать
+ * Wrapper функция для кнопки импорта
+ * ВАЖНО: Кнопка в A1 вызывает эту функцию
+ * ПРЯМОЙ ВЫЗОВ VK ИМПОРТА - БЕЗ УНИВЕРСАЛЬНОГО
  */
 function importSocialPosts() {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var ui = SpreadsheetApp.getUi();
-    
-    // Проверяем лист "Параметры"
-    var paramsSheet = ss.getSheetByName('Параметры');
-    if (paramsSheet) {
-      // Если есть лист Параметры - используем его настройки
-      var source = paramsSheet.getRange('B1').getValue();
-      var count = paramsSheet.getRange('B2').getValue();
-      var platform = paramsSheet.getRange('C1').getValue();
-      
-      if (source) {
-        // Вызываем импорт через клиент
-        importSocialPostsClient();
-        return;
-      }
+    // ПРЯМОЙ ВЫЗОВ VK ИМПОРТА
+    if (typeof importVkPosts === 'function') {
+      importVkPosts(); 
+    } else {
+      SpreadsheetApp.getUi().alert(
+        '❌ Ошибка',
+        'Функция VK импорта не найдена. Попробуйте через меню:\n' +
+        '🤖 Table AI → 📱 Социальные сети → 📱 VK импорт',
+        SpreadsheetApp.getUi().ButtonSet.OK
+      );
     }
-    
-    // Если нет параметров - показываем диалог выбора
-    showImportDialog();
-    
   } catch (error) {
     SpreadsheetApp.getUi().alert(
       '❌ Ошибка импорта',
@@ -214,8 +205,8 @@ function importWithParams(source, count, platform) {
   paramsSheet.getRange('B2').setValue(count);
   paramsSheet.getRange('C1').setValue(platform || '');
   
-  // Вызываем импорт
-  importSocialPostsClient();
+  // Вызываем VK импорт
+  importVkPosts();
 }
 
 /**
@@ -279,9 +270,3 @@ function createAllButtons() {
   addSystemLog('Создано кнопок: ' + created.length, 'INFO', 'AUTO_BUTTON');
 }
 
-/**
- * Алиас для обратной совместимости
- */
-function importVkPosts() {
-  importSocialPosts();
-}

@@ -5,108 +5,84 @@
  */
 
 /**
- * Универсальный импорт постов из социальных сетей (клиентский интерфейс)
- * ВОССТАНОВЛЕНО ИЗ old/Main.txt - РАБОЧАЯ ВЕРСИЯ С ЛИСТОМ "Параметры"
+ * ОРИГИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ ИЗ old/Main.txt
+ * Импорт VK постов через Google Apps Script парсер
+ * Использует VK_PARSER_URL с параметрами owner и count
  */
-function importSocialPostsClient() {
-  var ui = SpreadsheetApp.getUi();
+function importVkPosts() {
+  // Используем константу VK_PARSER_URL как в старой версии
+  var VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbzttbqz16EmmcXbEYCuYhNlXkCxAnCG77phspFL1_rTCi4xVqoorByJAPa4dI4iwT8/exec';
+  
+  addSystemLog('→ Импорт VK-постов с фильтрацией', 'INFO');
+  
   var ss = SpreadsheetApp.getActive();
+  var params = ss.getSheetByName('Параметры');
   
-  // Проверяем credentials
-  var credentials = getClientCredentials();
-  if (!credentials.ok) {
-    ui.alert('Ошибка настроек', 
-      'Настройте credentials: ' + credentials.error + '\n\n' +
-      'Меню: 🤖 Table AI → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ', 
-      ui.ButtonSet.OK);
-    return;
+  if (!params) { 
+    addSystemLog('❌ Нет листа "Параметры"', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Лист "Параметры" не найден!'); 
+    return; 
   }
   
-  // ЧИТАЕМ ПАРАМЕТРЫ ИЗ ЛИСТА "Параметры" (как в old/Main.txt)
-  var paramsSheet = ss.getSheetByName('Параметры');
-  if (!paramsSheet) {
-    ui.alert('❌ Лист "Параметры" не найден', 
-      'Создайте лист "Параметры" с настройками:\n\n' +
-      'B1 - Источник (URL или username)\n' +
-      'B2 - Количество постов\n' +
-      'C1 - Платформа (опционально)', 
-      ui.ButtonSet.OK);
-    addSystemLog('Social import failed: no Параметры sheet', 'ERROR', 'SOCIAL');
-    return;
+  var owner = params.getRange('B1').getValue();
+  var count = params.getRange('B2').getValue();
+  
+  if (!owner || !count) { 
+    addSystemLog('❌ Не указаны owner или count', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Введите owner и count на листе "Параметры"'); 
+    return; 
   }
   
-  // Читаем параметры из листа (как в old/Main.txt)
-  var source = paramsSheet.getRange('B1').getValue();
-  var count = paramsSheet.getRange('B2').getValue();
-  var platform = paramsSheet.getRange('C1').getValue();
-  
-  // Валидация
-  if (!source || !count) {
-    ui.alert('❌ Не указаны параметры импорта', 
-      'Заполните на листе "Параметры":\n\n' +
-      'B1 - Источник (например: https://vk.com/durov)\n' +
-      'B2 - Количество постов (например: 20)', 
-      ui.ButtonSet.OK);
-    addSystemLog('Social import failed: missing source or count in Параметры', 'ERROR', 'SOCIAL');
-    return;
-  }
-  
-  // Преобразуем count в число
-  count = parseInt(count) || 10;
-  if (count < 1) count = 1;
-  if (count > 100) count = 100;
-  
-  addSystemLog('Social import start from Параметры: source=' + source + ', count=' + count + ', platform=' + (platform || 'auto'), 'INFO', 'SOCIAL');
+  // Формируем URL точно как в старой версии
+  var url = VK_PARSER_URL + '?owner=' + encodeURIComponent(owner) + '&count=' + encodeURIComponent(count);
   
   try {
-    // Показываем процесс
-    ui.alert('🚀 Импорт запущен', 
-      'Импорт ' + count + ' постов из:\n' + source + '\n\n' +
-      'Это может занять до 2 минут...', 
-      ui.ButtonSet.OK);
-    
-    // УНИВЕРСАЛЬНЫЙ ИМПОРТ через сервер (поддерживает VK, Instagram, Telegram)
-    // Сервер автоматически определяет платформу по source или использует platform
-    var serverRequest = {
-      action: 'social_import',
-      email: credentials.email,
-      token: credentials.token,
-      source: source,
-      count: count,
-      platform: platform || ''  // Передаём платформу если указана
-    };
-    
-    addSystemLog('Universal social import request: source=' + source + ', count=' + count + ', platform=' + (platform || 'auto'), 'INFO', 'SOCIAL');
-    
-    var result = callServer(serverRequest);
-    
-    if (result && result.ok && result.data && result.data.length) {
-      // Записываем результаты в лист
-      var detectedPlatform = result.platform || 'social';
-      writeSocialPostsToSheet(ss, result.data, detectedPlatform);
-      
-      var summary = '✅ Импорт завершён успешно!\n\n' +
-                   'Платформа: ' + detectedPlatform.toUpperCase() + '\n' +
-                   'Импортировано: ' + result.data.length + ' постов\n' +
-                   'Источник: ' + source + '\n\n' +
-                   'Данные записаны в лист "посты".';
-      
-      addSystemLog('Social import success: platform=' + detectedPlatform + ', posts=' + result.data.length, 'INFO', 'SOCIAL');
-      ui.alert('✅ Успех!', summary, ui.ButtonSet.OK);
-      
-    } else {
-      var errorMsg = result && result.error ? result.error : 'Неизвестная ошибка сервера';
-      addSystemLog('Social import failed: ' + errorMsg, 'ERROR', 'SOCIAL');
-      ui.alert('❌ Ошибка импорта', 
-        'Не удалось импортировать посты:\n' + errorMsg + '\n\n💡 Проверьте:\n• Доступность источника\n• Правильность ссылки\n• Указание платформы в C1 (для @username и ID)', 
-        ui.ButtonSet.OK);
-    }
-    
+    var resp = UrlFetchApp.fetch(url);
+    var arr = JSON.parse(resp.getContentText());
   } catch (e) {
-    var error = 'Исключение при импорте: ' + e.message;
-    addSystemLog(error, 'ERROR', 'SOCIAL');
-    ui.alert('❌ Критическая ошибка', error, ui.ButtonSet.OK);
+    addSystemLog('❌ Ошибка запроса VK: ' + e.message, 'ERROR');
+    SpreadsheetApp.getUi().alert('Ошибка запроса VK Parser: ' + e);
+    return;
   }
+  
+  if (!Array.isArray(arr)) { 
+    addSystemLog('❌ Неверный массив от VK', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Неверный формат данных от VK Parser'); 
+    return; 
+  }
+
+  var headers = [
+    'Дата', 'Ссылка на пост', 'Текст поста', 'Номер поста',
+    'Стоп-слова', 'Отфильтрованные посты', 'Новый номер',
+    'Позитивные слова', 'Посты с позитивными словами', 'Новый номер (позитивные)'
+  ];
+  
+  var out = [headers];
+  
+  arr.forEach(function(o, i) {
+    var number = o.number !== undefined ? o.number : i + 1;
+    out.push([o.date, o.link, o.text, number, '', '', '', '', '', '']);
+  });
+
+  var sheet = ss.getSheetByName('посты');
+  
+  if (!sheet) { 
+    addSystemLog('❌ Лист "посты" не найден!', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Создайте лист "посты".'); 
+    return; 
+  }
+
+  sheet.clear();
+  sheet.getRange(1, 1, out.length, headers.length).setValues(out);
+  
+  // Применяем форматирование
+  applyUniformFormatting(sheet);
+  
+  // Создаем формулы фильтрации
+  createStopWordsFormulas(sheet, out.length);
+  
+  addSystemLog('✅ Импортировано ' + (out.length-1) + ' постов', 'INFO');
+  SpreadsheetApp.getUi().alert('Импорт завершён: ' + (out.length - 1) + ' постов. Формулы фильтрации добавлены.');
 }
 
 /**
@@ -163,9 +139,49 @@ function writeSocialPostsToSheet(ss, posts, platform) {
 }
 
 /**
- * Импорт постов VK (алиас для универсального импорта)
- * ВОССТАНОВЛЕНО ИЗ old/Main.txt
+ * Создание формул фильтрации по стоп-словам и позитивным словам
+ * ТОЧНАЯ КОПИЯ ИЗ old/Main.txt
  */
-function importVkPostsClient() {
-  importSocialPostsClient();
+function createStopWordsFormulas(sheet, totalRows) {
+  try {
+    addSystemLog('→ Создание формул фильтрации', 'INFO');
+    var stopWordsRange = '$E$2:$E$100';
+    for (var row = 2; row <= totalRows; row++) {
+      var formulaF = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + stopWordsRange + ', C' + row + ')))*(' + stopWordsRange + '<>"")) > 0, "", C' + row + ')';
+      sheet.getRange(row, 6).setFormula(formulaF); // F
+      var formulaG = '=IF(F' + row + '<>"", COUNTA(F$2:F' + row + '), "")';
+      sheet.getRange(row, 7).setFormula(formulaG); // G
+    }
+    var positiveWordsRange = '$H$2:$H$100';
+    for (var row = 2; row <= totalRows; row++) {
+      var formulaI = '=IF(SUMPRODUCT(--(ISNUMBER(SEARCH(' + positiveWordsRange + ', C' + row + ')))*(' + positiveWordsRange + '<>"")) > 0, C' + row + ', "")';
+      sheet.getRange(row, 9).setFormula(formulaI); // I
+      var formulaJ = '=IF(I' + row + '<>"", COUNTA(I$2:I' + row + '), "")';
+      sheet.getRange(row, 10).setFormula(formulaJ); // J
+    }
+    sheet.getRange(1, 5, 1, 3).setFontWeight('bold').setBackground('#FFF2CC');
+    sheet.getRange(1, 8, 1, 3).setFontWeight('bold').setBackground('#D9EAD3');
+    sheet.autoResizeColumns(5, 6);
+    addSystemLog('✅ Формулы фильтрации созданы', 'INFO');
+  } catch (e) {
+    addSystemLog('❌ Ошибка создания формул: ' + e.message, 'ERROR');
+    SpreadsheetApp.getUi().alert('Ошибка создания формул: ' + e.message);
+  }
+}
+
+/**
+ * Применение единообразного форматирования к листу
+ * ТОЧНАЯ КОПИЯ ИЗ old/Main.txt
+ */
+function applyUniformFormatting(sheet) {
+  try {
+    var range = sheet.getDataRange();
+    range.setFontFamily('Arial')
+         .setFontSize(10)
+         .setVerticalAlignment('middle')
+         .setHorizontalAlignment('left');
+    addSystemLog('✅ Применено форматирование к листу ' + sheet.getName(), 'DEBUG');
+  } catch (e) {
+    addSystemLog('⚠️ Ошибка форматирования листа ' + sheet.getName() + ': ' + e.message, 'WARN');
+  }
 }

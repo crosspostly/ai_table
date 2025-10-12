@@ -99,7 +99,14 @@ function onOpen() {
   
   // АВТОМАТИЧЕСКИ СОЗДАЁМ КНОПКИ
   try {
-    createButtonsOnOpen();
+    // Создаём кнопку импорта если есть лист "посты"
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var postsSheet = ss.getSheetByName('посты');
+    if (postsSheet) {
+      if (typeof createButtonInCell === 'function') {
+        createButtonInCell(postsSheet, 'A1', 'VK Импорт', 'importVkPosts');
+      }
+    }
   } catch (e) {
     console.log('Не удалось создать кнопки: ' + e.message);
   }
