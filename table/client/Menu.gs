@@ -463,9 +463,49 @@ function showCurrentVersionInfo() {
   }
 }
 
+
+
 /**
  * ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (перенесены из MissingFunctions.gs)
  */
+
+/**
+ * Настроить цепочку
+ */
+function configureSmartChain() {
+  var ui = SpreadsheetApp.getUi();
+  
+  var instructions = [];
+  instructions.push('🔧 НАСТРОЙКА УМНОЙ ЦЕПОЧКИ');
+  instructions.push('='.repeat(35));
+  instructions.push('');
+  instructions.push('📋 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:');
+  instructions.push('');
+  instructions.push('1️⃣ СТРОКА 1 - Заголовки колонок:');
+  instructions.push('   A1: Исходный текст');
+  instructions.push('   B1: Обработанный');
+  instructions.push('   C1: Итоговый');
+  instructions.push('');
+  instructions.push('2️⃣ СТРОКА 2 - Промпты для обработки:');
+  instructions.push('   A2: (пусто - исходные данные)');
+  instructions.push('   B2: Переведи на английский: {{prev}}');
+  instructions.push('   C2: Сделай краткое резюме: {{prev}}');
+  instructions.push('');
+  instructions.push('3️⃣ СТРОКА 3+ - Данные для обработки:');
+  instructions.push('   A3: Привет, как дела?');
+  instructions.push('   B3: (заполнится автоматически)');
+  instructions.push('   C3: (заполнится автоматически)');
+  instructions.push('');
+  instructions.push('🔗 ПЕРЕМЕННЫЕ:');
+  instructions.push('• {{prev}} - значение из предыдущей колонки');
+  instructions.push('• Можно использовать в любом промпте');
+  instructions.push('');
+  instructions.push('⚡ ЗАПУСК:');
+  instructions.push('• 📊 Анализ данных → 🚀 Запустить анализ');
+  instructions.push('• Или выберите строку и нажмите ⚡ Обновить ячейку');
+  
+  ui.alert('Настройка умной цепочки', instructions.join('\n'), ui.ButtonSet.OK);
+}
 
 /**
  * НЕДОСТАЮЩИЕ ФУНКЦИИ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
@@ -603,226 +643,6 @@ function checkSystemStatus() {
   ui.alert('📊 System Status', statusReport.join('\n'), ui.ButtonSet.OK);
   addSystemLog('System status checked', 'INFO', 'SYSTEM');
 }
-
-
-/**
- * Запустить все комплексные тесты
- */
-function runComprehensiveTests() {
-  try {
-    addSystemLog('🚀 ЗАПУСК КОМПЛЕКСНЫХ ТЕСТОВ', 'INFO', 'TESTING');
-    
-    // Запускаем автоматическую проверку функций
-    var functionReport = validateAllSystemFunctions();
-    
-    // Запускаем быстрый тест если есть
-    if (typeof quickTest === 'function') {
-      quickTest();
-    }
-    
-    // Показываем итоговый отчет
-    var ui = SpreadsheetApp.getUi();
-    var message = '🚀 КОМПЛЕКСНЫЕ ТЕСТЫ ЗАВЕРШЕНЫ\n\n';
-    message += '📊 Проверка функций: ' + functionReport.summary.existing + '/' + functionReport.summary.total + ' ✅\n';
-    message += '📈 Покрытие: ' + functionReport.summary.percentage + '%\n\n';
-    
-    if (functionReport.summary.missing > 0) {
-      message += '⚠️ Найдены проблемы: ' + functionReport.summary.missing + ' отсутствующих функций\n';
-      message += '🔧 Автоматически созданы заглушки\n\n';
-    }
-    
-    message += '📋 Подробные результаты смотрите в логах\n';
-    message += '🔍 Меню → 📊 Логи и Мониторинг → 📊 Открыть лист "Логи"';
-    
-    ui.alert('Комплексные тесты', message, ui.ButtonSet.OK);
-    
-    addSystemLog('✅ КОМПЛЕКСНЫЕ ТЕСТЫ ЗАВЕРШЕНЫ УСПЕШНО', 'INFO', 'TESTING');
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА КОМПЛЕКСНЫХ ТЕСТОВ: ' + error.message, 'ERROR', 'TESTING');
-    SpreadsheetApp.getUi().alert('Ошибка тестирования', 'Ошибка при запуске тестов: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-
-/**
- * Показать статистику логов
- */
-function showLogStatistics() {
-  try {
-    addSystemLog('📋 ПОЛУЧЕНИЕ СТАТИСТИКИ ЛОГОВ', 'INFO', 'LOG_STATS');
-    
-    var ui = SpreadsheetApp.getUi();
-    
-    try {
-      var ss = SpreadsheetApp.openById(SHEETS_LOGGER_CONFIG.spreadsheetId);
-      var logsSheet = ss.getSheetByName('Логи');
-      
-      if (!logsSheet) {
-        throw new Error('Лист "Логи" не найден');
-      }
-      
-      var data = logsSheet.getDataRange().getValues();
-      var totalLogs = data.length - 1; // Исключаем заголовок
-      
-      // Подсчитываем статистику
-      var stats = {
-        INFO: 0,
-        ERROR: 0,
-        WARN: 0,
-        DEBUG: 0,
-        other: 0
-      };
-      
-      var categories = {};
-      
-      for (var i = 1; i < data.length; i++) {
-        var level = data[i][1] || 'unknown';
-        var category = data[i][2] || 'uncategorized';
-        
-        if (stats.hasOwnProperty(level)) {
-          stats[level]++;
-        } else {
-          stats.other++;
-        }
-        
-        if (!categories[category]) {
-          categories[category] = 0;
-        }
-        categories[category]++;
-      }
-      
-      var report = '📋 СТАТИСТИКА ЛОГОВ\n\n';
-      report += '📊 Общее количество: ' + totalLogs + '\n\n';
-      report += '📈 По уровням:\n';
-      report += '• INFO: ' + stats.INFO + '\n';
-      report += '• ERROR: ' + stats.ERROR + ' ❌\n';
-      report += '• WARN: ' + stats.WARN + ' ⚠️\n';
-      report += '• DEBUG: ' + stats.DEBUG + '\n';
-      report += '• Другие: ' + stats.other + '\n\n';
-      
-      report += '🏷️ Топ категории:\n';
-      var sortedCategories = Object.keys(categories).sort(function(a, b) {
-        return categories[b] - categories[a];
-      });
-      
-      for (var i = 0; i < Math.min(5, sortedCategories.length); i++) {
-        var cat = sortedCategories[i];
-        report += '• ' + cat + ': ' + categories[cat] + '\n';
-      }
-      
-      ui.alert('Статистика логов', report, ui.ButtonSet.OK);
-      
-    } catch (logError) {
-      throw new Error('Не удалось получить статистику: ' + logError.message);
-    }
-    
-  } catch (error) {
-    addSystemLog('❌ ОШИБКА СТАТИСТИКИ ЛОГОВ: ' + error.message, 'ERROR', 'LOG_STATS');
-    SpreadsheetApp.getUi().alert('Ошибка', 'Не удалось получить статистику логов: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-
-/**
- * Настроить цепочку
- */
-function configureSmartChain() {
-  var ui = SpreadsheetApp.getUi();
-  
-  var instructions = [];
-  instructions.push('🔧 НАСТРОЙКА УМНОЙ ЦЕПОЧКИ');
-  instructions.push('='.repeat(35));
-  instructions.push('');
-  instructions.push('📋 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:');
-  instructions.push('');
-  instructions.push('1️⃣ СТРОКА 1 - Заголовки колонок:');
-  instructions.push('   A1: Исходный текст');
-  instructions.push('   B1: Обработанный');
-  instructions.push('   C1: Итоговый');
-  instructions.push('');
-  instructions.push('2️⃣ СТРОКА 2 - Промпты для обработки:');
-  instructions.push('   A2: (пусто - исходные данные)');
-  instructions.push('   B2: Переведи на английский: {{prev}}');
-  instructions.push('   C2: Сделай краткое резюме: {{prev}}');
-  instructions.push('');
-  instructions.push('3️⃣ СТРОКА 3+ - Данные для обработки:');
-  instructions.push('   A3: Привет, как дела?');
-  instructions.push('   B3: (заполнится автоматически)');
-  instructions.push('   C3: (заполнится автоматически)');
-  instructions.push('');
-  instructions.push('🔗 ПЕРЕМЕННЫЕ:');
-  instructions.push('• {{prev}} - значение из предыдущей колонки');
-  instructions.push('• Можно использовать в любом промпте');
-  instructions.push('');
-  instructions.push('⚡ ЗАПУСК:');
-  instructions.push('• 📊 Анализ данных → 🚀 Запустить анализ');
-  instructions.push('• Или выберите строку и нажмите ⚡ Обновить ячейку');
-  
-  ui.alert('Настройка умной цепочки', instructions.join('\n'), ui.ButtonSet.OK);
-}
-
-/**
- * НЕДОСТАЮЩИЕ ФУНКЦИИ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
- * Только уникальные функции без дублей
- * 
- * УДАЛЕНЫ заглушки (есть реализация в других файлах):
- *   - openWebInterface() → ClientUtilities.gs:611
- *   - analyzeLogsAndFixErrors() → GoogleSheetsLogger.gs
- *   - forceFlushAllLogs() → GoogleSheetsLogger.gs
- *   - openLogsSheet() → Menu.gs:289
- *   - configureSocialImport() → Menu.gs
- *   - callServerDevFunction() → Menu.gs
- *   - callServerTestFunction() → Menu.gs
- *   - showDeveloperDashboard() → Menu.gs
- *   - showVersionInstructions() → Menu.gs
- *   - showCurrentVersionInfo() → Menu.gs
- *   - importInstagramPosts() → SocialImportService.gs
- *   - importTelegramPosts() → TelegramImportService.gs
- *   - runChainCurrentRow() → ClientUtilities.gs
- *   - manualAnalyzeLogsAndFixErrors() → обертка удалена
- */
-
-/**
- * НЕДОСТАЮЩИЕ ФУНКЦИИ ИЗ МЕНЮ
- * Автоматически созданы после анализа
- */
-
-/**
- * Режим разработчика с инструкциями
- */
-function toggleDeveloperModeWithHelp() {
-  var ui = SpreadsheetApp.getUi();
-  var props = PropertiesService.getScriptProperties();
-  var isDevMode = props.getProperty('DEVELOPER_MODE') === 'true';
-  
-  var instruction = '🔧 РЕЖИМ РАЗРАБОТЧИКА\n\n';
-  instruction += 'Включает дополнительную диагностическую информацию:\n\n';
-  instruction += '✅ ЧТО ДОСТУПНО В DEV РЕЖИМЕ:\n';
-  instruction += '• Детальные логи операций\n';
-  instruction += '• Performance metrics (время выполнения)\n';
-  instruction += '• Cache statistics\n';
-  instruction += '• API response timing\n';
-  instruction += '• Error stack traces\n';
-  instruction += '• Memory usage tracking\n\n';
-  instruction += '📊 Текущий статус: ' + (isDevMode ? '✅ ВКЛЮЧЁН' : '❌ ВЫКЛЮЧЕН') + '\n\n';
-  instruction += 'Хотите ' + (isDevMode ? 'ВЫКЛЮЧИТЬ' : 'ВКЛЮЧИТЬ') + ' режим разработчика?';
-
-  var result = ui.alert('🔧 Developer Mode', instruction, ui.ButtonSet.YES_NO);
-  
-  if (result === ui.Button.YES) {
-    var newMode = !isDevMode;
-    props.setProperty('DEVELOPER_MODE', newMode.toString());
-    
-    var message = newMode ? 
-      '✅ Режим разработчика ВКЛЮЧЁН\n\nТеперь доступны:\n• Детальные логи в меню\n• Performance metrics\n• Расширенная диагностика' :
-      '❌ Режим разработчика ВЫКЛЮЧЕН\n\nВозвращён к стандартному режиму.';
-    
-    addSystemLog('🔧 Developer mode ' + (newMode ? 'enabled' : 'disabled'), 'INFO', 'DEV_MODE');
-    ui.alert('🔧 Режим изменён', message, ui.ButtonSet.OK);
-  }
-}
-
 
 /**
  * Проверить статус системы
