@@ -17,7 +17,7 @@ var CONTEXT_SETTINGS = {
   MAX_CONTEXT_LENGTH: 150000,     // Максимум символов в контексте (увеличено в 10 раз)
   CONTEXT_TTL_HOURS: 24,          // Время жизни контекста в часах
   AUTO_CLEANUP_ENABLED: true,     // Автоматическая очистка
-  CONTEXT_ENABLED_CELL: 'Параметры!C1' // Ячейка с настройкой включения контекста
+  CONTEXT_ALWAYS_ENABLED: true    // УПРОЩЕНО: Контекст всегда включен (убран чекбокс)
 };
 
 /**
