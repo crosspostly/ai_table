@@ -220,10 +220,21 @@ function parseSource(source, explicitPlatform) {
  */
 function importVkPostsAdvanced(source, count) {
   try {
-    addSystemLog('→ Импорт VK постов через прямой VK API: ' + source, 'INFO', 'VK_IMPORT');
+    addSystemLog('→ Импорт VK постов через VK_PARSER_URL: ' + source, 'INFO', 'VK_IMPORT');
     
-    // 🔥 ИСПРАВЛЕНИЕ: Используем прямой VK API вместо VK_PARSER_URL
-    var posts = handleWallGet_(source, count);
+    // ВОЗВРАЩАЕМ СТАРУЮ РАБОЧУЮ ВЕРСИЮ С VK_PARSER_URL
+    var url = VK_PARSER_URL + '?owner=' + encodeURIComponent(source) + '&count=' + encodeURIComponent(count);
+    
+    var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) {
+      throw new Error('VK Parser error: HTTP ' + resp.getResponseCode());
+    }
+    
+    var posts = JSON.parse(resp.getContentText());
+    
+    if (!Array.isArray(posts)) {
+      throw new Error('VK Parser вернул неверный формат данных');
+    }
     
     addSystemLog('📊 Получено VK постов: ' + posts.length, 'INFO', 'VK_IMPORT');
     
