@@ -1,52 +1,5 @@
-/**
- * Conditional Gemini Service
- * GM_IF functions and utilities for conditional processing
- */
+// GM_IF() - реализация в GeminiClient.gs
 
-/**
- * Conditional Gemini function - executes request only if condition is true
- */
-function GM_IF(condition, prompt, maxTokens, temperature, _tick) {
-  try {
-    var condVal = false;
-    
-    // Normalize input to scalar value
-    var raw = condition;
-    if (Array.isArray(raw)) {
-      raw = (raw[0] && raw[0].length ? raw[0][0] : raw[0] || '');
-    }
-    
-    var t = typeof raw;
-    if (t === 'boolean') {
-      condVal = raw === true;
-    } else if (t === 'number') {
-      condVal = raw !== 0;
-    } else if (t === 'string') {
-      var s = raw.trim().toLowerCase();
-      // TRUE FALSE in any locale; also 1 0; empty string means false
-      condVal = (s === 'true' || s === 'true' || s === '1' || s === 'да');
-    } else {
-      condVal = !!raw;
-    }
-    
-    // If condition is false - return empty string
-    if (!condVal) return "";
-    
-    // Normalize prompt
-    if (Array.isArray(prompt)) prompt = prompt[0][0];
-    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) return "";
-    
-    // Set default values
-    if (maxTokens == null) maxTokens = 25000;
-    if (temperature == null) temperature = 0.7;
-    
-    // Call main GM function
-    return GM(prompt, maxTokens, temperature);
-  } catch (e) {
-    logMessage('❌ GM_IF error: ' + e.message, 'ERROR');
-    return 'Error: ' + e.message;
-  }
-}
 
 // GM_IF_STATIC removed - functionality handled by client-side version in ThinClient.gs
 
