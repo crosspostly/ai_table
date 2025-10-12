@@ -102,86 +102,8 @@ function ocrReviews() {
  * Initialize Chat Mode
  * Creates a chat sheet with A/B columns for conversation
  */
-function initializeChatMode() {
-  var ss = SpreadsheetApp.getActive();
-  var ui = SpreadsheetApp.getUi();
-  
-  // Check if Chat sheet exists
-  var chatSheet = ss.getSheetByName('Чат') || ss.getSheetByName('Chat');
-  
-  if (chatSheet) {
-    var result = ui.alert('Лист \"Чат\" уже существует', 'Хотите очистить и пересоздать?', ui.ButtonSet.YES_NO);
-    if (result !== ui.Button.YES) {
-      return;
-    }
-    ss.deleteSheet(chatSheet);
-  }
-  
-  // Create new chat sheet
-  chatSheet = ss.insertSheet('Чат');
-  
-  // Setup headers
-  chatSheet.getRange('A1').setValue('Ваше сообщение');
-  chatSheet.getRange('B1').setValue('Ответ ассистента');
-  
-  // Format headers
-  chatSheet.getRange('A1:B1')
-    .setFontWeight('bold')
-    .setBackground('#4285f4')
-    .setFontColor('white');
-  
-  // Setup first row
-  chatSheet.getRange('A2').setValue('Напишите ваш вопрос здесь...');
-  
-  // Auto-resize columns
-  chatSheet.setColumnWidth(1, 400);
-  chatSheet.setColumnWidth(2, 600);
-  
-  ui.alert('✅ Режим чата создан', 'Лист \"Чат\" готов к использованию\\n\\nНапишите вопрос в A2 и нажмите Enter', ui.ButtonSet.OK);
-  
-  logClient('Chat mode initialized');
-}
-
-/**
- * Setup Smart Prompt Trigger
- * Creates trigger for automatic prompt conversion
- */
-function setupSmartPromptTrigger() {
-  var ui = SpreadsheetApp.getUi();
-  
-  // Check if trigger already exists
-  var triggers = ScriptApp.getProjectTriggers();
-  var existingTrigger = false;
-  
-  for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'onSmartPromptEdit') {
-      existingTrigger = true;
-      break;
-    }
-  }
-  
-  if (existingTrigger) {
-    var result = ui.alert('Триггер уже существует', 'Умные промпты уже активированы', ui.ButtonSet.OK);
-    return;
-  }
-  
-  // Create trigger
-  try {
-    ScriptApp.newTrigger('onSmartPromptEdit')
-      .forSpreadsheet(SpreadsheetApp.getActive())
-      .onEdit()
-      .create();
-    
-    // Create rules sheet if not exists
-    createSmartPromptRulesSheet();
-    
-    ui.alert('✅ Умные промпты активированы', 'Теперь вы можете использовать \"Промпт: текст\" в любой ячейке\\n\\nПравила замены находятся в листе \"Правила\"', ui.ButtonSet.OK);
-    
-    logClient('Smart prompt trigger created');
-  } catch (e) {
-    ui.alert('Ошибка создания триггера', e.message, ui.ButtonSet.OK);
-  }
-}
+// initializeChatMode() moved to ChatMode.gs (line 28)
+// setupSmartPromptTrigger() moved to SmartPromptProcessor.gs (line 217)
 
 /**
  * Create Smart Prompt Rules Sheet
