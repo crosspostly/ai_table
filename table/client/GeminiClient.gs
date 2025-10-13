@@ -330,14 +330,13 @@ function GM_STATIC(prompt, maxTokens, temperature, _tick) {
     
     // КЛЮЧЕВАЯ ФИЧА: заменяем формулу на статичное значение
     // Это предотвращает повторные вычисления
-    setTimeout(function() {
-      try {
-        cell.setValue(result);
-        logMessage('Static value set for cell ' + cell.getA1Notation(), 'INFO');
-      } catch (e) {
-        logMessage('Failed to set static value: ' + e.message, 'ERROR');
-      }
-    }, 100);
+    // Google Apps Script не поддерживает setTimeout, выполняем синхронно
+    try {
+      cell.setValue(result);
+      logMessage('Static value set for cell ' + cell.getA1Notation(), 'INFO');
+    } catch (e) {
+      logMessage('Failed to set static value: ' + e.message, 'ERROR');
+    }
     
     return result;
     

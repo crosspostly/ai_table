@@ -604,18 +604,30 @@ function extractImageSources(cellData, cellFormula, richTextUrl) {
 
 /**
  * Debounce функция для ограничения частоты вызовов
+ * ПРИМЕЧАНИЕ: Google Apps Script не поддерживает setTimeout
+ * Используйте CacheService для throttling вместо debounce
  */
 function createDebounce(func, wait) {
-  var timeoutId;
+  // Google Apps Script не поддерживает setTimeout/clearTimeout
+  // Возвращаем обёртку с throttling через Cache
   
   return function() {
     var context = this;
     var args = arguments;
     
-    clearTimeout(timeoutId);
+    var throttleKey = 'debounce_' + func.name + '_' + Date.now();
+    var cache = CacheService.getScriptCache();
     
-    timeoutId = setTimeout(function() {
-      func.apply(context, args);
-    }, wait);
+    // Проверяем был ли недавний вызов
+    var lastCall = cache.get(throttleKey);
+    if (lastCall) {
+      return; // Пропускаем вызов
+    }
+    
+    // Сохраняем метку времени
+    cache.put(throttleKey, Date.now().toString(), Math.ceil(wait / 1000));
+    
+    // Выполняем функцию
+    return func.apply(context, args);
   };
 }
