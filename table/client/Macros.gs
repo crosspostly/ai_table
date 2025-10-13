@@ -38,7 +38,8 @@ function GM1() {
       for (var col = 0; col < numCols; col++) {
         var cellValue = values[row][col];
         
-        if (!cellValue || cellValue === '') {
+        // Проверяем что значение существует
+        if (cellValue === null || cellValue === undefined || cellValue === '') {
           formulaRow.push('');
           continue;
         }
@@ -49,7 +50,14 @@ function GM1() {
           continue;
         }
         
-        var text = String(cellValue).trim();
+        // Безопасное преобразование в строку
+        var text = String(cellValue);
+        if (!text || text.length === 0) {
+          formulaRow.push('');
+          continue;
+        }
+        
+        text = text.trim();
         var escapedText = text.replace(/"/g, '""');
         formulaRow.push('=GM("' + escapedText + '")');
         convertedCount++;
@@ -98,7 +106,8 @@ function GM2() {
       for (var col = 0; col < numCols; col++) {
         var cellValue = values[row][col];
         
-        if (!cellValue || cellValue === '') {
+        // Проверяем что значение существует
+        if (cellValue === null || cellValue === undefined || cellValue === '') {
           formulaRow.push('');
           continue;
         }
@@ -109,7 +118,14 @@ function GM2() {
           continue;
         }
         
-        var text = String(cellValue).trim();
+        // Безопасное преобразование в строку
+        var text = String(cellValue);
+        if (!text || text.length === 0) {
+          formulaRow.push('');
+          continue;
+        }
+        
+        text = text.trim();
         var escapedText = text.replace(/"/g, '""');
         formulaRow.push('=GM_STATIC("' + escapedText + '")');
         convertedCount++;
