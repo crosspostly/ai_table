@@ -176,62 +176,8 @@ function fetchSocialApiWithRetry(platform, url, options = {}) {
   
   return fetchWithRetry(url, mergedOptions, config);
 }
+// fetchGeminiWithRetry() - реализация в NetworkRetry.gs
 
-/**
- * Retry для Gemini API запросов с учетом лимитов
- * ВАЖНО: Gemini запросы должны идти СТРОГО последовательно!
- * @param {string} url - Gemini API URL
- * @param {Object} options - опции запроса
- * @return {HTTPResponse} - ответ
- */
-function fetchGeminiWithRetry(url, options = {}) {
-  // Обеспечиваем последовательность запросов к Gemini
-  const lockKey = 'gemini_request_lock';
-  const cache = PropertiesService.getScriptProperties();
-  
-  // Ждем освобождения блокировки (максимум 30 секунд)
-  let waitTime = 0;
-  const maxWaitTime = 30000;
-  
-  while (cache.getProperty(lockKey) && waitTime < maxWaitTime) {
-    Utilities.sleep(500);
-    waitTime += 500;
-  }
-  
-  try {
-    // Устанавливаем блокировку
-    cache.setProperty(lockKey, String(Date.now()));
-    
-    const config = {
-      maxRetries: 2, // Gemini обычно стабилен
-      baseDelay: 2000,
-      maxDelay: 10000,
-      retryOnStatus: [429, 500, 502, 503],
-      logEnabled: true
-    };
-    
-    const mergedOptions = {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    };
-    
-    addSystemLog('🤖 Gemini запрос (последовательный)', 'INFO', 'RETRY_SERVICE');
-    
-    const response = fetchWithRetry(url, mergedOptions, config);
-    
-    // Дополнительная пауза после Gemini запроса
-    Utilities.sleep(1000);
-    
-    return response;
-    
-  } finally {
-    // Всегда освобождаем блокировку
-    cache.deleteProperty(lockKey);
-  }
-}
 
 /**
  * Batch запросы с контролем нагрузки
