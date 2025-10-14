@@ -335,9 +335,25 @@ jobs:
           echo "✅ Copied shared files to table/client/"
           
           # Copy web files directly into client directory  
-          cp table/web/*.gs table/client/ 2>/dev/null || true
-          cp table/web/*.html table/client/ 2>/dev/null || true
-          echo "✅ Copied web files to table/client/"
+          echo "📂 Copying web files..."
+          echo "Available web files:"
+          ls -la table/web/ || echo "No web directory found"
+          
+          if ls table/web/*.gs 1> /dev/null 2>&1; then
+            cp table/web/*.gs table/client/
+            echo "✅ Copied GS files: $(ls table/web/*.gs | wc -l) files"
+            ls -la table/client/*.gs | grep -E "(CollectConfig|WebInterface)"
+          else
+            echo "❌ No GS files found in table/web/"
+          fi
+          
+          if ls table/web/*.html 1> /dev/null 2>&1; then
+            cp table/web/*.html table/client/
+            echo "✅ Copied HTML files: $(ls table/web/*.html | wc -l) files"
+            ls -la table/client/*.html | grep -E "(CollectConfig|WebApp)"
+          else
+            echo "❌ No HTML files found in table/web/"
+          fi
           
           # 🔒 SECURITY CHECK: Ensure NO server files in client!
           echo "🔍 Security check: verifying NO server files in client..."
@@ -355,13 +371,26 @@ jobs:
           
           echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
           echo "Using clasp push for container-bound script..."
+          
+          echo "📋 BEFORE PUSH - Files being uploaded:"
+          find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
+          echo "CollectConfig files status:"
+          ls -la table/client/CollectConfig* 2>/dev/null || echo "❌ No CollectConfig files found in table/client/"
+          echo ""
+          
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
             echo ""
             echo "❌ CLIENT CLASP PUSH FAILED!"
             echo "Error output:"
             cat /tmp/clasp-client-push.log
+            echo ""
+            echo "📁 Files that clasp tried to push:"
+            find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
             exit 1
           }
+          
+          echo "📋 AFTER PUSH - Success! Uploaded files:"
+          grep -i "Pushed\|Updated\|Created" /tmp/clasp-client-push.log || echo "No specific file info in clasp output"
           
           # Clean up copied files (only shared, keep web files!)
           echo "Cleaning up copied shared files..."
