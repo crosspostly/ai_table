@@ -363,13 +363,12 @@ jobs:
             exit 1
           }
           
-          # Clean up copied files (but keep permanent client files!)
-          echo "Cleaning up copied files..."
+          # Clean up copied files (only shared, keep web files!)
+          echo "Cleaning up copied shared files..."
           rm -f table/client/Constants.gs table/client/LoggingService.gs table/client/Utils.gs
-          # ⚠️ Do NOT delete CollectConfigUI.html! It's a permanent client file
-          rm -f table/client/WebInterface.gs
           rm -f table/client/appsscript.json
-          echo "✅ Cleaned up (kept CollectConfigUI.html)"
+          # ✅ Keep ALL web files: CollectConfigUI.gs/html, WebInterface.gs, etc.
+          echo "✅ Cleaned up shared files (kept all web files)"
           
           echo "✅ Client deployment complete!"
 
