@@ -1,6 +1,7 @@
 // Client Menu System for AI_TABLE
 // Version: DEPLOY_TIME_PLACEHOLDER
 // Last Deploy: DEPLOY_TIMESTAMP_PLACEHOLDER
+// Debug: Force sync test - 2025-01-14 14:35:00
 
 /**
  * Настроить все credentials - с инструкцией
