@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: 'Google Sans', Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: #f8f9fa;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+    
+    h2 {
+      margin: 0 0 8px 0;
+      color: #202124;
+      font-size: 22px;
+      font-weight: 400;
+    }
+    
+    .cell-info {
+      background: #e8f0fe;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 24px;
+      color: #1967d2;
+      font-weight: 500;
+    }
+    
+    .section {
+      margin-bottom: 24px;
+    }
+    
+    .section-title {
+      font-weight: 500;
+      margin-bottom: 12px;
+      color: #5f6368;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    select, input {
+      padding: 10px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: #1a73e8;
+    }
+    
+    select {
+      flex: 1;
+    }
+    
+    input {
+      flex: 0 0 120px;
+    }
+    
+    .data-item {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    
+    .data-item select {
+      flex: 1;
+    }
+    
+    .data-item input {
+      flex: 0 0 120px;
+    }
+    
+    .remove-btn {
+      background: #fff;
+      border: 1px solid #dadce0;
+      color: #5f6368;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .remove-btn:hover {
+      background: #f8f9fa;
+      border-color: #d93025;
+      color: #d93025;
+    }
+    
+    .add-btn {
+      background: #fff;
+      border: 1px solid #1a73e8;
+      color: #1a73e8;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .add-btn:hover {
+      background: #e8f0fe;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1765cc;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+    
+    .btn-secondary {
+      background: #fff;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+    }
+    
+    .btn-secondary:hover {
+      background: #f8f9fa;
+    }
+    
+    .btn-danger {
+      background: #fff;
+      color: #d93025;
+      border: 1px solid #dadce0;
+    }
+    
+    .btn-danger:hover {
+      background: #fce8e6;
+      border-color: #d93025;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 16px;
+      display: none;
+    }
+    
+    .status.success {
+      background: #e6f4ea;
+      color: #137333;
+    }
+    
+    .status.error {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #5f6368;
+      padding: 20px;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #dadce0;
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🎯 Настройка AI запроса</h2>
+    <div class="cell-info" id="cellInfo">Загрузка...</div>
+    
+    <!-- System Prompt -->
+    <div class="section">
+      <div class="section-title">📍 System Prompt (инструкция для AI)</div>
+      <div class="input-group">
+        <select id="systemSheet">
+          <option value="">Выберите лист...</option>
+        </select>
+        <input type="text" id="systemCell" placeholder="A1" />
+      </div>
+    </div>
+    
+    <!-- User Data -->
+    <div class="section">
+      <div class="section-title">📦 User Data (данные для обработки)</div>
+      <div id="userDataList"></div>
+      <button class="add-btn" onclick="addUserDataRow()">+ Добавить данные</button>
+    </div>
+    
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" onclick="runConfig()">🚀 Запустить</button>
+      <button class="btn btn-secondary" onclick="saveOnly()">💾 Сохранить</button>
+      <button class="btn btn-danger" onclick="resetConfig()">🔄 Сбросить</button>
+    </div>
+    
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    let sheetName = '';
+    let cellAddress = '';
+    let sheets = [];
+    
+    // Инициализация
+    google.script.run
+      .withSuccessHandler(initialize)
+      .withFailureHandler(showError)
+      .getCollectConfigInitData();
+    
+    function initialize(data) {
+      sheetName = data.sheetName;
+      cellAddress = data.cellAddress;
+      sheets = data.sheets;
+      
+      // Обновляем информацию о ячейке
+      document.getElementById('cellInfo').textContent = 
+        '📌 Ячейка: ' + sheetName + ' → ' + cellAddress;
+      
+      // Заполняем выпадающие списки листов
+      const systemSheet = document.getElementById('systemSheet');
+      sheets.forEach(function(sheet) {
+        const option = document.createElement('option');
+        option.value = sheet;
+        option.textContent = sheet;
+        systemSheet.appendChild(option);
+      });
+      
+      // Загружаем существующую конфигурацию
+      loadExistingConfig();
+    }
+    
+    function loadExistingConfig() {
+      google.script.run
+        .withSuccessHandler(function(config) {
+          if (config) {
+            // Заполняем System Prompt
+            if (config.systemPrompt) {
+              document.getElementById('systemSheet').value = config.systemPrompt.sheet;
+              document.getElementById('systemCell').value = config.systemPrompt.cell;
+            }
+            
+            // Заполняем User Data
+            if (config.userData && config.userData.length > 0) {
+              config.userData.forEach(function(data) {
+                addUserDataRow(data.sheet, data.cell);
+              });
+            } else {
+              addUserDataRow(); // Добавляем пустую строку
+            }
+          } else {
+            addUserDataRow(); // Добавляем пустую строку
+          }
+        })
+        .withFailureHandler(function() {
+          addUserDataRow(); // Добавляем пустую строку при ошибке
+        })
+        .loadCollectConfig(sheetName, cellAddress);
+    }
+    
+    function addUserDataRow(sheet, cell) {
+      const container = document.getElementById('userDataList');
+      const item = document.createElement('div');
+      item.className = 'data-item';
+      
+      const select = document.createElement('select');
+      sheets.forEach(function(s) {
+        const option = document.createElement('option');
+        option.value = s;
+        option.textContent = s;
+        if (s === sheet) option.selected = true;
+        select.appendChild(option);
+      });
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'A1 или A1:Z100';
+      input.value = cell || '';
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '✕';
+      removeBtn.onclick = function() {
+        container.removeChild(item);
+      };
+      
+      item.appendChild(select);
+      item.appendChild(input);
+      item.appendChild(removeBtn);
+      container.appendChild(item);
+    }
+    
+    function collectConfig() {
+      const systemSheet = document.getElementById('systemSheet').value;
+      const systemCell = document.getElementById('systemCell').value;
+      
+      const config = {
+        systemPrompt: systemSheet && systemCell ? {
+          sheet: systemSheet,
+          cell: systemCell
+        } : null,
+        userData: []
+      };
+      
+      const dataItems = document.querySelectorAll('.data-item');
+      dataItems.forEach(function(item) {
+        const sheet = item.querySelector('select').value;
+        const cell = item.querySelector('input').value;
+        if (sheet && cell) {
+          config.userData.push({ sheet: sheet, cell: cell });
+        }
+      });
+      
+      return config;
+    }
+    
+    function saveOnly() {
+      const config = collectConfig();
+      showStatus('Сохранение...', 'info');
+      
+      google.script.run
+        .withSuccessHandler(function() {
+          showStatus('✅ Конфигурация сохранена!', 'success');
+        })
+        .withFailureHandler(function(error) {
+          showStatus('❌ Ошибка: ' + error, 'error');
+        })
+        .saveCollectConfig(sheetName, cellAddress, config);
+    }
+    
+    function runConfig() {
+      const config = collectConfig();
+      
+      if (!config.systemPrompt && config.userData.length === 0) {
+        showStatus('⚠️ Заполните хотя бы одно поле!', 'error');
+        return;
+      }
+      
+      showStatus('🚀 Выполнение запроса...', 'info');
+      
+      // Сначала сохраняем
+      google.script.run
+        .withSuccessHandler(function() {
+          // Затем выполняем
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result.success) {
+                showStatus('✅ Готово! Результат записан в ' + cellAddress, 'success');
+                google.script.host.close();
+              } else {
+                showStatus('❌ Ошибка: ' + result.error, 'error');
+              }
+            })
+            .withFailureHandler(function(error) {
+              showStatus('❌ Ошибка: ' + error, 'error');
+            })
+            .executeCollectConfig(sheetName, cellAddress);
+        })
+        .withFailureHandler(function(error) {
+          showStatus('❌ Ошибка сохранения: ' + error, 'error');
+        })
+        .saveCollectConfig(sheetName, cellAddress, config);
+    }
+    
+    function resetConfig() {
+      if (confirm('Удалить сохранённую конфигурацию?')) {
+        google.script.run
+          .withSuccessHandler(function() {
+            showStatus('✅ Конфигурация сброшена!', 'success');
+            setTimeout(function() {
+              google.script.host.close();
+            }, 1000);
+          })
+          .withFailureHandler(function(error) {
+            showStatus('❌ Ошибка: ' + error, 'error');
+          })
+          .deleteCollectConfig(sheetName, cellAddress);
+      }
+    }
+    
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + type;
+      status.style.display = 'block';
+    }
+    
+    function showError(error) {
+      showStatus('❌ Ошибка: ' + error, 'error');
+    }
+  </script>
+</body>
+</html>
