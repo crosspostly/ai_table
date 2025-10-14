@@ -336,8 +336,19 @@ jobs:
           
           echo "Copying shared files into client directory..."
           # Copy shared files directly into client directory
-          cp table/shared/*.gs table/client/
-          echo "✅ Copied shared files to table/client/"
+          for file in table/shared/*.gs; do
+            if [ -f "$file" ]; then
+              # Skip server-related shared files (they shouldn't exist but just in case)
+              filename=$(basename "$file")
+              if [[ "$filename" =~ ^.*Server.*\.gs$ ]] && [[ ! "$filename" =~ ^ClientUtilities\.gs$ ]]; then
+                echo "⚠️ Skipping server-related shared file: $filename"
+                continue
+              fi
+              cp "$file" table/client/
+              echo "  ✅ Copied $filename"
+            fi
+          done
+          echo "✅ Shared files copied to table/client/"
           
           # 🔄 COPY web files for deployment (Apps Script needs them!)
           echo "📂 Copying web files to client directory..."
@@ -348,52 +359,122 @@ jobs:
           rm -f table/client/CollectConfigUI.* table/client/WebInterface.* table/client/WebApp.* table/client/RealisticWebApp.*
           echo "✅ Old web files removed"
           
-          # 📋 Now copy fresh files from web/
-          cp -v table/web/*.gs table/client/ 2>/dev/null || echo "No .gs files in web/"
-          cp -v table/web/*.html table/client/ 2>/dev/null || echo "No .html files in web/"
+          # 📋 Smart copy of web files with detailed logging
+          echo "📋 Copying web files with detailed logging..."
+          WEB_GS_COUNT=0
+          WEB_HTML_COUNT=0
+          
+          if [ -d table/web ]; then
+            for file in table/web/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                cp "$file" table/client/
+                case "$filename" in
+                  *.gs)
+                    WEB_GS_COUNT=$((WEB_GS_COUNT + 1))
+                    echo "  ✅ Copied JS: $filename"
+                    ;;
+                  *.html)
+                    WEB_HTML_COUNT=$((WEB_HTML_COUNT + 1))
+                    echo "  ✅ Copied HTML: $filename"
+                    ;;
+                  *)
+                    echo "  ✅ Copied other: $filename"
+                    ;;
+                esac
+              fi
+            done
+            echo "📊 Web files copied: $WEB_GS_COUNT GS files, $WEB_HTML_COUNT HTML files"
+          else
+            echo "⚠️ No table/web/ directory found"
+          fi
           
           # ⚠️  WORKAROUND: Rename CollectConfigUI.gs to avoid name conflict with existing HTML
           if [ -f table/client/CollectConfigUI.gs ]; then
             mv table/client/CollectConfigUI.gs table/client/CollectConfigUIScript.gs
-            echo "⚠️  Renamed CollectConfigUI.gs → CollectConfigUIScript.gs to avoid conflict"
+            echo "✅ Renamed CollectConfigUI.gs to CollectConfigUIScript.gs"
           fi
           
           echo "✅ Web files copied to table/client/ for Apps Script sync"
           
-          # 🔒 SECURITY CHECK: Ensure NO server files in client!
-          echo "🔍 Security check: verifying NO server files in client..."
-          if ls table/client/server* 2>/dev/null || ls table/client/*Server*.gs 2>/dev/null | grep -v ClientUtilities 2>/dev/null; then
+          # 🔒 ENHANCED SECURITY CHECK: Ensure NO server files in client!
+          echo "🔍 Enhanced security check: verifying NO server files in client..."
+          
+          FOUND_SERVER_FILES=false
+          
+          # Check for files starting with "server" or "Server" (case insensitive)
+          for file in table/client/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              # Skip ClientUtilities.gs as it's allowed
+              if [[ "$filename" == "ClientUtilities.gs" ]]; then
+                continue
+              fi
+              # Check for server-related patterns
+              if [[ "$filename" =~ ^[Ss]erver.*\.(gs|html)$ ]] || [[ "$filename" =~ ^.*Server.*\.(gs|html)$ ]]; then
+                echo "❌ SECURITY VIOLATION: Server file found in client: $filename"
+                FOUND_SERVER_FILES=true
+              fi
+            fi
+          done
+          
+          if [ "$FOUND_SERVER_FILES" = true ]; then
             echo "❌ SECURITY ERROR: Server files found in client directory!"
-            ls -la table/client/server* table/client/*Server*.gs 2>/dev/null || true
+            echo "Current client directory contents:"
+            ls -la table/client/
             exit 1
           fi
-          echo "✅ Security check passed: no server files in client"
+          echo "✅ Enhanced security check passed: no server files in client"
           
           echo ""
-          echo "Files in CLIENT directory:"
-          find table/client -type f \( -name "*.gs" -o -name "*.html" \) | sort
+          echo "=== DETAILED CLIENT DEPLOYMENT SUMMARY ==="
+          echo "📁 Files in CLIENT directory ready for upload:"
+          
+          CLIENT_GS_COUNT=0
+          CLIENT_HTML_COUNT=0
+          CLIENT_JSON_COUNT=0
+          
+          for file in table/client/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              case "$filename" in
+                *.gs)
+                  CLIENT_GS_COUNT=$((CLIENT_GS_COUNT + 1))
+                  echo "  📜 JavaScript: $filename ($(wc -l < "$file") lines)"
+                  ;;
+                *.html)
+                  CLIENT_HTML_COUNT=$((CLIENT_HTML_COUNT + 1))
+                  echo "  🌐 HTML: $filename ($(wc -l < "$file") lines)"
+                  ;;
+                *.json)
+                  CLIENT_JSON_COUNT=$((CLIENT_JSON_COUNT + 1))
+                  echo "  ⚙️ JSON: $filename"
+                  ;;
+                *)
+                  echo "  ❓ Other: $filename"
+                  ;;
+              esac
+            fi
+          done
+          
+          echo "📊 Summary: $CLIENT_GS_COUNT GS files, $CLIENT_HTML_COUNT HTML files, $CLIENT_JSON_COUNT JSON files"
+          echo "📦 Total files to upload: $(find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | wc -l)"
+          echo ""
+          
+          # 🔍 CRITICAL FILES VERIFICATION
+          echo "🔍 CRITICAL FILES VERIFICATION:"
+          CRITICAL_FILES=("Menu.gs" "GeminiClient.gs" "CredentialsManager.gs" "appsscript.json")
+          for critical_file in "${CRITICAL_FILES[@]}"; do
+            if [ -f "table/client/$critical_file" ]; then
+              echo "  ✅ $critical_file present"
+            else
+              echo "  ❌ $critical_file MISSING!"
+            fi
+          done
           echo ""
           
           echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
           echo "Using clasp push for container-bound script..."
-          
-          echo "📋 BEFORE PUSH - Files being uploaded:"
-          find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
-          echo ""
-          echo "🔍 SPECIFIC FILE STATUS CHECK:"
-          echo "CollectConfigUI files:"
-          ls -la table/client/CollectConfig* 2>/dev/null || echo "❌ No CollectConfigUI files found in table/client/"
-          echo "AIConstructorUI files:"
-          ls -la table/client/AIConstructor* 2>/dev/null || echo "❌ No AIConstructorUI files found in table/client/"
-          echo "WebInterface files:"
-          ls -la table/client/WebInterface* 2>/dev/null || echo "❌ No WebInterface files found in table/client/"
-          echo ""
-          echo "📊 FILE COUNT SUMMARY:"
-          echo "Total GS files: $(find table/client -name "*.gs" | wc -l)"
-          echo "Total HTML files: $(find table/client -name "*.html" | wc -l)"
-          echo "Total JSON files: $(find table/client -name "*.json" | wc -l)"
-          echo ""
-          
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
             echo ""
             echo "❌ CLIENT CLASP PUSH FAILED!"
@@ -408,12 +489,29 @@ jobs:
           echo "📋 AFTER PUSH - Success! Uploaded files:"
           grep -i "Pushed\|Updated\|Created" /tmp/clasp-client-push.log || echo "No specific file info in clasp output"
           
-          # Clean up copied files (only shared, keep web files!)
-          echo "Cleaning up copied shared files..."
-          rm -f table/client/Constants.gs table/client/LoggingService.gs table/client/Utils.gs
-          rm -f table/client/appsscript.json
-          # ✅ Keep ALL web files: CollectConfigUI.gs/html, WebInterface.gs, etc.
-          echo "✅ Cleaned up shared files (kept all web files)"
+          # 🧹 SMART CLEANUP: Remove only deployment-copied files
+          echo "🧹 Smart cleanup: removing only deployment-copied files..."
+          
+          # Remove shared files (known to be copied during deployment)
+          SHARED_FILES=("Constants.gs" "LoggingService.gs" "Utils.gs" "ClientUtilities.gs")
+          for shared_file in "${SHARED_FILES[@]}"; do
+            if [ -f "table/client/$shared_file" ]; then
+              rm -f "table/client/$shared_file"
+              echo "  🗑️ Removed shared file: $shared_file"
+            fi
+          done
+          
+          # Remove deployment-specific files
+          if [ -f "table/client/appsscript.json" ]; then
+            rm -f table/client/appsscript.json
+            echo "  🗑️ Removed deployment appsscript.json"
+          fi
+          
+          echo "✅ Smart cleanup completed - all web files preserved"
+          
+          # Verification: Check what remains
+          echo "📁 Files remaining in client directory:"
+          ls -la table/client/ | grep -E '\.(gs|html)$' || echo "No .gs or .html files found"
           
           echo "✅ Client deployment complete!"
 
