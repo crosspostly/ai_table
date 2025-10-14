@@ -374,8 +374,19 @@ jobs:
           
           echo "📋 BEFORE PUSH - Files being uploaded:"
           find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
-          echo "CollectConfig files status:"
-          ls -la table/client/CollectConfig* 2>/dev/null || echo "❌ No CollectConfig files found in table/client/"
+          echo ""
+          echo "🔍 SPECIFIC FILE STATUS CHECK:"
+          echo "CollectConfigUI files:"
+          ls -la table/client/CollectConfig* 2>/dev/null || echo "❌ No CollectConfigUI files found in table/client/"
+          echo "AIConstructorUI files:"
+          ls -la table/client/AIConstructor* 2>/dev/null || echo "❌ No AIConstructorUI files found in table/client/"
+          echo "WebInterface files:"
+          ls -la table/client/WebInterface* 2>/dev/null || echo "❌ No WebInterface files found in table/client/"
+          echo ""
+          echo "📊 FILE COUNT SUMMARY:"
+          echo "Total GS files: $(find table/client -name "*.gs" | wc -l)"
+          echo "Total HTML files: $(find table/client -name "*.html" | wc -l)"
+          echo "Total JSON files: $(find table/client -name "*.json" | wc -l)"
           echo ""
           
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
