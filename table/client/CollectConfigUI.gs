@@ -1,6 +1,9 @@
 /**
  * Collect Config UI Functions
  * Функции для работы с веб-интерфейсом настройки
+ * 
+ * Version: 1.0.0
+ * Last updated: 2024-10-14
  */
 
 /**
