@@ -118,7 +118,7 @@ function onOpen() {
   var webMenuItem = '🌐 Веб версия';
   
   ui.createMenu('🤖 Table AI')
-    .addItem('🌐 Веб версия', 'openWebInterface')
+    .addItem('🌐 Веб версия (ТЕСТ СИНХРОНИЗАЦИИ)', 'openWebInterface')
     .addSeparator()
     .addSubMenu(ui.createMenu('📱 Социальные сети')
       .addItem('📱 Импорт постов', 'importVkPosts')
