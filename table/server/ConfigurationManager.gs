@@ -1,410 +1,312 @@
 /**
- * Configuration Manager
- * Управление конфигурациями ячеек для GM_COLLECT
+ * Configuration Manager for CollectConfig System
+ * Управление конфигурациями AI Конструктора
  * 
- * Хранит настройки в отдельном скрытом листе "ConfigData"
- * Структура:
- * | Sheet | Cell | SystemPromptSheet | SystemPromptCell | UserDataJSON | CreatedAt | LastRun |
- * 
- * Преимущества:
- * - Нет лимитов PropertiesService (500KB)
- * - Легко просматривать все конфигурации
- * - Можно экспортировать/импортировать
+ * Version: 1.0.0
+ * Created: 2025-01-14
  */
-
-var CONFIG_SHEET_NAME = 'ConfigData';
 
 /**
- * Инициализировать лист конфигураций
- * @return {Sheet} Лист конфигураций
+ * Сохранение конфигурации AI Конструктора
+ * @param {string} sheetName - имя листа с результатом
+ * @param {string} cellAddress - адрес ячейки с результатом (A1 notation)
+ * @param {Object} config - конфигурация {systemPrompt, userData[]}
+ * @return {boolean} успешность операции
  */
-function getOrCreateConfigSheet() {
+function saveCollectConfig(sheetName, cellAddress, config) {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(CONFIG_SHEET_NAME);
+    addSystemLog(`saveCollectConfig START: ${sheetName}!${cellAddress}`, 'DEBUG', 'COLLECT_CONFIG');
     
-    if (!sheet) {
-      // Создаём новый лист
-      sheet = ss.insertSheet(CONFIG_SHEET_NAME);
-      
-      // Заголовки
-      sheet.getRange('A1:G1').setValues([[
-        'Sheet', 'Cell', 'SystemPromptSheet', 'SystemPromptCell', 
-        'UserDataJSON', 'CreatedAt', 'LastRun'
-      ]]);
-      
-      // Форматирование заголовков
-      sheet.getRange('A1:G1')
-        .setBackground('#4285f4')
-        .setFontColor('#ffffff')
-        .setFontWeight('bold');
-      
-      // Замораживаем первую строку
-      sheet.setFrozenRows(1);
-      
-      // Скрываем лист
-      sheet.hideSheet();
-      
-      Logger.log('✅ Создан лист конфигураций: ' + CONFIG_SHEET_NAME);
+    // Валидация входных данных
+    if (!sheetName || !cellAddress || !config) {
+      throw new Error('Требуются sheetName, cellAddress и config');
     }
     
-    return sheet;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Получаем или создаем скрытый лист ConfigData
+    var configSheet = ss.getSheetByName('ConfigData');
+    
+    if (!configSheet) {
+      addSystemLog('Создание листа ConfigData', 'INFO', 'COLLECT_CONFIG');
+      configSheet = ss.insertSheet('ConfigData');
+      
+      // Скрываем лист
+      configSheet.hideSheet();
+      
+      // Создаем заголовки
+      var headers = ['Sheet', 'Cell', 'SystemPromptSheet', 'SystemPromptCell', 'UserDataJSON', 'CreatedAt', 'LastRun', 'ConfigName'];
+      configSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      configSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#4285f4').setFontColor('white');
+      
+      // Форматирование столбцов
+      configSheet.setColumnWidth(1, 120); // Sheet
+      configSheet.setColumnWidth(2, 80);  // Cell
+      configSheet.setColumnWidth(3, 150); // SystemPromptSheet
+      configSheet.setColumnWidth(4, 100); // SystemPromptCell
+      configSheet.setColumnWidth(5, 300); // UserDataJSON
+      configSheet.setColumnWidth(6, 150); // CreatedAt
+      configSheet.setColumnWidth(7, 150); // LastRun
+      configSheet.setColumnWidth(8, 200); // ConfigName
+    }
+    
+    // Ищем существующую конфигурацию
+    var existingRowIndex = findExistingConfig(configSheet, sheetName, cellAddress);
+    
+    // Подготавливаем данные для сохранения
+    var currentTime = new Date().toISOString();
+    var systemPromptSheet = config.systemPrompt ? config.systemPrompt.sheet : '';
+    var systemPromptCell = config.systemPrompt ? config.systemPrompt.cell : '';
+    var userDataJSON = JSON.stringify(config.userData || []);
+    var configName = config.name || ''; // Для будущих пресетов
+    
+    if (existingRowIndex > 0) {
+      // Обновляем существующую конфигурацию
+      addSystemLog(`Обновление существующей конфигурации в строке ${existingRowIndex}`, 'INFO', 'COLLECT_CONFIG');
+      
+      var rowData = [
+        [sheetName, cellAddress, systemPromptSheet, systemPromptCell, userDataJSON, 
+         configSheet.getRange(existingRowIndex, 6).getValue(), // Сохраняем CreatedAt
+         null, // LastRun обнуляем до выполнения
+         configName]
+      ];
+      
+      configSheet.getRange(existingRowIndex, 1, 1, rowData[0].length).setValues(rowData);
+      
+    } else {
+      // Создаем новую конфигурацию
+      addSystemLog('Создание новой конфигурации', 'INFO', 'COLLECT_CONFIG');
+      
+      var lastRow = configSheet.getLastRow();
+      var rowData = [
+        [sheetName, cellAddress, systemPromptSheet, systemPromptCell, userDataJSON, 
+         currentTime, null, configName]
+      ];
+      
+      configSheet.getRange(lastRow + 1, 1, 1, rowData[0].length).setValues(rowData);
+    }
+    
+    addSystemLog(`✅ Конфигурация сохранена: ${userDataJSON.length} символов JSON`, 'INFO', 'COLLECT_CONFIG');
+    return true;
     
   } catch (error) {
-    Logger.log('❌ Ошибка создания листа конфигураций: ' + error.message);
+    addSystemLog(`❌ Ошибка сохранения конфигурации: ${error.message}`, 'ERROR', 'COLLECT_CONFIG');
     throw error;
   }
 }
 
 /**
- * Найти строку конфигурации для ячейки
- * @param {Sheet} configSheet - Лист конфигураций
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки
- * @return {number} Номер строки или -1 если не найдено
- */
-function findConfigRow(configSheet, sheetName, cellAddress) {
-  try {
-    var data = configSheet.getDataRange().getValues();
-    
-    for (var i = 1; i < data.length; i++) { // Пропускаем заголовок
-      if (data[i][0] === sheetName && data[i][1] === cellAddress) {
-        return i + 1; // +1 потому что индексы с 1
-      }
-    }
-    
-    return -1;
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка поиска конфигурации: ' + error.message);
-    return -1;
-  }
-}
-
-/**
- * Сохранить конфигурацию для ячейки
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки (например "B3")
- * @param {Object} config - Конфигурация
- */
-function saveCollectConfig(sheetName, cellAddress, config) {
-  try {
-    var configSheet = getOrCreateConfigSheet();
-    var row = findConfigRow(configSheet, sheetName, cellAddress);
-    
-    var systemPromptSheet = config.systemPrompt ? config.systemPrompt.sheet : '';
-    var systemPromptCell = config.systemPrompt ? config.systemPrompt.cell : '';
-    var userDataJSON = JSON.stringify(config.userData || []);
-    var createdAt = new Date().toISOString();
-    
-    var rowData = [
-      sheetName,
-      cellAddress,
-      systemPromptSheet,
-      systemPromptCell,
-      userDataJSON,
-      createdAt,
-      '' // LastRun пустой при создании
-    ];
-    
-    if (row === -1) {
-      // Добавляем новую строку
-      configSheet.appendRow(rowData);
-      Logger.log('✅ Конфигурация создана для ' + sheetName + '!' + cellAddress);
-    } else {
-      // Обновляем существующую (сохраняем CreatedAt)
-      var existingCreatedAt = configSheet.getRange(row, 6).getValue();
-      rowData[5] = existingCreatedAt || createdAt;
-      configSheet.getRange(row, 1, 1, 7).setValues([rowData]);
-      Logger.log('✅ Конфигурация обновлена для ' + sheetName + '!' + cellAddress);
-    }
-    
-    return true;
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка сохранения конфигурации: ' + error.message);
-    return false;
-  }
-}
-
-/**
- * Загрузить конфигурацию для ячейки
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки
- * @return {Object|null} Конфигурация или null
+ * Загрузка конфигурации AI Конструктора
+ * @param {string} sheetName - имя листа
+ * @param {string} cellAddress - адрес ячейки  
+ * @return {Object|null} конфигурация или null если не найдена
  */
 function loadCollectConfig(sheetName, cellAddress) {
   try {
+    addSystemLog(`loadCollectConfig START: ${sheetName}!${cellAddress}`, 'DEBUG', 'COLLECT_CONFIG');
+    
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var configSheet = ss.getSheetByName(CONFIG_SHEET_NAME);
+    var configSheet = ss.getSheetByName('ConfigData');
     
     if (!configSheet) {
-      return null; // Лист не создан = нет конфигураций
+      addSystemLog('Лист ConfigData не существует', 'WARN', 'COLLECT_CONFIG');
+      return null;
     }
     
-    var row = findConfigRow(configSheet, sheetName, cellAddress);
+    var rowIndex = findExistingConfig(configSheet, sheetName, cellAddress);
     
-    if (row === -1) {
-      return null; // Конфигурация не найдена
+    if (rowIndex <= 0) {
+      addSystemLog('Конфигурация не найдена', 'INFO', 'COLLECT_CONFIG');
+      return null;
     }
     
-    var data = configSheet.getRange(row, 1, 1, 7).getValues()[0];
+    // Читаем данные из строки
+    var rowData = configSheet.getRange(rowIndex, 1, 1, 8).getValues()[0];
+    
+    var systemPrompt = null;
+    if (rowData[2] && rowData[3]) { // SystemPromptSheet и SystemPromptCell
+      systemPrompt = {
+        sheet: rowData[2],
+        cell: rowData[3]
+      };
+    }
+    
+    var userData = [];
+    try {
+      if (rowData[4]) { // UserDataJSON
+        userData = JSON.parse(rowData[4]);
+      }
+    } catch (parseError) {
+      addSystemLog(`⚠️ Ошибка парсинга UserDataJSON: ${parseError.message}`, 'WARN', 'COLLECT_CONFIG');
+    }
     
     var config = {
-      systemPrompt: data[2] && data[3] ? {
-        sheet: data[2],
-        cell: data[3]
-      } : null,
-      userData: data[4] ? JSON.parse(data[4]) : [],
-      createdAt: data[5],
-      lastRun: data[6] || null
+      systemPrompt: systemPrompt,
+      userData: userData,
+      name: rowData[7] || '', // ConfigName
+      createdAt: rowData[5],   // CreatedAt
+      lastRun: rowData[6]      // LastRun
     };
     
-    Logger.log('✅ Конфигурация загружена для ' + sheetName + '!' + cellAddress);
+    addSystemLog(`✅ Конфигурация загружена: SystemPrompt=${systemPrompt ? 'да' : 'нет'}, UserData=${userData.length} элементов`, 'INFO', 'COLLECT_CONFIG');
     return config;
     
   } catch (error) {
-    Logger.log('❌ Ошибка загрузки конфигурации: ' + error.message);
+    addSystemLog(`❌ Ошибка загрузки конфигурации: ${error.message}`, 'ERROR', 'COLLECT_CONFIG');
     return null;
   }
 }
 
 /**
- * Удалить конфигурацию для ячейки
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки
- */
-function deleteCollectConfig(sheetName, cellAddress) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var configSheet = ss.getSheetByName(CONFIG_SHEET_NAME);
-    
-    if (!configSheet) {
-      return true; // Нет листа = нечего удалять
-    }
-    
-    var row = findConfigRow(configSheet, sheetName, cellAddress);
-    
-    if (row === -1) {
-      return true; // Конфигурация не найдена = уже удалена
-    }
-    
-    configSheet.deleteRow(row);
-    Logger.log('✅ Конфигурация удалена для ' + sheetName + '!' + cellAddress);
-    return true;
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка удаления конфигурации: ' + error.message);
-    return false;
-  }
-}
-
-/**
- * Обновить время последнего запуска
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки
- */
-function updateLastRun(sheetName, cellAddress) {
-  try {
-    var config = loadCollectConfig(sheetName, cellAddress);
-    if (!config) {
-      return false;
-    }
-    
-    config.lastRun = new Date().toISOString();
-    saveCollectConfig(sheetName, cellAddress, config);
-    return true;
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка обновления lastRun: ' + error.message);
-    return false;
-  }
-}
-
-/**
- * Получить все листы в таблице
- * @return {Array} Массив названий листов
- */
-function getAllSheetNames() {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheets = ss.getSheets();
-    var names = [];
-    
-    for (var i = 0; i < sheets.length; i++) {
-      names.push(sheets[i].getName());
-    }
-    
-    return names;
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка получения списка листов: ' + error.message);
-    return [];
-  }
-}
-
-/**
- * Собрать данные из ячейки/диапазона
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки или диапазона
- * @return {string} Собранные данные
- */
-function collectDataFromRange(sheetName, cellAddress) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(sheetName);
-    
-    if (!sheet) {
-      Logger.log('❌ Лист не найден: ' + sheetName);
-      return '';
-    }
-    
-    var range = sheet.getRange(cellAddress);
-    var values = range.getValues();
-    var result = [];
-    
-    // Собираем все непустые значения
-    for (var row = 0; row < values.length; row++) {
-      for (var col = 0; col < values[row].length; col++) {
-        var value = values[row][col];
-        if (value !== null && value !== undefined && value !== '') {
-          result.push(String(value));
-        }
-      }
-    }
-    
-    return result.join(' ');
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка сбора данных из ' + sheetName + '!' + cellAddress + ': ' + error.message);
-    return '';
-  }
-}
-
-/**
- * Выполнить запрос по сохранённой конфигурации
- * @param {string} sheetName - Имя листа
- * @param {string} cellAddress - Адрес ячейки
- * @return {Object} {success, result, error}
+ * Выполнение AI запроса по сохраненной конфигурации
+ * @param {string} sheetName - имя листа с результатом
+ * @param {string} cellAddress - адрес ячейки с результатом
+ * @return {Object} {success: boolean, result?: string, error?: string}
  */
 function executeCollectConfig(sheetName, cellAddress) {
   try {
-<<<<<<< HEAD
-    addSystemLog('→ executeCollectConfig START: ' + sheetName + '!' + cellAddress, 'INFO', 'COLLECT_EXEC');
+    addSystemLog(`executeCollectConfig START: ${sheetName}!${cellAddress}`, 'INFO', 'COLLECT_EXEC');
     
-=======
->>>>>>> origin/main
-    // 🔐 Проверка credentials
-    var props = PropertiesService.getScriptProperties();
-    var geminiKey = props.getProperty('GEMINI_API_KEY');
-    
-    if (!geminiKey) {
-<<<<<<< HEAD
-      addSystemLog('❌ GEMINI_API_KEY не настроен!', 'ERROR', 'COLLECT_EXEC');
-=======
->>>>>>> origin/main
+    // 1. Проверяем Gemini API Key
+    var credentials = getClientCredentials();
+    if (!credentials.geminiKey) {
       return {
         success: false,
-        error: '❌ Не настроен Gemini API Key! Меню → Настройки → Gemini API'
+        error: 'Не настроен Gemini API Key. Используйте меню: 🤖 Table AI → ⚙️ Настройки → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ'
       };
     }
     
-    // Загружаем конфигурацию
-<<<<<<< HEAD
-    addSystemLog('   Загрузка конфигурации...', 'DEBUG', 'COLLECT_EXEC');
+    // 2. Загружаем конфигурацию
+    addSystemLog('Загрузка конфигурации...', 'DEBUG', 'COLLECT_EXEC');
     var config = loadCollectConfig(sheetName, cellAddress);
+    
     if (!config) {
-      addSystemLog('❌ Конфигурация не найдена!', 'ERROR', 'COLLECT_EXEC');
-=======
-    var config = loadCollectConfig(sheetName, cellAddress);
-    if (!config) {
->>>>>>> origin/main
       return {
         success: false,
-        error: 'Конфигурация не найдена для ' + sheetName + '!' + cellAddress
+        error: 'Конфигурация не найдена. Сначала настройте запрос через: 🎯 AI Конструктор → Настроить запрос'
       };
     }
     
-<<<<<<< HEAD
-    addSystemLog('✅ Конфигурация загружена: ' + JSON.stringify(config), 'DEBUG', 'COLLECT_EXEC');
+    addSystemLog(`✅ Конфигурация загружена: ${JSON.stringify(config).substring(0, 100)}...`, 'DEBUG', 'COLLECT_EXEC');
     
-    // Собираем System Prompt
+    // 3. Собираем System Prompt
     var systemPrompt = '';
-    if (config.systemPrompt) {
-      addSystemLog('   Сбор System Prompt из ' + config.systemPrompt.sheet + '!' + config.systemPrompt.cell, 'DEBUG', 'COLLECT_EXEC');
-=======
-    // Собираем System Prompt
-    var systemPrompt = '';
-    if (config.systemPrompt) {
->>>>>>> origin/main
-      systemPrompt = collectDataFromRange(
-        config.systemPrompt.sheet,
-        config.systemPrompt.cell
-      );
-<<<<<<< HEAD
-      addSystemLog('   System Prompt: ' + systemPrompt.substring(0, 100) + '...', 'DEBUG', 'COLLECT_EXEC');
-=======
->>>>>>> origin/main
+    if (config.systemPrompt && config.systemPrompt.sheet && config.systemPrompt.cell) {
+      addSystemLog(`Сбор System Prompt из ${config.systemPrompt.sheet}!${config.systemPrompt.cell}`, 'DEBUG', 'COLLECT_EXEC');
+      
+      try {
+        systemPrompt = collectDataFromRange(config.systemPrompt.sheet, config.systemPrompt.cell);
+        addSystemLog(`System Prompt собран: ${systemPrompt.length} символов`, 'DEBUG', 'COLLECT_EXEC');
+      } catch (error) {
+        addSystemLog(`⚠️ Ошибка сбора System Prompt: ${error.message}`, 'WARN', 'COLLECT_EXEC');
+      }
     }
     
-    // Собираем User Data
+    // 4. Собираем User Data
     var userData = [];
-    if (config.userData && config.userData.length > 0) {
-<<<<<<< HEAD
-      addSystemLog('   Сбор User Data из ' + config.userData.length + ' источников', 'DEBUG', 'COLLECT_EXEC');
-      for (var i = 0; i < config.userData.length; i++) {
-        var dataSource = config.userData[i];
-        addSystemLog('     [' + i + '] ' + dataSource.sheet + '!' + dataSource.cell, 'DEBUG', 'COLLECT_EXEC');
-=======
-      for (var i = 0; i < config.userData.length; i++) {
-        var dataSource = config.userData[i];
->>>>>>> origin/main
-        var data = collectDataFromRange(dataSource.sheet, dataSource.cell);
-        if (data) {
+    addSystemLog(`Сбор User Data из ${config.userData.length} источников`, 'DEBUG', 'COLLECT_EXEC');
+    
+    for (var i = 0; i < config.userData.length; i++) {
+      var source = config.userData[i];
+      if (source.sheet && source.cell) {
+        try {
+          addSystemLog(`  [${i}] ${source.sheet}!${source.cell}`, 'DEBUG', 'COLLECT_EXEC');
+          var data = collectDataFromRange(source.sheet, source.cell);
+          
           userData.push({
-            source: dataSource.sheet + '!' + dataSource.cell,
+            source: `${source.sheet}!${source.cell}`,
             content: data
           });
-<<<<<<< HEAD
-          addSystemLog('     ✅ Собрано ' + data.length + ' символов', 'DEBUG', 'COLLECT_EXEC');
-=======
->>>>>>> origin/main
+          
+          addSystemLog(`  ✅ Собрано ${data.length} символов`, 'DEBUG', 'COLLECT_EXEC');
+        } catch (error) {
+          addSystemLog(`  ❌ Ошибка сбора из ${source.sheet}!${source.cell}: ${error.message}`, 'ERROR', 'COLLECT_EXEC');
+          
+          userData.push({
+            source: `${source.sheet}!${source.cell}`,
+            content: `[ОШИБКА: ${error.message}]`
+          });
         }
       }
     }
     
-    // Формируем JSON для отправки в AI
+    // 5. Формируем запрос
     var requestData = {
       systemInstruction: systemPrompt,
       userData: userData
     };
     
-<<<<<<< HEAD
-    addSystemLog('   Отправка в Gemini...', 'INFO', 'COLLECT_EXEC');
+    // Создаем итоговый промпт для Gemini
+    var fullPrompt = '';
     
-    // Отправляем в Gemini
-    var result = sendToGeminiWithJSON(requestData);
+    if (systemPrompt) {
+      fullPrompt += systemPrompt + '\n\n';
+    }
     
-    addSystemLog('✅ Получен ответ от Gemini: ' + result.substring(0, 100) + '...', 'INFO', 'COLLECT_EXEC');
+    if (userData.length > 0) {
+      fullPrompt += 'Данные для анализа:\n\n';
+      for (var j = 0; j < userData.length; j++) {
+        fullPrompt += `Источник ${j + 1} (${userData[j].source}):\n${userData[j].content}\n\n`;
+      }
+    }
     
-    // Записываем результат в ячейку
+    if (!fullPrompt.trim()) {
+      return {
+        success: false,
+        error: 'Нет данных для обработки. Настройте System Prompt или User Data.'
+      };
+    }
+    
+    addSystemLog(`Сформированный промпт: ${fullPrompt.length} символов`, 'DEBUG', 'COLLECT_EXEC');
+    
+    // 6. Отправляем в Gemini
+    addSystemLog('Отправка в Gemini...', 'INFO', 'COLLECT_EXEC');
+    
+    var geminiResult = callGeminiAPI(fullPrompt, credentials.geminiKey);
+    
+    if (!geminiResult || !geminiResult.result) {
+      return {
+        success: false,
+        error: 'Gemini API не вернул результат: ' + (geminiResult ? geminiResult.error : 'неизвестная ошибка')
+      };
+    }
+    
+    addSystemLog(`✅ Получен ответ от Gemini: ${geminiResult.result.length} символов`, 'INFO', 'COLLECT_EXEC');
+    
+    // 7. Записываем результат в ячейку
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var targetSheet = ss.getSheetByName(sheetName);
-    if (targetSheet) {
-      targetSh                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-=======
-    // Отправляем в Gemini
-    var result = sendToGeminiWithJSON(requestData);
     
-    // Обновляем время последнего запуска
-    updateLastRun(sheetName, cellAddress);
+    if (!targetSheet) {
+      return {
+        success: false,
+        error: `Лист "${sheetName}" не найден`
+      };
+    }
     
-    return {
-      success: true,
-      result: result
-    };
+    try {
+      var targetRange = targetSheet.getRange(cellAddress);
+      targetRange.setValue(geminiResult.result);
+      
+      addSystemLog(`✅ Результат записан в ${sheetName}!${cellAddress}`, 'INFO', 'COLLECT_EXEC');
+      
+      // 8. Обновляем LastRun
+      updateLastRun(sheetName, cellAddress);
+      
+      return {
+        success: true,
+        result: geminiResult.result
+      };
+      
+    } catch (error) {
+      return {
+        success: false,
+        error: `Ошибка записи в ячейку ${cellAddress}: ${error.message}`
+      };
+    }
     
   } catch (error) {
+    addSystemLog(`❌ Критическая ошибка executeCollectConfig: ${error.message}`, 'ERROR', 'COLLECT_EXEC');
     return {
       success: false,
       error: error.message
@@ -413,33 +315,182 @@ function executeCollectConfig(sheetName, cellAddress) {
 }
 
 /**
- * Отправить JSON в Gemini
- * @param {Object} requestData - {systemInstruction, userData}
- * @return {string} Ответ от AI
+ * Удаление конфигурации
+ * @param {string} sheetName - имя листа
+ * @param {string} cellAddress - адрес ячейки
+ * @return {boolean} успешность операции
  */
-function sendToGeminiWithJSON(requestData) {
+function deleteCollectConfig(sheetName, cellAddress) {
   try {
-    // Формируем промпт
-    var fullPrompt = '';
+    addSystemLog(`deleteCollectConfig START: ${sheetName}!${cellAddress}`, 'DEBUG', 'COLLECT_CONFIG');
     
-    // Добавляем system instruction
-    if (requestData.systemInstruction) {
-      fullPrompt += requestData.systemInstruction + '\n\n';
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName('ConfigData');
+    
+    if (!configSheet) {
+      return true; // Нечего удалять
     }
     
-    // Добавляем user data в JSON формате
-    if (requestData.userData && requestData.userData.length > 0) {
-      fullPrompt += 'DATA:\n';
-      fullPrompt += JSON.stringify(requestData.userData, null, 2);
+    var rowIndex = findExistingConfig(configSheet, sheetName, cellAddress);
+    
+    if (rowIndex > 0) {
+      configSheet.deleteRow(rowIndex);
+      addSystemLog(`✅ Конфигурация удалена из строки ${rowIndex}`, 'INFO', 'COLLECT_CONFIG');
     }
     
-    // Вызываем существующую функцию Gemini
-    var result = callGeminiAPI(fullPrompt);
-    return result;
+    return true;
     
   } catch (error) {
-    Logger.log('❌ Ошибка отправки в Gemini: ' + error.message);
-    throw error;
+    addSystemLog(`❌ Ошибка удаления конфигурации: ${error.message}`, 'ERROR', 'COLLECT_CONFIG');
+    return false;
   }
 }
->>>>>>> origin/main
+
+/**
+ * Поиск существующей конфигурации
+ * @param {Sheet} configSheet - лист ConfigData
+ * @param {string} sheetName - имя листа
+ * @param {string} cellAddress - адрес ячейки
+ * @return {number} индекс строки или -1 если не найдена
+ */
+function findExistingConfig(configSheet, sheetName, cellAddress) {
+  var lastRow = configSheet.getLastRow();
+  
+  if (lastRow <= 1) {
+    return -1; // Только заголовок или пустой лист
+  }
+  
+  // Читаем все данные за раз для оптимизации
+  var data = configSheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] === sheetName && data[i][1] === cellAddress) {
+      return i + 2; // +2 потому что начали с строки 2 и индекс 0-based
+    }
+  }
+  
+  return -1;
+}
+
+/**
+ * Обновление времени последнего выполнения
+ * @param {string} sheetName - имя листа
+ * @param {string} cellAddress - адрес ячейки
+ */
+function updateLastRun(sheetName, cellAddress) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName('ConfigData');
+    
+    if (!configSheet) return;
+    
+    var rowIndex = findExistingConfig(configSheet, sheetName, cellAddress);
+    
+    if (rowIndex > 0) {
+      configSheet.getRange(rowIndex, 7).setValue(new Date().toISOString()); // LastRun
+      addSystemLog(`LastRun обновлен для ${sheetName}!${cellAddress}`, 'DEBUG', 'COLLECT_CONFIG');
+    }
+    
+  } catch (error) {
+    addSystemLog(`⚠️ Ошибка обновления LastRun: ${error.message}`, 'WARN', 'COLLECT_CONFIG');
+  }
+}
+
+/**
+ * Сбор данных из диапазона ячеек
+ * @param {string} sheetName - имя листа
+ * @param {string} cellAddress - адрес ячейки/диапазона (A1, C1:C100, C:C)
+ * @return {string} собранные данные
+ */
+function collectDataFromRange(sheetName, cellAddress) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      throw new Error(`Лист "${sheetName}" не найден`);
+    }
+    
+    // Обрабатываем специальные случаи для полных столбцов
+    var normalizedAddress = cellAddress;
+    
+    // Если это полный столбец (C:C), преобразуем в C1:C (до последней строки с данными)
+    if (/^[A-Z]+:[A-Z]+$/.test(cellAddress)) {
+      var columnLetter = cellAddress.split(':')[0];
+      var lastRow = sheet.getLastRow();
+      normalizedAddress = `${columnLetter}1:${columnLetter}${lastRow}`;
+    }
+    
+    var range = sheet.getRange(normalizedAddress);
+    var values = range.getValues();
+    
+    // Собираем все непустые значения в строку
+    var result = [];
+    
+    for (var i = 0; i < values.length; i++) {
+      for (var j = 0; j < values[i].length; j++) {
+        var value = values[i][j];
+        if (value !== null && value !== undefined && value.toString().trim() !== '') {
+          result.push(value.toString());
+        }
+      }
+    }
+    
+    return result.join('\n');
+    
+  } catch (error) {
+    throw new Error(`Ошибка сбора данных из ${sheetName}!${cellAddress}: ${error.message}`);
+  }
+}
+
+/**
+ * Логи AI Конструктора
+ * @return {Array<string>} массив логов
+ */
+function showCollectConfigLogs() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    
+    // Получаем логи из CacheService
+    var logs = [];
+    
+    try {
+      var cache = CacheService.getScriptCache();
+      var props = PropertiesService.getScriptProperties();
+      var allProps = props.getProperties();
+      
+      // Ищем логи в Properties
+      Object.keys(allProps).forEach(function(key) {
+        if (key.startsWith('log_') && (key.indexOf('COLLECT_CONFIG') > -1 || key.indexOf('COLLECT_EXEC') > -1)) {
+          try {
+            var logEntry = JSON.parse(allProps[key]);
+            logs.push(`[${logEntry.timestamp}] ${logEntry.level} [${logEntry.component}] ${logEntry.message}`);
+          } catch (e) {
+            // Пропускаем невалидные записи
+          }
+        }
+      });
+      
+    } catch (cacheError) {
+      logs.push('⚠️ Ошибка доступа к свойствам: ' + cacheError.message);
+    }
+    
+    if (logs.length === 0) {
+      logs.push('📋 Логи пусты. Попробуйте:\n1. Настроить запрос (💾 Сохранить)\n2. Выполнить запрос (🚀 Запустить)\n3. Сразу после этого открыть логи');
+    }
+    
+    // Сортируем логи по времени (новые сверху)
+    logs.sort().reverse();
+    
+    var logText = logs.slice(0, 50).join('\n\n'); // Показываем последние 50 записей
+    
+    ui.alert(
+      '🔍 Логи AI Конструктора',
+      logText.length > 8000 ? logText.substring(0, 8000) + '\n\n... (показаны первые 8000 символов)' : logText,
+      ui.ButtonSet.OK
+    );
+    
+  } catch (error) {
+    SpreadsheetApp.getUi().alert('❌ Ошибка', 'Не удалось загрузить логи: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
