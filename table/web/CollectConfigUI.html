@@ -77,10 +77,31 @@
     .input-group {
       display: flex;
       gap: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
     
-    select, input {
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #5f6368;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    
+    .checkbox-group label {
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    select, input[type="text"] {
       padding: 10px 12px;
       border: 1px solid #dadce0;
       border-radius: 4px;
@@ -89,7 +110,7 @@
       transition: border-color 0.2s;
     }
     
-    select:focus, input:focus {
+    select:focus, input[type="text"]:focus {
       outline: none;
       border-color: #1a73e8;
     }
@@ -98,7 +119,7 @@
       flex: 1;
     }
     
-    input {
+    input[type="text"] {
       flex: 0 0 120px;
     }
     
@@ -249,7 +270,11 @@
         <select id="systemSheet" onchange="updateSystemPreview()">
           <option value="">Выберите лист...</option>
         </select>
-        <input type="text" id="systemCell" placeholder="A1" onblur="updateSystemPreview()" />
+        <input type="text" id="systemCell" placeholder="A1 или C" onblur="updateSystemPreview()" />
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="systemWholeColumn" onchange="handleColumnCheckbox('system')" />
+        <label for="systemWholeColumn">📊 Выбрать весь столбец (C → C1:C)</label>
       </div>
       <div id="systemPreview" class="cell-preview" style="display:none;"></div>
     </div>
@@ -351,8 +376,23 @@
       
       const input = document.createElement('input');
       input.type = 'text';
-      input.placeholder = 'A1 или A1:Z100';
+      input.placeholder = 'A1 или C';
       input.value = cell || '';
+      
+      // Чекбокс для выбора всего столбца
+      const checkboxWrapper = document.createElement('div');
+      checkboxWrapper.className = 'checkbox-group';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = 'wholeColumn_' + Date.now();
+      
+      const checkboxLabel = document.createElement('label');
+      checkboxLabel.setAttribute('for', checkbox.id);
+      checkboxLabel.textContent = '📊 Весь столбец';
+      
+      checkboxWrapper.appendChild(checkbox);
+      checkboxWrapper.appendChild(checkboxLabel);
       
       const preview = document.createElement('div');
       preview.className = 'cell-preview';
@@ -393,17 +433,54 @@
         container.removeChild(wrapper);
       };
       
+      // Обработка чекбокса для преобразования в полный столбец
+      checkbox.onchange = function() {
+        if (checkbox.checked) {
+          const currentValue = input.value.trim();
+          if (currentValue) {
+            const columnLetter = extractColumnLetter(currentValue);
+            if (columnLetter) {
+              input.value = columnLetter + '1:' + columnLetter;
+              updatePreview();
+            }
+          }
+        }
+      };
+      
       item.appendChild(select);
       item.appendChild(input);
       item.appendChild(removeBtn);
       
       wrapper.appendChild(item);
+      wrapper.appendChild(checkboxWrapper);
       wrapper.appendChild(preview);
       container.appendChild(wrapper);
       
       // Загрузим превью если есть значения
       if (sheet && cell) {
         updatePreview();
+      }
+    }
+    
+    function extractColumnLetter(cellRef) {
+      // Извлекает букву столбца из C, C1, C40 и т.д.
+      const match = cellRef.match(/^([A-Z]+)\d*$/i);
+      return match ? match[1].toUpperCase() : null;
+    }
+    
+    function handleColumnCheckbox(type) {
+      const checkbox = document.getElementById(type + 'WholeColumn');
+      const input = document.getElementById(type + 'Cell');
+      
+      if (checkbox.checked) {
+        const currentValue = input.value.trim();
+        if (currentValue) {
+          const columnLetter = extractColumnLetter(currentValue);
+          if (columnLetter) {
+            input.value = columnLetter + '1:' + columnLetter;
+            updateSystemPreview();
+          }
+        }
       }
     }
     
