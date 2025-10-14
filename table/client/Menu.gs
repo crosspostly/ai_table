@@ -1,7 +1,9 @@
+// 🚀🚀🚀 СУПЕР-ТЕСТ СИНХРОНИЗАЦИИ 2025-01-27 05:20:00 🚀🚀🚀
+// ЕСЛИ ВЫ ВИДИТЕ ЭТОТ ТЕКСТ В APPS SCRIPT - СИНХРОНИЗАЦИЯ РАБОТАЕТ!
 // Client Menu System for AI_TABLE
-// Version: DEPLOY_TIME_PLACEHOLDER
+// Version: DEPLOY_TIME_PLACEHOLDER  
 // Last Deploy: DEPLOY_TIMESTAMP_PLACEHOLDER
-// Debug: Force sync test - 2025-01-14 14:35:00
+// Debug: Force sync test - ОБНОВЛЕН ДЛЯ СУПЕР-ДИАГНОСТИКИ
 
 /**
  * Настроить все credentials - с инструкцией
