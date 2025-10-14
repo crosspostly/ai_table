@@ -334,10 +334,26 @@ jobs:
           cp table/shared/*.gs table/client/
           echo "✅ Copied shared files to table/client/"
           
-          # Copy web files directly into client directory  
-          cp table/web/*.gs table/client/ 2>/dev/null || true
-          cp table/web/*.html table/client/ 2>/dev/null || true
-          echo "✅ Copied web files to table/client/"
+          # 🔄 COPY web files for deployment (Apps Script needs them!)
+          echo "📂 Copying web files to client directory..."
+          echo "⚠️  Apps Script rootDir=table/client, must copy web files here"
+          
+          # 🗑️ First, remove any old web files from client to avoid conflicts
+          echo "🗑️  Removing old web files from client..."
+          rm -f table/client/CollectConfigUI.* table/client/WebInterface.* table/client/WebApp.* table/client/RealisticWebApp.*
+          echo "✅ Old web files removed"
+          
+          # 📋 Now copy fresh files from web/
+          cp -v table/web/*.gs table/client/ 2>/dev/null || echo "No .gs files in web/"
+          cp -v table/web/*.html table/client/ 2>/dev/null || echo "No .html files in web/"
+          
+          # ⚠️  WORKAROUND: Rename CollectConfigUI.gs to avoid name conflict with existing HTML
+          if [ -f table/client/CollectConfigUI.gs ]; then
+            mv table/client/CollectConfigUI.gs table/client/CollectConfigUIScript.gs
+            echo "⚠️  Renamed CollectConfigUI.gs → CollectConfigUIScript.gs to avoid conflict"
+          fi
+          
+          echo "✅ Web files copied to table/client/ for Apps Script sync"
           
           # 🔒 SECURITY CHECK: Ensure NO server files in client!
           echo "🔍 Security check: verifying NO server files in client..."
@@ -355,20 +371,44 @@ jobs:
           
           echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
           echo "Using clasp push for container-bound script..."
+          
+          echo "📋 BEFORE PUSH - Files being uploaded:"
+          find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
+          echo ""
+          echo "🔍 SPECIFIC FILE STATUS CHECK:"
+          echo "CollectConfigUI files:"
+          ls -la table/client/CollectConfig* 2>/dev/null || echo "❌ No CollectConfigUI files found in table/client/"
+          echo "AIConstructorUI files:"
+          ls -la table/client/AIConstructor* 2>/dev/null || echo "❌ No AIConstructorUI files found in table/client/"
+          echo "WebInterface files:"
+          ls -la table/client/WebInterface* 2>/dev/null || echo "❌ No WebInterface files found in table/client/"
+          echo ""
+          echo "📊 FILE COUNT SUMMARY:"
+          echo "Total GS files: $(find table/client -name "*.gs" | wc -l)"
+          echo "Total HTML files: $(find table/client -name "*.html" | wc -l)"
+          echo "Total JSON files: $(find table/client -name "*.json" | wc -l)"
+          echo ""
+          
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
             echo ""
             echo "❌ CLIENT CLASP PUSH FAILED!"
             echo "Error output:"
             cat /tmp/clasp-client-push.log
+            echo ""
+            echo "📁 Files that clasp tried to push:"
+            find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
             exit 1
           }
           
-          # Clean up copied files
-          echo "Cleaning up copied files..."
+          echo "📋 AFTER PUSH - Success! Uploaded files:"
+          grep -i "Pushed\|Updated\|Created" /tmp/clasp-client-push.log || echo "No specific file info in clasp output"
+          
+          # Clean up copied files (only shared, keep web files!)
+          echo "Cleaning up copied shared files..."
           rm -f table/client/Constants.gs table/client/LoggingService.gs table/client/Utils.gs
-          rm -f table/client/WebInterface.gs table/client/*.html
           rm -f table/client/appsscript.json
-          echo "✅ Cleaned up"
+          # ✅ Keep ALL web files: CollectConfigUI.gs/html, WebInterface.gs, etc.
+          echo "✅ Cleaned up shared files (kept all web files)"
           
           echo "✅ Client deployment complete!"
 

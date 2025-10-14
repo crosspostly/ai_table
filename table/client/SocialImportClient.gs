@@ -1,5 +1,83 @@
 // importVkPosts() - реализация в VkImportService.gs
 
+/**
+ * ОРИГИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ ИЗ old/Main.txt
+ * Импорт VK постов через Google Apps Script парсер
+ * Использует VK_PARSER_URL с параметрами owner и count
+ */
+function importVkPosts() {
+  // Используем глобальную константу VK_PARSER_URL из Constants.gs
+  addSystemLog('→ Импорт VK-постов с фильтрацией', 'INFO');
+  
+  var ss = SpreadsheetApp.getActive();
+  var params = ss.getSheetByName('Параметры');
+  
+  if (!params) { 
+    addSystemLog('❌ Нет листа "Параметры"', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Лист "Параметры" не найден!'); 
+    return; 
+  }
+  
+  var owner = params.getRange('B1').getValue();
+  var count = params.getRange('B2').getValue();
+  
+  if (!owner || !count) { 
+    addSystemLog('❌ Не указаны owner или count', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Введите owner и count на листе "Параметры"'); 
+    return; 
+  }
+  
+  // Формируем URL точно как в старой версии
+  var url = VK_PARSER_URL + '?owner=' + encodeURIComponent(owner) + '&count=' + encodeURIComponent(count);
+  
+  try {
+    var resp = UrlFetchApp.fetch(url);
+    var arr = JSON.parse(resp.getContentText());
+  } catch (e) {
+    addSystemLog('❌ Ошибка запроса VK: ' + e.message, 'ERROR');
+    SpreadsheetApp.getUi().alert('Ошибка запроса VK Parser: ' + e);
+    return;
+  }
+  
+  if (!Array.isArray(arr)) { 
+    addSystemLog('❌ Неверный массив от VK', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Неверный формат данных от VK Parser'); 
+    return; 
+  }
+
+  var headers = [
+    'Дата', 'Ссылка на пост', 'Текст поста', 'Номер поста',
+    'Стоп-слова', 'Отфильтрованные посты', 'Новый номер',
+    'Позитивные слова', 'Посты с позитивными словами', 'Новый номер (позитивные)'
+  ];
+  
+  var out = [headers];
+  
+  arr.forEach(function(o, i) {
+    var number = o.number !== undefined ? o.number : i + 1;
+    out.push([o.date, o.link, o.text, number, '', '', '', '', '', '']);
+  });
+
+  var sheet = ss.getSheetByName('посты');
+  
+  if (!sheet) { 
+    addSystemLog('❌ Лист "посты" не найден!', 'ERROR'); 
+    SpreadsheetApp.getUi().alert('Создайте лист "посты".'); 
+    return; 
+  }
+
+  sheet.clear();
+  sheet.getRange(1, 1, out.length, headers.length).setValues(out);
+  
+  // Применяем форматирование
+  applyUniformFormatting(sheet);
+  
+  // Создаем формулы фильтрации
+  createStopWordsFormulas(sheet, out.length);
+  
+  addSystemLog('✅ Импортировано ' + (out.length-1) + ' постов', 'INFO');
+  SpreadsheetApp.getUi().alert('Импорт завершён: ' + (out.length - 1) + ' постов. Формулы фильтрации добавлены.');
+}
 
 /**
  * Запись социальных постов в лист

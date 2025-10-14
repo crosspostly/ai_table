@@ -126,11 +126,27 @@ function onOpen() {
       .addItem('🔧 Настроить цепочку', 'configureSmartChain'))
     .addItem('📝 Транскрибировать отзывы', 'ocrRun')
     .addItem('💬 Режим чата', 'initializeChatMode')
-    .addItem('🧠 Умные правила', 'setupSmartPromptTrigger')
+    .addSubMenu(ui.createMenu('📝 Текст → AI Формула')
+      .addItem('🔄 GM() - Обновляемая', 'convertTextToGMFormula')
+      .addItem('🔒 GM_STATIC() - Одноразовая', 'convertTextToGMStaticFormula')
+      .addSeparator()
+      .addItem('🧠 С умными правилами', 'applySmartRulesToSelection')
+      .addSeparator()
+      .addItem('❓ Справка', 'showTextToFormulaHelp'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🎯 AI Конструктор (без лимитов)')
+      .addItem('🎯 Настроить запрос', 'openCollectConfigUI')
+      .addItem('🔄 Обновить ячейку', 'refreshCellWithConfig')
+      .addSeparator()
+      .addItem('❓ Что это?', 'showCollectConfigHelp'))
     .addSubMenu(ui.createMenu('⚙️ Настройки')
       .addItem('🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ', 'setupAllCredentialsWithHelp')
       .addItem('📊 Проверить статус системы', 'checkSystemStatus')
       .addItem('📋 Очистить ячейки', 'clearChainForA3'))
+    .addSubMenu(ui.createMenu('🧠 Управление правилами')
+      .addItem('📖 Открыть лист "Правила"', 'openRulesSheet')
+      .addItem('🔧 Создать лист правил', 'initializeSmartRules')
+      .addItem('❓ Справка по правилам', 'showSmartRulesHelp'))
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
       .addItem('🚀 Супер проверка системы', 'superMasterCheck')
       .addItem('📊 Открыть логи', 'openLogsSheetWithCreation')
@@ -462,183 +478,7 @@ function showCurrentVersionInfo() {
   }
 }
 
-
-
-/**
- * ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (перенесены из MissingFunctions.gs)
- */
-
-/**
- * Настроить цепочку
- */
-function configureSmartChain() {
-  var ui = SpreadsheetApp.getUi();
-  
-  var instructions = [];
-  instructions.push('🔧 НАСТРОЙКА УМНОЙ ЦЕПОЧКИ');
-  instructions.push('='.repeat(35));
-  instructions.push('');
-  instructions.push('📋 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:');
-  instructions.push('');
-  instructions.push('1️⃣ СТРОКА 1 - Заголовки колонок:');
-  instructions.push('   A1: Исходный текст');
-  instructions.push('   B1: Обработанный');
-  instructions.push('   C1: Итоговый');
-  instructions.push('');
-  instructions.push('2️⃣ СТРОКА 2 - Промпты для обработки:');
-  instructions.push('   A2: (пусто - исходные данные)');
-  instructions.push('   B2: Переведи на английский: {{prev}}');
-  instructions.push('   C2: Сделай краткое резюме: {{prev}}');
-  instructions.push('');
-  instructions.push('3️⃣ СТРОКА 3+ - Данные для обработки:');
-  instructions.push('   A3: Привет, как дела?');
-  instructions.push('   B3: (заполнится автоматически)');
-  instructions.push('   C3: (заполнится автоматически)');
-  instructions.push('');
-  instructions.push('🔗 ПЕРЕМЕННЫЕ:');
-  instructions.push('• {{prev}} - значение из предыдущей колонки');
-  instructions.push('• Можно использовать в любом промпте');
-  instructions.push('');
-  instructions.push('⚡ ЗАПУСК:');
-  instructions.push('• 📊 Анализ данных → 🚀 Запустить анализ');
-  instructions.push('• Или выберите строку и нажмите ⚡ Обновить ячейку');
-  
-  ui.alert('Настройка умной цепочки', instructions.join('\n'), ui.ButtonSet.OK);
-}
-
-/**
- * НЕДОСТАЮЩИЕ ФУНКЦИИ - ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
- * Только уникальные функции без дублей
- * 
- * УДАЛЕНЫ заглушки (есть реализация в других файлах):
- *   - openWebInterface() → ClientUtilities.gs:611
- *   - analyzeLogsAndFixErrors() → GoogleSheetsLogger.gs
- *   - forceFlushAllLogs() → GoogleSheetsLogger.gs
- *   - openLogsSheet() → Menu.gs:289
- *   - configureSocialImport() → Menu.gs
- *   - callServerDevFunction() → Menu.gs
- *   - callServerTestFunction() → Menu.gs
- *   - showDeveloperDashboard() → Menu.gs
- *   - showVersionInstructions() → Menu.gs
- *   - showCurrentVersionInfo() → Menu.gs
- *   - importInstagramPosts() → SocialImportService.gs
- *   - importTelegramPosts() → TelegramImportService.gs
- *   - runChainCurrentRow() → ClientUtilities.gs
- *   - manualAnalyzeLogsAndFixErrors() → обертка удалена
- */
-
-/**
- * НЕДОСТАЮЩИЕ ФУНКЦИИ ИЗ МЕНЮ
- * Автоматически созданы после анализа
- */
-
-/**
- * Режим разработчика с инструкциями
- */
-function toggleDeveloperModeWithHelp() {
-  var ui = SpreadsheetApp.getUi();
-  var props = PropertiesService.getScriptProperties();
-  var isDevMode = props.getProperty('DEVELOPER_MODE') === 'true';
-  
-  var instruction = '🔧 РЕЖИМ РАЗРАБОТЧИКА\n\n';
-  instruction += 'Включает дополнительную диагностическую информацию:\n\n';
-  instruction += '✅ ЧТО ДОСТУПНО В DEV РЕЖИМЕ:\n';
-  instruction += '• Детальные логи операций\n';
-  instruction += '• Performance metrics (время выполнения)\n';
-  instruction += '• Cache statistics\n';
-  instruction += '• API response timing\n';
-  instruction += '• Error stack traces\n';
-  instruction += '• Memory usage tracking\n\n';
-  instruction += '📊 Текущий статус: ' + (isDevMode ? '✅ ВКЛЮЧЁН' : '❌ ВЫКЛЮЧЕН') + '\n\n';
-  instruction += 'Хотите ' + (isDevMode ? 'ВЫКЛЮЧИТЬ' : 'ВКЛЮЧИТЬ') + ' режим разработчика?';
-
-  var result = ui.alert('🔧 Developer Mode', instruction, ui.ButtonSet.YES_NO);
-  
-  if (result === ui.Button.YES) {
-    var newMode = !isDevMode;
-    props.setProperty('DEVELOPER_MODE', newMode.toString());
-    
-    var message = newMode ? 
-      '✅ Режим разработчика ВКЛЮЧЁН\n\nТеперь доступны:\n• Детальные логи в меню\n• Performance metrics\n• Расширенная диагностика' :
-      '❌ Режим разработчика ВЫКЛЮЧЕН\n\nВозвращён к стандартному режиму.';
-    
-    addSystemLog('🔧 Developer mode ' + (newMode ? 'enabled' : 'disabled'), 'INFO', 'DEV_MODE');
-    ui.alert('🔧 Режим изменён', message, ui.ButtonSet.OK);
-  }
-}
-
-
-/**
- * Проверить статус системы
- */
-function checkSystemStatus() {
-  var ui = SpreadsheetApp.getUi();
-  var props = PropertiesService.getScriptProperties();
-  
-  var statusReport = [];
-  statusReport.push('📊 AI_TABLE System Status Report');
-  statusReport.push('Generated: ' + new Date().toLocaleString('ru-RU'));
-  statusReport.push('Last Update: ' + new Date().toISOString());
-  statusReport.push('');
-  
-  // License Status
-  var email = props.getProperty('LICENSE_EMAIL');
-  var token = props.getProperty('LICENSE_TOKEN');
-  if (email && token) {
-    statusReport.push('📧 License: ✅ Configured');
-    statusReport.push('   Email: ' + email);
-  } else {
-    statusReport.push('📧 License: ❌ Not configured');
-  }
-  statusReport.push('');
-  
-  // Gemini API Status  
-  var geminiKey = props.getProperty('GEMINI_API_KEY');
-  if (geminiKey) {
-    statusReport.push('🤖 Gemini API: ✅ Configured');
-    try {
-      if (typeof GM === 'function') {
-        var testResult = GM('Status check', 10, 0.1);
-        if (testResult && !testResult.includes('Ошибка')) {
-          statusReport.push('   Connection: ✅ Working');
-        } else {
-          statusReport.push('   Connection: ❌ Failed');
-        }
-      } else {
-        statusReport.push('   Function: ❌ GM function not available');
-      }
-    } catch (e) {
-      statusReport.push('   Connection: ❌ Error: ' + (e.message || String(e)));
-    }
-  } else {
-    statusReport.push('🤖 Gemini API: ❌ Not configured');
-  }
-  statusReport.push('');
-  
-  // Version Status
-  try {
-    var version = getCurrentVersion ? getCurrentVersion() : 'неизвестно';
-    statusReport.push('🔢 Version: ' + version);
-  } catch (e) {
-    statusReport.push('🔢 Version: ❌ getCurrentVersion() недоступно');
-  }
-  statusReport.push('');
-  
-  // Cache Status
-  try {
-    var cache = CacheService.getScriptCache();
-    statusReport.push('💾 Cache Service: ✅ Available');
-  } catch (e) {
-    statusReport.push('💾 Cache Service: ❌ Error: ' + e.message);
-  }
-  
-  statusReport.push('');
-  statusReport.push('🔧 Для настройки недостающих компонентов:');
-  statusReport.push('🤖 Table AI → 🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ');
-  
-  // ⚠️ ВАЖНО: VK API НЕ проверяется здесь!
-  // VK токены хранятся на СЕРВЕРЕ, клиент их НЕ видит!
-  
-  ui.alert('📊 System Status', statusReport.join('\n'), ui.ButtonSet.OK);
-  addSystemLog('System status checked', 'INFO', 'SYSTEM');
-}
+// ========================================
+// COLLECT CONFIG UI FUNCTIONS
+// Moved to table/web/CollectConfigUI.gs - avoid duplication
+// ========================================

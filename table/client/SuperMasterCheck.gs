@@ -102,14 +102,8 @@ function superMasterCheck() {
     overallResults.failed += section4.failed;
     overallResults.skipped += section4.skipped;
     
-    // === СЕКЦИЯ 5: VK API ТЕСТИРОВАНИЕ ===
-    logSection(testSheet, '━━━━━━━━━ СЕКЦИЯ 5: VK API ТЕСТИРОВАНИЕ ━━━━━━━━━');
-    var section5 = runVkApiTestSection(testSheet);
-    overallResults.sections.push(section5);
-    overallResults.total += section5.total;
-    overallResults.passed += section5.passed;
-    overallResults.failed += section5.failed;
-    overallResults.skipped += section5.skipped;
+    // УБРАНО: Секция 5 VK API - больше не используется
+    // VK токены теперь на сервере, проверка не нужна на клиенте
     
     // === ФИНАЛЬНЫЙ ОТЧЁТ ===
     var endTime = new Date();
@@ -240,38 +234,10 @@ function runDeveloperTestsSection(testSheet) {
       logStep('CLIENT-SERVER [3/8]', 'EXCEPTION: ' + e.message, 'error');
     }
     
-    // ТЕСТ 4: VK API через сервер
-    logStep('CLIENT-SERVER [4/8]', 'Тест VK API через сервер', 'in_progress');
-    try {
-      var vkRequest = {
-        action: 'social_import',  // ИСПРАВЛЕНО: используем правильное действие
-        email: credentials.email,
-        token: credentials.token,
-        source: 'durov',  // ИСПРАВЛЕНО: используем source вместо owner
-        count: 3,
-        platform: 'vk'  // ДОБАВЛЕНО: указываем платформу
-      };
-      
-      var vkResult = callServer(vkRequest);
-      
-      if (vkResult && vkResult.ok && vkResult.data) {
-        results.passed++;
-        results.details.push('✅ [4/8] VK API: OK (' + vkResult.data.length + ' posts)');
-        writeTestResultToSheet(testSheet, '[4/8] VK API', '✅ PASS', 
-          'Posts: ' + vkResult.data.length + ', First: ' + (vkResult.data[0] ? vkResult.data[0].date : 'N/A'));
-        logStep('CLIENT-SERVER [4/8]', 'VK API: OK (' + vkResult.data.length + ' posts)', 'success');
-      } else {
-        results.failed++;
-        results.details.push('❌ [4/8] VK API: FAILED (' + (vkResult ? vkResult.error : 'no response') + ')');
-        writeTestResultToSheet(testSheet, '[4/8] VK API', '❌ FAIL', vkResult ? vkResult.error : 'no response');
-        logStep('CLIENT-SERVER [4/8]', 'VK API: FAILED', 'error');
-      }
-    } catch (e) {
-      results.failed++;
-      results.details.push('❌ [4/8] VK API: EXCEPTION (' + e.message + ')');
-      writeTestResultToSheet(testSheet, '[4/8] VK API', '❌ FAIL', e.message, e.stack);
-      logStep('CLIENT-SERVER [4/8]', 'EXCEPTION: ' + e.message, 'error');
-    }
+    // УБРАНО: ТЕСТ 4 - VK API через сервер
+    // VK токены теперь на сервере, проверка не нужна на клиенте
+    logStep('CLIENT-SERVER [4/8]', 'VK API проверка убрана (токены на сервере)', 'success');
+    results.total--;  // Уменьшаем общее количество тестов
     
     // ТЕСТ 5: Social Import
     logStep('CLIENT-SERVER [5/8]', 'Тест Social Import', 'in_progress');
@@ -1073,6 +1039,29 @@ function showFinalResults(overallResults) {
     message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n';
     message += '⚠️ НАЙДЕНЫ ПРОБЛЕМЫ:\\n';
     message += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n';
+    
+    // Собираем все провалившиеся тесты из секций
+    var failedTests = [];
+    overallResults.sections.forEach(function(section) {
+      if (section.details && section.details.length > 0) {
+        section.details.forEach(function(detail) {
+          // Ищем строки с ❌
+          if (detail.indexOf('❌') !== -1) {
+            failedTests.push(detail);
+          }
+        });
+      }
+    });
+    
+    // Показываем список провалившихся тестов
+    if (failedTests.length > 0) {
+      message += '❌ ПРОВАЛЕНО (' + failedTests.length + '):\\n';
+      failedTests.forEach(function(test) {
+        message += '   ' + test + '\\n';
+      });
+      message += '\\n';
+    }
+    
     message += '🔍 ШАГ 1: Откройте лист \"тест\"\\n';
     message += '🔍 ШАГ 2: Найдите строки с ❌ FAIL (выделены красным)\\n';
     message += '🔍 ШАГ 3: Читайте колонку \"Рекомендации 🔧\"\\n';
