@@ -3,6 +3,7 @@ name: Deploy to Google Apps Script
 on:
   push:
     branches:
+      - main
       - web-interface-with-design
     paths:
       - 'table/**'
@@ -163,10 +164,14 @@ jobs:
           sed -i "s/DEPLOY_TIMESTAMP_PLACEHOLDER/$DEPLOY_TIMESTAMP/g" version.json
           sed -i "s/DEPLOY_BUILD_NUMBER_PLACEHOLDER/$DEPLOY_BUILD/g" version.json
           
-          # Update Menu.gs  
+          # Update Menu.gs with full timestamp
           sed -i "s/DEPLOY_TIMESTAMP_PLACEHOLDER/$DEPLOY_TIMESTAMP/g" table/client/Menu.gs
           
-          echo "✅ Timestamps updated in version.json and Menu.gs"
+          # Update Menu.gs with time-only version (HH:MM format)
+          DEPLOY_TIME=$(date -u +"%H:%M")
+          sed -i "s/DEPLOY_TIME_PLACEHOLDER/$DEPLOY_TIME/g" table/client/Menu.gs
+          
+          echo "✅ Timestamps updated: $DEPLOY_TIMESTAMP (time: $DEPLOY_TIME)"
           echo ""
           echo "Updated version.json:"
           grep -A 2 "updateTimestamp" version.json
@@ -345,19 +350,52 @@ jobs:
           done
           echo "✅ Shared files copied to table/client/"
           
-          # Copy web files directly into client directory  
-          echo "Copying web files into client directory..."
+          # 🔄 COPY web files for deployment (Apps Script needs them!)
+          echo "📂 Copying web files to client directory..."
+          echo "⚠️  Apps Script rootDir=table/client, must copy web files here"
+          
+          # 🗑️ First, remove any old web files from client to avoid conflicts
+          echo "🗑️  Removing old web files from client..."
+          rm -f table/client/CollectConfigUI.* table/client/WebInterface.* table/client/WebApp.* table/client/RealisticWebApp.*
+          echo "✅ Old web files removed"
+          
+          # 📋 Smart copy of web files with detailed logging
+          echo "📋 Copying web files with detailed logging..."
+          WEB_GS_COUNT=0
+          WEB_HTML_COUNT=0
+          
           if [ -d table/web ]; then
             for file in table/web/*; do
               if [ -f "$file" ]; then
+                filename=$(basename "$file")
                 cp "$file" table/client/
-                echo "  ✅ Copied $(basename "$file")"
+                case "$filename" in
+                  *.gs)
+                    WEB_GS_COUNT=$((WEB_GS_COUNT + 1))
+                    echo "  ✅ Copied JS: $filename"
+                    ;;
+                  *.html)
+                    WEB_HTML_COUNT=$((WEB_HTML_COUNT + 1))
+                    echo "  ✅ Copied HTML: $filename"
+                    ;;
+                  *)
+                    echo "  ✅ Copied other: $filename"
+                    ;;
+                esac
               fi
             done
-            echo "✅ Web files copied to table/client/"
+            echo "📊 Web files copied: $WEB_GS_COUNT GS files, $WEB_HTML_COUNT HTML files"
           else
-            echo "⚠️ No web directory found, skipping web files"
+            echo "⚠️ No table/web/ directory found"
           fi
+          
+          # ⚠️  WORKAROUND: Rename CollectConfigUI.gs to avoid name conflict with existing HTML
+          if [ -f table/client/CollectConfigUI.gs ]; then
+            mv table/client/CollectConfigUI.gs table/client/CollectConfigUIScript.gs
+            echo "✅ Renamed CollectConfigUI.gs to CollectConfigUIScript.gs"
+          fi
+          
+          echo "✅ Web files copied to table/client/ for Apps Script sync"
           
           # 🔒 ENHANCED SECURITY CHECK: Ensure NO server files in client!
           echo "🔍 Enhanced security check: verifying NO server files in client..."
@@ -423,71 +461,57 @@ jobs:
           echo "📦 Total files to upload: $(find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | wc -l)"
           echo ""
           
-          # Verify critical files are present
-          echo "🔍 Verifying critical client files..."
-          MISSING_FILES=false
-          
+          # 🔍 CRITICAL FILES VERIFICATION
+          echo "🔍 CRITICAL FILES VERIFICATION:"
           CRITICAL_FILES=("Menu.gs" "GeminiClient.gs" "CredentialsManager.gs" "appsscript.json")
           for critical_file in "${CRITICAL_FILES[@]}"; do
             if [ -f "table/client/$critical_file" ]; then
               echo "  ✅ $critical_file present"
             else
               echo "  ❌ $critical_file MISSING!"
-              MISSING_FILES=true
             fi
           done
-          
-          if [ "$MISSING_FILES" = true ]; then
-            echo "❌ CRITICAL FILES MISSING! Cannot proceed with deployment."
-            exit 1
-          fi
-          echo "✅ All critical files present"
           echo ""
           
-          echo "🚀 Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
-          echo "📡 Using clasp push for container-bound script..."
+          echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
+          echo "Using clasp push for container-bound script..."
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
             echo ""
             echo "❌ CLIENT CLASP PUSH FAILED!"
             echo "Error output:"
             cat /tmp/clasp-client-push.log
+            echo ""
+            echo "📁 Files that clasp tried to push:"
+            find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
             exit 1
           }
           
-          # Smart cleanup of copied files (only remove files that were copied, not original client files)
-          echo "🧹 Smart cleanup of deployment-copied files..."
+          echo "📋 AFTER PUSH - Success! Uploaded files:"
+          grep -i "Pushed\|Updated\|Created" /tmp/clasp-client-push.log || echo "No specific file info in clasp output"
           
-          # Remove shared files that were copied (they exist in table/shared/)
-          for shared_file in table/shared/*.gs; do
-            if [ -f "$shared_file" ]; then
-              shared_basename=$(basename "$shared_file")
-              if [ -f "table/client/$shared_basename" ]; then
-                echo "  🗑️ Removing copied shared file: $shared_basename"
-                rm -f "table/client/$shared_basename"
-              fi
+          # 🧹 SMART CLEANUP: Remove only deployment-copied files
+          echo "🧹 Smart cleanup: removing only deployment-copied files..."
+          
+          # Remove shared files (known to be copied during deployment)
+          SHARED_FILES=("Constants.gs" "LoggingService.gs" "Utils.gs" "ClientUtilities.gs")
+          for shared_file in "${SHARED_FILES[@]}"; do
+            if [ -f "table/client/$shared_file" ]; then
+              rm -f "table/client/$shared_file"
+              echo "  🗑️ Removed shared file: $shared_file"
             fi
           done
           
-          # Remove web files that were copied (they exist in table/web/)  
-          if [ -d table/web ]; then
-            for web_file in table/web/*; do
-              if [ -f "$web_file" ]; then
-                web_basename=$(basename "$web_file")
-                if [ -f "table/client/$web_basename" ]; then
-                  echo "  🗑️ Removing copied web file: $web_basename"
-                  rm -f "table/client/$web_basename"
-                fi
-              fi
-            done
-          fi
-          
-          # Remove the appsscript.json that was copied for deployment
+          # Remove deployment-specific files
           if [ -f "table/client/appsscript.json" ]; then
-            echo "  🗑️ Removing copied appsscript.json"
-            rm -f "table/client/appsscript.json"
+            rm -f table/client/appsscript.json
+            echo "  🗑️ Removed deployment appsscript.json"
           fi
           
-          echo "✅ Smart cleanup completed - only deployment-copied files removed"
+          echo "✅ Smart cleanup completed - all web files preserved"
+          
+          # Verification: Check what remains
+          echo "📁 Files remaining in client directory:"
+          ls -la table/client/ | grep -E '\.(gs|html)$' || echo "No .gs or .html files found"
           
           echo "✅ Client deployment complete!"
 

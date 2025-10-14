@@ -190,8 +190,8 @@ function addSystemLogsBulk(entries, async) {
   };
   
   if (async) {
-    // Используем setTimeout для асинхронной обработки
-    setTimeout(processEntries, 0);
+    // Google Apps Script не поддерживает setTimeout, выполняем синхронно
+    processEntries();
   } else {
     processEntries();
   }
