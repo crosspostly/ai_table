@@ -11,7 +11,9 @@
  */
 function openCollectConfigUI() {
   try {
-    var html = HtmlService.createHtmlOutputFromFile('table/web/CollectConfigUI')
+    // ВАЖНО: Apps Script не поддерживает пути с папками!
+    // Файл должен называться просто 'CollectConfigUI' в плоской структуре
+    var html = HtmlService.createHtmlOutputFromFile('CollectConfigUI')
       .setWidth(650)
       .setHeight(600)
       .setTitle('🎯 Настройка AI запроса');
