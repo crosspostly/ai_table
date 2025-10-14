@@ -49,6 +49,31 @@
       letter-spacing: 0.5px;
     }
     
+    .cell-preview {
+      margin-top: 4px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-left: 3px solid #1a73e8;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #5f6368;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 60px;
+      overflow-y: auto;
+    }
+    
+    .cell-preview.empty {
+      color: #9aa0a6;
+      font-style: italic;
+    }
+    
+    .cell-preview.error {
+      border-left-color: #ea4335;
+      color: #d93025;
+    }
+    
     .input-group {
       display: flex;
       gap: 8px;
@@ -221,11 +246,12 @@
     <div class="section">
       <div class="section-title">📍 System Prompt (инструкция для AI)</div>
       <div class="input-group">
-        <select id="systemSheet">
+        <select id="systemSheet" onchange="updateSystemPreview()">
           <option value="">Выберите лист...</option>
         </select>
-        <input type="text" id="systemCell" placeholder="A1" />
+        <input type="text" id="systemCell" placeholder="A1" onblur="updateSystemPreview()" />
       </div>
+      <div id="systemPreview" class="cell-preview" style="display:none;"></div>
     </div>
     
     <!-- User Data -->
@@ -308,6 +334,9 @@
     
     function addUserDataRow(sheet, cell) {
       const container = document.getElementById('userDataList');
+      const wrapper = document.createElement('div');
+      wrapper.style.marginBottom = '12px';
+      
       const item = document.createElement('div');
       item.className = 'data-item';
       
@@ -325,17 +354,82 @@
       input.placeholder = 'A1 или A1:Z100';
       input.value = cell || '';
       
+      const preview = document.createElement('div');
+      preview.className = 'cell-preview';
+      preview.style.display = 'none';
+      
+      // Обновление превью при изменении
+      const updatePreview = function() {
+        const s = select.value;
+        const c = input.value.trim();
+        
+        if (s && c) {
+          google.script.run
+            .withSuccessHandler(function(text) {
+              preview.textContent = text;
+              preview.style.display = 'block';
+              
+              if (text.startsWith('(пусто)')) {
+                preview.className = 'cell-preview empty';
+              } else if (text.startsWith('❌')) {
+                preview.className = 'cell-preview error';
+              } else {
+                preview.className = 'cell-preview';
+              }
+            })
+            .getCellPreview(s, c);
+        } else {
+          preview.style.display = 'none';
+        }
+      };
+      
+      select.onchange = updatePreview;
+      input.onblur = updatePreview;
+      
       const removeBtn = document.createElement('button');
       removeBtn.className = 'remove-btn';
       removeBtn.textContent = '✕';
       removeBtn.onclick = function() {
-        container.removeChild(item);
+        container.removeChild(wrapper);
       };
       
       item.appendChild(select);
       item.appendChild(input);
       item.appendChild(removeBtn);
-      container.appendChild(item);
+      
+      wrapper.appendChild(item);
+      wrapper.appendChild(preview);
+      container.appendChild(wrapper);
+      
+      // Загрузим превью если есть значения
+      if (sheet && cell) {
+        updatePreview();
+      }
+    }
+    
+    function updateSystemPreview() {
+      const sheet = document.getElementById('systemSheet').value;
+      const cell = document.getElementById('systemCell').value.trim();
+      const preview = document.getElementById('systemPreview');
+      
+      if (sheet && cell) {
+        google.script.run
+          .withSuccessHandler(function(text) {
+            preview.textContent = text;
+            preview.style.display = 'block';
+            
+            if (text.startsWith('(пусто)')) {
+              preview.className = 'cell-preview empty';
+            } else if (text.startsWith('❌')) {
+              preview.className = 'cell-preview error';
+            } else {
+              preview.className = 'cell-preview';
+            }
+          })
+          .getCellPreview(sheet, cell);
+      } else {
+        preview.style.display = 'none';
+      }
     }
     
     function collectConfig() {

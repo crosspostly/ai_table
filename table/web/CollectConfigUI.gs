@@ -149,6 +149,63 @@ function hasConfigForCurrentCell() {
 }
 
 /**
+ * Получить список всех листов в таблице
+ * @return {Array<string>} Массив названий листов
+ */
+function getAllSheetNames() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheets = ss.getSheets();
+    var names = [];
+    
+    for (var i = 0; i < sheets.length; i++) {
+      names.push(sheets[i].getName());
+    }
+    
+    return names;
+    
+  } catch (error) {
+    Logger.log('Error getting sheet names: ' + error.message);
+    return [];
+  }
+}
+
+/**
+ * Получить предпросмотр содержимого ячейки (первые 100 символов)
+ * @param {string} sheetName - Название листа
+ * @param {string} cellAddress - Адрес ячейки (A1 notation)
+ * @return {string} Первые 100 символов или "пусто"
+ */
+function getCellPreview(sheetName, cellAddress) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      return '❌ Лист не найден';
+    }
+    
+    var cell = sheet.getRange(cellAddress);
+    var value = cell.getValue();
+    
+    if (!value || value.toString().trim() === '') {
+      return '(пусто)';
+    }
+    
+    var text = value.toString();
+    
+    if (text.length <= 100) {
+      return text;
+    }
+    
+    return text.substring(0, 100) + '...';
+    
+  } catch (error) {
+    return '❌ Ошибка: ' + error.message;
+  }
+}
+
+/**
  * Справка по AI Конструктору
  */
 function showCollectConfigHelp() {
