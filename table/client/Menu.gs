@@ -150,6 +150,12 @@ function onOpen() {
     .addSubMenu(ui.createMenu('🧰 DEV ' + versionInfo)
       .addItem('🚀 Супер проверка системы', 'superMasterCheck')
       .addItem('📊 Открыть логи', 'openLogsSheetWithCreation')
+      .addSeparator()
+      .addItem('🔍 Показать логи AI Конструктора', 'showCollectConfigLogs')
+      .addItem('📋 Показать все логи', 'showSystemLogs')
+      .addItem('💾 Экспортировать логи в лист', 'exportLogsToSheet')
+      .addItem('🗑️ Очистить логи', 'clearSystemLogs')
+      .addSeparator()
       .addItem('🔧 Диагностика системы', 'callServerDevFunction')
       .addItem('📋 Версия', 'showCurrentVersionInfo'))
     .addToUi();

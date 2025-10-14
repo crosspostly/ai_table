@@ -289,11 +289,20 @@ function collectDataFromRange(sheetName, cellAddress) {
  */
 function executeCollectConfig(sheetName, cellAddress) {
   try {
+<<<<<<< HEAD
+    addSystemLog('→ executeCollectConfig START: ' + sheetName + '!' + cellAddress, 'INFO', 'COLLECT_EXEC');
+    
+=======
+>>>>>>> origin/main
     // 🔐 Проверка credentials
     var props = PropertiesService.getScriptProperties();
     var geminiKey = props.getProperty('GEMINI_API_KEY');
     
     if (!geminiKey) {
+<<<<<<< HEAD
+      addSystemLog('❌ GEMINI_API_KEY не настроен!', 'ERROR', 'COLLECT_EXEC');
+=======
+>>>>>>> origin/main
       return {
         success: false,
         error: '❌ Не настроен Gemini API Key! Меню → Настройки → Gemini API'
@@ -301,34 +310,65 @@ function executeCollectConfig(sheetName, cellAddress) {
     }
     
     // Загружаем конфигурацию
+<<<<<<< HEAD
+    addSystemLog('   Загрузка конфигурации...', 'DEBUG', 'COLLECT_EXEC');
     var config = loadCollectConfig(sheetName, cellAddress);
     if (!config) {
+      addSystemLog('❌ Конфигурация не найдена!', 'ERROR', 'COLLECT_EXEC');
+=======
+    var config = loadCollectConfig(sheetName, cellAddress);
+    if (!config) {
+>>>>>>> origin/main
       return {
         success: false,
         error: 'Конфигурация не найдена для ' + sheetName + '!' + cellAddress
       };
     }
     
+<<<<<<< HEAD
+    addSystemLog('✅ Конфигурация загружена: ' + JSON.stringify(config), 'DEBUG', 'COLLECT_EXEC');
+    
     // Собираем System Prompt
     var systemPrompt = '';
     if (config.systemPrompt) {
+      addSystemLog('   Сбор System Prompt из ' + config.systemPrompt.sheet + '!' + config.systemPrompt.cell, 'DEBUG', 'COLLECT_EXEC');
+=======
+    // Собираем System Prompt
+    var systemPrompt = '';
+    if (config.systemPrompt) {
+>>>>>>> origin/main
       systemPrompt = collectDataFromRange(
         config.systemPrompt.sheet,
         config.systemPrompt.cell
       );
+<<<<<<< HEAD
+      addSystemLog('   System Prompt: ' + systemPrompt.substring(0, 100) + '...', 'DEBUG', 'COLLECT_EXEC');
+=======
+>>>>>>> origin/main
     }
     
     // Собираем User Data
     var userData = [];
     if (config.userData && config.userData.length > 0) {
+<<<<<<< HEAD
+      addSystemLog('   Сбор User Data из ' + config.userData.length + ' источников', 'DEBUG', 'COLLECT_EXEC');
       for (var i = 0; i < config.userData.length; i++) {
         var dataSource = config.userData[i];
+        addSystemLog('     [' + i + '] ' + dataSource.sheet + '!' + dataSource.cell, 'DEBUG', 'COLLECT_EXEC');
+=======
+      for (var i = 0; i < config.userData.length; i++) {
+        var dataSource = config.userData[i];
+>>>>>>> origin/main
         var data = collectDataFromRange(dataSource.sheet, dataSource.cell);
         if (data) {
           userData.push({
             source: dataSource.sheet + '!' + dataSource.cell,
             content: data
           });
+<<<<<<< HEAD
+          addSystemLog('     ✅ Собрано ' + data.length + ' символов', 'DEBUG', 'COLLECT_EXEC');
+=======
+>>>>>>> origin/main
         }
       }
     }
@@ -339,6 +379,20 @@ function executeCollectConfig(sheetName, cellAddress) {
       userData: userData
     };
     
+<<<<<<< HEAD
+    addSystemLog('   Отправка в Gemini...', 'INFO', 'COLLECT_EXEC');
+    
+    // Отправляем в Gemini
+    var result = sendToGeminiWithJSON(requestData);
+    
+    addSystemLog('✅ Получен ответ от Gemini: ' + result.substring(0, 100) + '...', 'INFO', 'COLLECT_EXEC');
+    
+    // Записываем результат в ячейку
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var targetSheet = ss.getSheetByName(sheetName);
+    if (targetSheet) {
+      targetSh                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+=======
     // Отправляем в Gemini
     var result = sendToGeminiWithJSON(requestData);
     
@@ -388,3 +442,4 @@ function sendToGeminiWithJSON(requestData) {
     throw error;
   }
 }
+>>>>>>> origin/main
