@@ -337,8 +337,22 @@ jobs:
           # 🔄 COPY web files for deployment (Apps Script needs them!)
           echo "📂 Copying web files to client directory..."
           echo "⚠️  Apps Script rootDir=table/client, must copy web files here"
+          
+          # 🗑️ First, remove any old web files from client to avoid conflicts
+          echo "🗑️  Removing old web files from client..."
+          rm -f table/client/CollectConfigUI.* table/client/WebInterface.* table/client/WebApp.* table/client/RealisticWebApp.*
+          echo "✅ Old web files removed"
+          
+          # 📋 Now copy fresh files from web/
           cp -v table/web/*.gs table/client/ 2>/dev/null || echo "No .gs files in web/"
           cp -v table/web/*.html table/client/ 2>/dev/null || echo "No .html files in web/"
+          
+          # ⚠️  WORKAROUND: Rename CollectConfigUI.gs to avoid name conflict with existing HTML
+          if [ -f table/client/CollectConfigUI.gs ]; then
+            mv table/client/CollectConfigUI.gs table/client/CollectConfigUIScript.gs
+            echo "⚠️  Renamed CollectConfigUI.gs → CollectConfigUIScript.gs to avoid conflict"
+          fi
+          
           echo "✅ Web files copied to table/client/ for Apps Script sync"
           
           # 🔒 SECURITY CHECK: Ensure NO server files in client!
