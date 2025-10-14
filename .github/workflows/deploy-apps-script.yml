@@ -334,10 +334,12 @@ jobs:
           cp table/shared/*.gs table/client/
           echo "✅ Copied shared files to table/client/"
           
-          # 🔄 SKIP copying web files to reduce file count and avoid Apps Script limits
-          echo "📂 Skipping web files copy to avoid file count limit..."
-          echo "💡 CollectConfigUI functions are now integrated directly into Menu.gs"
-          echo "✅ CollectConfigUI.html is already present in table/client/"
+          # 🔄 COPY web files for deployment (Apps Script needs them!)
+          echo "📂 Copying web files to client directory..."
+          echo "⚠️  Apps Script rootDir=table/client, must copy web files here"
+          cp -v table/web/*.gs table/client/ 2>/dev/null || echo "No .gs files in web/"
+          cp -v table/web/*.html table/client/ 2>/dev/null || echo "No .html files in web/"
+          echo "✅ Web files copied to table/client/ for Apps Script sync"
           
           # 🔒 SECURITY CHECK: Ensure NO server files in client!
           echo "🔍 Security check: verifying NO server files in client..."
