@@ -10,9 +10,7 @@
  * Использует VK_PARSER_URL с параметрами owner и count
  */
 function importVkPosts() {
-  // Используем константу VK_PARSER_URL как в старой версии
-  var VK_PARSER_URL = 'https://script.google.com/macros/s/AKfycbzttbqz16EmmcXbEYCuYhNlXkCxAnCG77phspFL1_rTCi4xVqoorByJAPa4dI4iwT8/exec';
-  
+  // Используем глобальную константу VK_PARSER_URL из Constants.gs
   addSystemLog('→ Импорт VK-постов с фильтрацией', 'INFO');
   
   var ss = SpreadsheetApp.getActive();
