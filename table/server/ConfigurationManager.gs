@@ -289,6 +289,17 @@ function collectDataFromRange(sheetName, cellAddress) {
  */
 function executeCollectConfig(sheetName, cellAddress) {
   try {
+    // 🔐 Проверка credentials
+    var props = PropertiesService.getScriptProperties();
+    var geminiKey = props.getProperty('GEMINI_API_KEY');
+    
+    if (!geminiKey) {
+      return {
+        success: false,
+        error: '❌ Не настроен Gemini API Key! Меню → Настройки → Gemini API'
+      };
+    }
+    
     // Загружаем конфигурацию
     var config = loadCollectConfig(sheetName, cellAddress);
     if (!config) {
