@@ -555,28 +555,37 @@
         return;
       }
       
-      showStatus('🚀 Выполнение запроса...', 'info');
+      console.log('Запуск конфигурации:', config);
+      showStatus('🚀 Сохранение и выполнение...', 'info');
       
       // Сначала сохраняем
       google.script.run
-        .withSuccessHandler(function() {
+        .withSuccessHandler(function(saveResult) {
+          console.log('Сохранено, начинаем выполнение:', saveResult);
+          
           // Затем выполняем
           google.script.run
             .withSuccessHandler(function(result) {
+              console.log('Результат выполнения:', result);
+              
               if (result.success) {
                 showStatus('✅ Готово! Результат записан в ' + cellAddress, 'success');
-                google.script.host.close();
+                setTimeout(function() {
+                  google.script.host.close();
+                }, 2000);
               } else {
-                showStatus('❌ Ошибка: ' + result.error, 'error');
+                showStatus('❌ Ошибка выполнения: ' + (result.error || 'Неизвестная ошибка'), 'error');
               }
             })
             .withFailureHandler(function(error) {
-              showStatus('❌ Ошибка: ' + error, 'error');
+              console.error('Ошибка выполнения:', error);
+              showStatus('❌ Ошибка выполнения: ' + error.message, 'error');
             })
             .executeCollectConfig(sheetName, cellAddress);
         })
         .withFailureHandler(function(error) {
-          showStatus('❌ Ошибка сохранения: ' + error, 'error');
+          console.error('Ошибка сохранения:', error);
+          showStatus('❌ Ошибка сохранения: ' + error.message, 'error');
         })
         .saveCollectConfig(sheetName, cellAddress, config);
     }
