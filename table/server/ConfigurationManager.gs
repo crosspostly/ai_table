@@ -289,11 +289,14 @@ function collectDataFromRange(sheetName, cellAddress) {
  */
 function executeCollectConfig(sheetName, cellAddress) {
   try {
+    addSystemLog('→ executeCollectConfig START: ' + sheetName + '!' + cellAddress, 'INFO', 'COLLECT_EXEC');
+    
     // 🔐 Проверка credentials
     var props = PropertiesService.getScriptProperties();
     var geminiKey = props.getProperty('GEMINI_API_KEY');
     
     if (!geminiKey) {
+      addSystemLog('❌ GEMINI_API_KEY не настроен!', 'ERROR', 'COLLECT_EXEC');
       return {
         success: false,
         error: '❌ Не настроен Gemini API Key! Меню → Настройки → Gemini API'
@@ -301,34 +304,43 @@ function executeCollectConfig(sheetName, cellAddress) {
     }
     
     // Загружаем конфигурацию
+    addSystemLog('   Загрузка конфигурации...', 'DEBUG', 'COLLECT_EXEC');
     var config = loadCollectConfig(sheetName, cellAddress);
     if (!config) {
+      addSystemLog('❌ Конфигурация не найдена!', 'ERROR', 'COLLECT_EXEC');
       return {
         success: false,
         error: 'Конфигурация не найдена для ' + sheetName + '!' + cellAddress
       };
     }
     
+    addSystemLog('✅ Конфигурация загружена: ' + JSON.stringify(config), 'DEBUG', 'COLLECT_EXEC');
+    
     // Собираем System Prompt
     var systemPrompt = '';
     if (config.systemPrompt) {
+      addSystemLog('   Сбор System Prompt из ' + config.systemPrompt.sheet + '!' + config.systemPrompt.cell, 'DEBUG', 'COLLECT_EXEC');
       systemPrompt = collectDataFromRange(
         config.systemPrompt.sheet,
         config.systemPrompt.cell
       );
+      addSystemLog('   System Prompt: ' + systemPrompt.substring(0, 100) + '...', 'DEBUG', 'COLLECT_EXEC');
     }
     
     // Собираем User Data
     var userData = [];
     if (config.userData && config.userData.length > 0) {
+      addSystemLog('   Сбор User Data из ' + config.userData.length + ' источников', 'DEBUG', 'COLLECT_EXEC');
       for (var i = 0; i < config.userData.length; i++) {
         var dataSource = config.userData[i];
+        addSystemLog('     [' + i + '] ' + dataSource.sheet + '!' + dataSource.cell, 'DEBUG', 'COLLECT_EXEC');
         var data = collectDataFromRange(dataSource.sheet, dataSource.cell);
         if (data) {
           userData.push({
             source: dataSource.sheet + '!' + dataSource.cell,
             content: data
           });
+          addSystemLog('     ✅ Собрано ' + data.length + ' символов', 'DEBUG', 'COLLECT_EXEC');
         }
       }
     }
@@ -339,52 +351,15 @@ function executeCollectConfig(sheetName, cellAddress) {
       userData: userData
     };
     
+    addSystemLog('   Отправка в Gemini...', 'INFO', 'COLLECT_EXEC');
+    
     // Отправляем в Gemini
     var result = sendToGeminiWithJSON(requestData);
     
-    // Обновляем время последнего запуска
-    updateLastRun(sheetName, cellAddress);
+    addSystemLog('✅ Получен ответ от Gemini: ' + result.substring(0, 100) + '...', 'INFO', 'COLLECT_EXEC');
     
-    return {
-      success: true,
-      result: result
-    };
-    
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Отправить JSON в Gemini
- * @param {Object} requestData - {systemInstruction, userData}
- * @return {string} Ответ от AI
- */
-function sendToGeminiWithJSON(requestData) {
-  try {
-    // Формируем промпт
-    var fullPrompt = '';
-    
-    // Добавляем system instruction
-    if (requestData.systemInstruction) {
-      fullPrompt += requestData.systemInstruction + '\n\n';
-    }
-    
-    // Добавляем user data в JSON формате
-    if (requestData.userData && requestData.userData.length > 0) {
-      fullPrompt += 'DATA:\n';
-      fullPrompt += JSON.stringify(requestData.userData, null, 2);
-    }
-    
-    // Вызываем существующую функцию Gemini
-    var result = callGeminiAPI(fullPrompt);
-    return result;
-    
-  } catch (error) {
-    Logger.log('❌ Ошибка отправки в Gemini: ' + error.message);
-    throw error;
-  }
-}
+    // Записываем результат в ячейку
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var targetSheet = ss.getSheetByName(sheetName);
+    if (targetSheet) {
+      targetSh                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
