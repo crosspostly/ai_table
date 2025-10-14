@@ -3,6 +3,7 @@ name: Deploy to Google Apps Script
 on:
   push:
     branches:
+      - main
       - web-interface-with-design
     paths:
       - 'table/**'
@@ -163,10 +164,14 @@ jobs:
           sed -i "s/DEPLOY_TIMESTAMP_PLACEHOLDER/$DEPLOY_TIMESTAMP/g" version.json
           sed -i "s/DEPLOY_BUILD_NUMBER_PLACEHOLDER/$DEPLOY_BUILD/g" version.json
           
-          # Update Menu.gs  
+          # Update Menu.gs with full timestamp
           sed -i "s/DEPLOY_TIMESTAMP_PLACEHOLDER/$DEPLOY_TIMESTAMP/g" table/client/Menu.gs
           
-          echo "✅ Timestamps updated in version.json and Menu.gs"
+          # Update Menu.gs with time-only version (HH:MM format)
+          DEPLOY_TIME=$(date -u +"%H:%M")
+          sed -i "s/DEPLOY_TIME_PLACEHOLDER/$DEPLOY_TIME/g" table/client/Menu.gs
+          
+          echo "✅ Timestamps updated: $DEPLOY_TIMESTAMP (time: $DEPLOY_TIME)"
           echo ""
           echo "Updated version.json:"
           grep -A 2 "updateTimestamp" version.json

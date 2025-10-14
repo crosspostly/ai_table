@@ -1,4 +1,6 @@
 // Client Menu System for AI_TABLE
+// Version: DEPLOY_TIME_PLACEHOLDER
+// Last Deploy: DEPLOY_TIMESTAMP_PLACEHOLDER
 
 /**
  * Настроить все credentials - с инструкцией
