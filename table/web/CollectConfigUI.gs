@@ -11,7 +11,7 @@
  */
 function openCollectConfigUI() {
   try {
-    var html = HtmlService.createHtmlOutputFromFile('table/client/CollectConfigUI')
+    var html = HtmlService.createHtmlOutputFromFile('CollectConfigUI')
       .setWidth(650)
       .setHeight(600)
       .setTitle('🎯 Настройка AI запроса');
