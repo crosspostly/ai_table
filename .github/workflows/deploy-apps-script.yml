@@ -320,125 +320,35 @@ jobs:
 
       - name: Deploy Client Project
         run: |
-          echo "🚀🚀🚀 CLIENT PROJECT DEPLOYMENT - SUPER DEBUG MODE 🚀🚀🚀"
-          echo "================================================================"
-          echo "🕐 Start time: $(date)"
-          echo "📁 Working directory: $(pwd)"
-          echo "🌿 Branch: ${{ github.ref }}"
-          echo "🆔 Commit: ${{ github.sha }}"
-          echo "👤 Actor: ${{ github.actor }}"
-          echo ""
-          
-          # 🔧 ENVIRONMENT CHECK
-          echo "🔧 ENVIRONMENT VERIFICATION:"
-          echo "  • Node version: $(node -v)"
-          echo "  • NPM version: $(npm -v)" 
-          echo "  • clasp version: $(clasp --version)"
-          echo "  • Current user: $(whoami)"
-          echo "  • Working dir: $(pwd)"
-          echo "  • Environment: CI=$CI"
-          echo ""
-          
-          # 🔍 REPOSITORY STATE CHECK  
-          echo "📂 REPOSITORY STATE CHECK:"
-          echo "  • Git status: $(git status --short)"
-          echo "  • Last commit: $(git log --oneline -1)"
-          echo "  • Current branch: $(git branch --show-current)"
-          echo ""
-          
-          echo "📋 DIRECTORY STRUCTURE ANALYSIS:"
-          echo "Root directory contents:"
-          ls -la
-          echo ""
-          echo "table/ directory contents:"
-          ls -la table/ || echo "❌ table/ directory not found"
-          echo ""
-          echo "table/client/ directory contents:"  
-          ls -la table/client/ || echo "❌ table/client/ directory not found"
-          echo ""
-          
           echo "📦 Deploying Client project (Container-bound to Google Sheets)..."
-          
-          echo "🔧 CLASP CONFIGURATION:"
-          echo "  • Copying .clasp-client.json to .clasp.json"
           cp .clasp-client.json .clasp.json
-          echo "  • .clasp.json contents:"
-          cat .clasp.json
-          echo ""
           
-          echo "=== PREPARING CLIENT DEPLOYMENT (WITH DETAILED LOGGING) ==="
+          echo "=== PREPARING CLIENT DEPLOYMENT ==="
           
           # 🚨 CRITICAL: Copy appsscript.json to client directory FIRST
-          echo "📋 STEP 1: COPYING APPSSCRIPT.JSON"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  • Looking for table/appsscript.json..."
+          echo "Copying appsscript.json to client directory..."
           if [ ! -f table/appsscript.json ]; then
-            echo "❌ FATAL ERROR: table/appsscript.json not found!"
-            echo "📁 Contents of table/ directory:"
-            ls -la table/
-            echo ""
-            echo "🔍 Searching for appsscript.json anywhere:"
-            find . -name "appsscript.json" -type f
+            echo "❌ ERROR: table/appsscript.json not found!"
             exit 1
           fi
-          echo "  ✅ Found table/appsscript.json ($(wc -c < table/appsscript.json) bytes)"
-          echo "  • Copying to table/client/..."
           cp table/appsscript.json table/client/
-          echo "  ✅ Copy successful!"
-          echo "  📋 Verification: $(ls -la table/client/appsscript.json)"
-          echo "  📄 Content preview:"
-          head -5 table/client/appsscript.json
-          echo ""
+          echo "✅ Copied appsscript.json to table/client/"
           
-          echo "📋 STEP 2: COPYING SHARED FILES"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  • Checking table/shared directory..."
-          if [ ! -d "table/shared" ]; then
-            echo "  ❌ table/shared directory not found!"
-            echo "  📁 Available directories in table/:"
-            ls -la table/
-            echo "  ⚠️ Skipping shared files copy"
-          else
-            echo "  ✅ table/shared directory found"
-            echo "  📁 Contents of table/shared/:"
-            ls -la table/shared/
-            echo ""
-            
-            SHARED_GS_COUNT=0
-            echo "  • Processing .gs files from table/shared/..."
-            
-            for file in table/shared/*.gs; do
-              if [ -f "$file" ]; then
-                filename=$(basename "$file")
-                filesize=$(wc -c < "$file")
-                echo "    📄 Processing: $filename ($filesize bytes)"
-                
-                # Skip server-related shared files for better security
-                if [[ "$filename" =~ ^.*Server.*\.gs$ ]] && [[ ! "$filename" =~ ^ClientUtilities\.gs$ ]]; then
-                  echo "    ⚠️ SKIPPED server-related file: $filename"
-                  continue
-                fi
-                
-                echo "    • Copying $filename to table/client/..."
-                cp "$file" table/client/
-                
-                # Verify copy
-                if [ -f "table/client/$filename" ]; then
-                  copied_size=$(wc -c < "table/client/$filename")
-                  echo "    ✅ COPIED: $filename ($copied_size bytes) ✓"
-                  SHARED_GS_COUNT=$((SHARED_GS_COUNT + 1))
-                else
-                  echo "    ❌ COPY FAILED: $filename"
-                fi
-              else
-                echo "    ⚠️ Not a file: $file"
+          echo "Copying shared files into client directory..."
+          # Copy shared files directly into client directory
+          for file in table/shared/*.gs; do
+            if [ -f "$file" ]; then
+              # Skip server-related shared files (they shouldn't exist but just in case)
+              filename=$(basename "$file")
+              if [[ "$filename" =~ ^.*Server.*\.gs$ ]] && [[ ! "$filename" =~ ^ClientUtilities\.gs$ ]]; then
+                echo "⚠️ Skipping server-related shared file: $filename"
+                continue
               fi
-            done
-            
-            echo ""
-            echo "  📊 Shared files summary: $SHARED_GS_COUNT files successfully copied"
-          fi
-          echo ""
+              cp "$file" table/client/
+              echo "  ✅ Copied $filename"
+            fi
+          done
+          echo "✅ Shared files copied to table/client/"
           
           # 🔄 COPY web files for deployment (Apps Script needs them!)
           echo "📂 Copying web files to client directory..."
@@ -482,7 +392,7 @@ jobs:
           # ⚠️  WORKAROUND: Rename CollectConfigUI.gs to avoid name conflict with existing HTML
           if [ -f table/client/CollectConfigUI.gs ]; then
             mv table/client/CollectConfigUI.gs table/client/CollectConfigUIScript.gs
-            echo "⚠️  Renamed CollectConfigUI.gs → CollectConfigUIScript.gs to avoid conflict"
+            echo "✅ Renamed CollectConfigUI.gs to CollectConfigUIScript.gs"
           fi
           
           echo "✅ Web files copied to table/client/ for Apps Script sync"
@@ -492,12 +402,12 @@ jobs:
           
           FOUND_SERVER_FILES=false
           
-          # Check for files with server-related patterns  
+          # Check for files starting with "server" or "Server" (case insensitive)
           for file in table/client/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
-              # Skip allowed files
-              if [[ "$filename" == "ClientUtilities.gs" ]] || [[ "$filename" == "CollectConfigUIScript.gs" ]]; then
+              # Skip ClientUtilities.gs as it's allowed
+              if [[ "$filename" == "ClientUtilities.gs" ]]; then
                 continue
               fi
               # Check for server-related patterns
@@ -511,22 +421,14 @@ jobs:
           if [ "$FOUND_SERVER_FILES" = true ]; then
             echo "❌ SECURITY ERROR: Server files found in client directory!"
             echo "Current client directory contents:"
-            ls -la table/client/ | grep -i server || true
+            ls -la table/client/
             exit 1
           fi
           echo "✅ Enhanced security check passed: no server files in client"
           
           echo ""
-          echo "Files in CLIENT directory:"
-          find table/client -type f \( -name "*.gs" -o -name "*.html" \) | sort
-          echo ""
-          
-          echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
-          echo "Using clasp push for container-bound script..."
-          
-          # 📋 DETAILED PRE-PUSH ANALYSIS
           echo "=== DETAILED CLIENT DEPLOYMENT SUMMARY ==="
-          echo "📁 Files ready for upload to Apps Script:"
+          echo "📁 Files in CLIENT directory ready for upload:"
           
           CLIENT_GS_COUNT=0
           CLIENT_HTML_COUNT=0
@@ -535,32 +437,31 @@ jobs:
           for file in table/client/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
-              filesize=$(wc -l < "$file" 2>/dev/null || echo "0")
               case "$filename" in
                 *.gs)
                   CLIENT_GS_COUNT=$((CLIENT_GS_COUNT + 1))
-                  echo "  📜 JavaScript: $filename ($filesize lines)"
+                  echo "  📜 JavaScript: $filename ($(wc -l < "$file") lines)"
                   ;;
                 *.html)
                   CLIENT_HTML_COUNT=$((CLIENT_HTML_COUNT + 1))
-                  echo "  🌐 HTML: $filename ($filesize lines)"
+                  echo "  🌐 HTML: $filename ($(wc -l < "$file") lines)"
                   ;;
                 *.json)
                   CLIENT_JSON_COUNT=$((CLIENT_JSON_COUNT + 1))
                   echo "  ⚙️ JSON: $filename"
                   ;;
+                *)
+                  echo "  ❓ Other: $filename"
+                  ;;
               esac
             fi
           done
           
-          echo "📊 DEPLOYMENT SUMMARY:"
-          echo "  • JavaScript files: $CLIENT_GS_COUNT"
-          echo "  • HTML files: $CLIENT_HTML_COUNT" 
-          echo "  • JSON files: $CLIENT_JSON_COUNT"
-          echo "  • Total files: $((CLIENT_GS_COUNT + CLIENT_HTML_COUNT + CLIENT_JSON_COUNT))"
-          
-          # Critical files verification
+          echo "📊 Summary: $CLIENT_GS_COUNT GS files, $CLIENT_HTML_COUNT HTML files, $CLIENT_JSON_COUNT JSON files"
+          echo "📦 Total files to upload: $(find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | wc -l)"
           echo ""
+          
+          # 🔍 CRITICAL FILES VERIFICATION
           echo "🔍 CRITICAL FILES VERIFICATION:"
           CRITICAL_FILES=("Menu.gs" "GeminiClient.gs" "CredentialsManager.gs" "appsscript.json")
           for critical_file in "${CRITICAL_FILES[@]}"; do
@@ -572,67 +473,18 @@ jobs:
           done
           echo ""
           
-          echo "🚀🚀🚀 CRITICAL SECTION: CLASP PUSH 🚀🚀🚀"
-          echo "════════════════════════════════════════════"
-          echo "🕐 Pre-push time: $(date)"
-          echo ""
-          
-          # FINAL VERIFICATION BEFORE PUSH
-          echo "📋 FINAL FILE VERIFICATION BEFORE PUSH:"
-          echo "  • Working directory: $(pwd)"
-          echo "  • .clasp.json exists: $([ -f .clasp.json ] && echo 'YES' || echo 'NO')"
-          echo "  • .clasp.json content:"
-          cat .clasp.json | jq .
-          echo ""
-          
-          echo "📁 ALL FILES IN table/client/ BEFORE PUSH:"
-          ls -la table/client/
-          echo ""
-          
-          echo "🔍 CLASP STATUS CHECK:"
-          clasp login --status || echo "⚠️ Login status check failed"
-          echo ""
-          
-          echo "📄 MENU.GS CONTENT VERIFICATION (looking for our test text):"
-          echo "First 10 lines of Menu.gs:"
-          head -10 table/client/Menu.gs
-          echo ""
-          echo "Looking for test string '(ТЕСТ СИНХРОНИЗАЦИИ)':"
-          grep -n "ТЕСТ СИНХРОНИЗАЦИИ" table/client/Menu.gs || echo "❌ Test string NOT found!"
-          echo ""
-          
-          echo "🚀 STARTING CLASP PUSH WITH FULL LOGGING:"
-          echo "Command: clasp push -f"
-          echo "Time: $(date)"
-          echo ""
-          
+          echo "Pushing to Script ID: 1DdlYfvo0EfEA1O1nb5DRI0o-WJoIivtfIPNSE1C1bt3IvvWC91sGE6Xs"
+          echo "Using clasp push for container-bound script..."
           clasp push -f 2>&1 | tee /tmp/clasp-client-push.log || {
             echo ""
-            echo "🔥🔥🔥 CLIENT CLASP PUSH FAILED! 🔥🔥🔥"
-            echo "════════════════════════════════════════"
-            echo "🕐 Failure time: $(date)"
-            echo ""
-            echo "📄 COMPLETE ERROR LOG:"
+            echo "❌ CLIENT CLASP PUSH FAILED!"
+            echo "Error output:"
             cat /tmp/clasp-client-push.log
             echo ""
             echo "📁 Files that clasp tried to push:"
             find table/client -type f \( -name "*.gs" -o -name "*.html" -o -name "*.json" \) | sort
-            echo ""
-            echo "🔍 DEBUGGING INFO:"
-            echo "  • Current directory: $(pwd)"
-            echo "  • .clasp.json exists: $([ -f .clasp.json ] && echo 'YES' || echo 'NO')"
-            echo "  • .clasprc.json exists: $([ -f ~/.clasprc.json ] && echo 'YES' || echo 'NO')"
-            echo ""
-            echo "🔧 CLASP DIAGNOSTICS:"
-            clasp list 2>&1 || echo "clasp list failed"
-            echo ""
             exit 1
           }
-          
-          echo ""
-          echo "✅✅✅ CLASP PUSH COMPLETED SUCCESSFULLY! ✅✅✅"
-          echo "🕐 Success time: $(date)"
-          echo ""
           
           echo "📋 AFTER PUSH - Success! Uploaded files:"
           grep -i "Pushed\|Updated\|Created" /tmp/clasp-client-push.log || echo "No specific file info in clasp output"
