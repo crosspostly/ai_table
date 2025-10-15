@@ -4,21 +4,11 @@
  */
 
 /**
-/**
  * addSystemLog() - основная реализация находится в Utils.gs:219
  * Использует CacheService для временного хранения логов
+ * 
+ * Этот файл содержит только вспомогательные функции для логирования
  */
-
-  
-  // 3. Для критических ошибок - также в Google Sheets
-  if (level === 'CRITICAL' || level === 'ERROR') {
-    try {
-      logToSheet(logEntry, level);
-    } catch (error) {
-      Logger.log('Sheet logging failed: ' + error.message);
-    }
-  }
-}
 
 /**
  * Логирование в Google Sheets для критических событий

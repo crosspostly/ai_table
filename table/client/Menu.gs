@@ -1,6 +1,9 @@
+// 🚀🚀🚀 СУПЕР-ТЕСТ СИНХРОНИЗАЦИИ 2025-01-27 05:20:00 🚀🚀🚀
+// ЕСЛИ ВЫ ВИДИТЕ ЭТОТ ТЕКСТ В APPS SCRIPT - СИНХРОНИЗАЦИЯ РАБОТАЕТ!
 // Client Menu System for AI_TABLE
-// Version: DEPLOY_TIME_PLACEHOLDER
+// Version: DEPLOY_TIME_PLACEHOLDER  
 // Last Deploy: DEPLOY_TIMESTAMP_PLACEHOLDER
+// Debug: Force sync test - ОБНОВЛЕН ДЛЯ СУПЕР-ДИАГНОСТИКИ
 
 /**
  * Настроить все credentials - с инструкцией
@@ -117,7 +120,7 @@ function onOpen() {
   var webMenuItem = '🌐 Веб версия';
   
   ui.createMenu('🤖 Table AI')
-    .addItem('🌐 Веб версия', 'openWebInterface')
+    .addItem('🌐 Веб версия (ТЕСТ СИНХРОНИЗАЦИИ)', 'openWebInterface')
     .addSeparator()
     .addSubMenu(ui.createMenu('📱 Социальные сети')
       .addItem('📱 Импорт постов', 'importVkPosts')
