@@ -339,6 +339,47 @@ function addSystemLogWithSheets(message, level, category, operation, status, det
  * 📊 СПЕЦИАЛЬНЫЕ ФУНКЦИИ ЛОГИРОВАНИЯ ДЛЯ ОПЕРАЦИЙ
  */
 
+// Collect Config операции
+function logCollectConfigOperation(step, target, status, details, traceId, executionTime, error) {
+  var level = error ? 'ERROR' : (step === 'START' || step === 'END') ? 'INFO' : 'DEBUG';
+  var message;
+
+  switch(step) {
+    case 'START':
+      message = '🚀 Начало выполнения для ячейки ' + target;
+      break;
+    case 'LOAD_CONFIG':
+      message = '📥 Загружена конфигурация для ' + target;
+      break;
+    case 'COLLECT_SYSTEM_PROMPT':
+      message = '📍 Собран системный промпт';
+      break;
+    case 'COLLECT_USER_DATA':
+      message = '📦 Собраны данные пользователя';
+      break;
+    case 'API_CALL':
+      message = '🤖 Отправка запроса в Gemini API';
+      break;
+    case 'API_RESPONSE':
+      message = '✅ Получен ответ от Gemini API';
+      break;
+    case 'WRITE_RESULT':
+      message = '✍️ Результат записан в ячейку ' + target;
+      break;
+    case 'END':
+      message = '🏁 Успешное завершение для ячейки ' + target;
+      break;
+    case 'ERROR':
+      message = '❌ Ошибка выполнения для ' + target + ': ' + error.message;
+      break;
+    default:
+      message = 'Неизвестный шаг';
+  }
+  
+  logToGoogleSheets(level, 'COLLECT_CONFIG', step, status, message, details, traceId, executionTime);
+}
+
+
 // GM функции
 function logGMOperation(prompt, result, executionTime, traceId, error) {
   var status = error ? 'FAILED' : 'SUCCESS';

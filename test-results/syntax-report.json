@@ -1,8 +1,13 @@
 {
-  "total": 60,
-  "passed": 53,
-  "failed": 7,
+  "total": 68,
+  "passed": 60,
+  "failed": 8,
   "details": [
+    {
+      "file": "table/client/AutoButton.gs",
+      "status": "OK",
+      "functions": 8
+    },
     {
       "file": "table/client/ButtonFunctions.gs",
       "status": "OK",
@@ -17,25 +22,18 @@
       "file": "table/client/ClientUtilities.gs",
       "status": "FAILED",
       "errors": [
-        "Несбалансированные круглые скобки: ( (340) vs ) (339)"
-      ]
-    },
-    {
-      "file": "table/client/ComprehensiveTest.gs",
-      "status": "OK",
-      "functions": 26
-    },
-    {
-      "file": "table/client/ComprehensiveTestSuite.gs",
-      "status": "FAILED",
-      "errors": [
-        "Несбалансированные круглые скобки: ( (213) vs ) (210)"
+        "Несбалансированные круглые скобки: ( (310) vs ) (309)"
       ]
     },
     {
       "file": "table/client/CredentialsManager.gs",
       "status": "OK",
       "functions": 8
+    },
+    {
+      "file": "table/client/DeveloperTests.gs",
+      "status": "OK",
+      "functions": 5
     },
     {
       "file": "table/client/GeminiClient.gs",
@@ -45,24 +43,24 @@
       ]
     },
     {
+      "file": "table/client/LogViewer.gs",
+      "status": "OK",
+      "functions": 4
+    },
+    {
       "file": "table/client/LogsSheetManager.gs",
       "status": "OK",
       "functions": 5
     },
     {
-      "file": "table/client/MasterCheck.gs",
+      "file": "table/client/Macros.gs",
       "status": "OK",
-      "functions": 17
+      "functions": 4
     },
     {
       "file": "table/client/Menu.gs",
       "status": "OK",
-      "functions": 10
-    },
-    {
-      "file": "table/client/MissingFunctions.gs",
-      "status": "OK",
-      "functions": 33
+      "functions": 11
     },
     {
       "file": "table/client/NetworkRetry.gs",
@@ -79,7 +77,7 @@
     {
       "file": "table/client/OcrRunner.gs",
       "status": "OK",
-      "functions": 3
+      "functions": 4
     },
     {
       "file": "table/client/SmartPromptProcessor.gs",
@@ -87,9 +85,21 @@
       "functions": 11
     },
     {
+      "file": "table/client/SmartRulesProcessor.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные фигурные скобки: { (48) vs } (49)"
+      ]
+    },
+    {
       "file": "table/client/SocialImportClient.gs",
       "status": "OK",
-      "functions": 6
+      "functions": 2
+    },
+    {
+      "file": "table/client/SuperMasterCheck.gs",
+      "status": "OK",
+      "functions": 15
     },
     {
       "file": "table/client/SystemFunctionValidator.gs",
@@ -97,14 +107,14 @@
       "functions": 10
     },
     {
-      "file": "table/client/TestSuite.gs",
+      "file": "table/client/TextToFormulaConverter.gs",
       "status": "OK",
-      "functions": 11
+      "functions": 4
     },
     {
       "file": "table/client/ThinClient.gs",
       "status": "OK",
-      "functions": 16
+      "functions": 14
     },
     {
       "file": "table/server/CompletionPhraseService.gs",
@@ -114,7 +124,17 @@
     {
       "file": "table/server/ConditionalGemini.gs",
       "status": "OK",
-      "functions": 8
+      "functions": 6
+    },
+    {
+      "file": "table/server/ConfigurationManager.gs",
+      "status": "OK",
+      "functions": 6
+    },
+    {
+      "file": "table/server/ConfigurationPresets.gs",
+      "status": "OK",
+      "functions": 9
     },
     {
       "file": "table/server/ContextManager.gs",
@@ -134,7 +154,7 @@
     {
       "file": "table/server/LicenseService.gs",
       "status": "OK",
-      "functions": 6
+      "functions": 5
     },
     {
       "file": "table/server/OcrService.gs",
@@ -154,18 +174,18 @@
     {
       "file": "table/server/ServerEndpoints.gs",
       "status": "OK",
-      "functions": 17
+      "functions": 20
     },
     {
       "file": "table/server/SimpleLicenseService.gs",
       "status": "OK",
-      "functions": 7
+      "functions": 6
     },
     {
       "file": "table/server/SmartChainService.gs",
       "status": "FAILED",
       "errors": [
-        "Несбалансированные круглые скобки: ( (173) vs ) (170)"
+        "Несбалансированные круглые скобки: ( (164) vs ) (161)"
       ]
     },
     {
@@ -202,8 +222,15 @@
     },
     {
       "file": "table/server/VkImportService.gs",
+      "status": "FAILED",
+      "errors": [
+        "Несбалансированные круглые скобки: ( (333) vs ) (335)"
+      ]
+    },
+    {
+      "file": "table/server/VkTokenValidator.gs",
       "status": "OK",
-      "functions": 7
+      "functions": 6
     },
     {
       "file": "table/shared/Constants.gs",
@@ -216,14 +243,19 @@
       "functions": 8
     },
     {
+      "file": "table/shared/EmojiRemover.gs",
+      "status": "OK",
+      "functions": 3
+    },
+    {
       "file": "table/shared/GoogleSheetsLogger.gs",
       "status": "OK",
-      "functions": 16
+      "functions": 17
     },
     {
       "file": "table/shared/LoggingService.gs",
       "status": "OK",
-      "functions": 11
+      "functions": 10
     },
     {
       "file": "table/shared/SecurityValidator.gs",
@@ -234,13 +266,13 @@
       "file": "table/shared/Utils.gs",
       "status": "FAILED",
       "errors": [
-        "Несбалансированные круглые скобки: ( (275) vs ) (276)"
+        "Несбалансированные круглые скобки: ( (256) vs ) (257)"
       ]
     },
     {
       "file": "table/shared/VersionInfo.gs",
       "status": "OK",
-      "functions": 4
+      "functions": 5
     },
     {
       "file": "table/tests/ComprehensiveCodeAudit.gs",
@@ -308,6 +340,16 @@
       "functions": 12
     },
     {
+      "file": "table/web/CollectConfigUI.gs",
+      "status": "OK",
+      "functions": 7
+    },
+    {
+      "file": "table/web/LogViewer.gs",
+      "status": "OK",
+      "functions": 4
+    },
+    {
       "file": "table/web/WebInterface.gs",
       "status": "OK",
       "functions": 10
@@ -315,7 +357,7 @@
     {
       "file": "table/web/WebInterfaceExtensions.gs",
       "status": "OK",
-      "functions": 7
+      "functions": 6
     }
   ]
 }
