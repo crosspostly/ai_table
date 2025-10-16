@@ -5,23 +5,6 @@
  */
 
 /**
- * Удаляет эмодзи и смайлики из текста (локальная копия)
- * @param {string} text - Исходный текст
- * @return {string} - Текст без эмодзи
- */
-function removeEmojis(text) {
-  if (!text || typeof text !== 'string') {
-    return text;
-  }
-  
-  var emojiPattern = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u2300-\u23FF]|[\u2B50]|[\uFE00-\uFE0F]|[\u200D]|[\u20E3]/g;
-  var cleaned = text.replace(emojiPattern, '');
-  cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  
-  return cleaned;
-}
-
-/**
  * Получение VK токена из Properties
  * @return {string} VK токен
  */
@@ -81,7 +64,7 @@ function handleWallGet_(owner, count) {
     
     // Преобразуем в формат совместимый с существующим кодом
     var posts = jsonResponse.response.items.map(function(post, index) {
-      var rawText = String(post.text || '').replace(/\\n/g, ' ');
+      var rawText = String(post.text || '').replace(/\n/g, ' ');
       var cleanText = removeEmojis(rawText);  // Удаляем эмодзи из текста поста
       
       return {
@@ -268,11 +251,8 @@ function testStopWordsFilter() {
     var number2 = sheet.getRange(2, 7).getValue();
     var number3 = sheet.getRange(3, 7).getValue();
     
-    var message = 'Тест фильтрации:\
-\
-' +
-      'Строка 2: ' + (filtered2 ? 'показывается' : 'скрыто') + ', номер: ' + (number2 || '—') + '\
-' +
+    var message = 'Тест фильтрации:\n\n' +
+      'Строка 2: ' + (filtered2 ? 'показывается' : 'скрыто') + ', номер: ' + (number2 || '—') + '\n' +
       'Строка 3: ' + (filtered3 ? 'показывается' : 'скрыто') + ', номер: ' + (number3 || '—');
     
     SpreadsheetApp.getUi().alert('Результаты теста', message, SpreadsheetApp.getUi().ButtonSet.OK);
