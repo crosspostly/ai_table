@@ -188,7 +188,7 @@ function updateLastRun(sheetName, cellAddress) {
 
 function collectDataFromRange(sheetName, cellAddress) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  if (!sheet) throw new Error(`Лист "${sheetName}" не найден.`);
+  if (!sheet) throw new Error(`Лист \"${sheetName}\" не найден.`);
   
   if (/^[A-Z]+:[A-Z]+$/.test(cellAddress)) {
     var col = cellAddress.split(':')[0];
