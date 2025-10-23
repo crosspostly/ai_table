@@ -291,13 +291,16 @@
       <div id="userDataList"></div>
       <button class="add-btn" onclick="addUserDataRow()">+ Добавить данные</button>
     </div>
-    
-    <!-- Preset Name -->
+
+    <!-- Preset (Template) Save Section -->
     <div class="section">
       <div class="section-title">📋 Сохранить как шаблон (опционально)</div>
-      <input type="text" id="presetName" placeholder="Введите имя шаблона..." style="width: 100%; padding: 10px 12px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px;" />
+      <div class="input-group">
+        <input type="text" id="presetName" placeholder="Имя шаблона (обязательно для сохранения)" style="flex: 1;" />
+        <input type="text" id="presetDesc" placeholder="Описание (необязательно)" style="flex: 1;" />
+      </div>
       <div style="font-size: 12px; color: #5f6368; margin-top: 4px;">
-        💡 Если указано имя - конфигурация сохранится как многоразовый шаблон
+        💡 Если указано имя — конфигурация сохранится как многоразовый шаблон
       </div>
     </div>
     
@@ -565,19 +568,20 @@
     
     function saveAsPreset() {
       const presetName = document.getElementById('presetName').value.trim();
-      
       if (!presetName) {
         showStatus('⚠️ Введите имя шаблона!', 'error');
         return;
       }
-      
       const config = collectConfig();
-      
+      const descEl = document.getElementById('presetDesc');
+      const presetDesc = descEl ? descEl.value.trim() : '';
+      if (presetDesc) {
+        config.description = presetDesc;
+      }
       if (!config.systemPrompt && config.userData.length === 0) {
         showStatus('⚠️ Заполните хотя бы одно поле!', 'error');
         return;
       }
-      
       showStatus('💾 Сохранение шаблона "' + presetName + '"...', 'info');
       
       google.script.run
@@ -586,13 +590,14 @@
             showStatus('✅ Шаблон "' + presetName + '" сохранен!', 'success');
             setTimeout(function() {
               document.getElementById('presetName').value = '';
+              if (descEl) descEl.value = '';
             }, 2000);
           } else {
             showStatus('❌ Не удалось сохранить шаблон', 'error');
           }
         })
         .withFailureHandler(function(error) {
-          showStatus('❌ Ошибка сохранения шаблона: ' + error.message, 'error');
+          showStatus('❌ Ошибка сохранения шаблона: ' + (error && error.message ? error.message : error), 'error');
         })
         .saveConfigAsPreset(presetName, config);
     }
@@ -600,6 +605,8 @@
     function runConfig() {
       const config = collectConfig();
       const presetName = document.getElementById('presetName').value.trim();
+      const descEl = document.getElementById('presetDesc');
+      const presetDesc = descEl ? descEl.value.trim() : '';
       
       if (!config.systemPrompt && config.userData.length === 0) {
         showStatus('⚠️ Заполните хотя бы одно поле!', 'error');
@@ -610,6 +617,9 @@
       
       // Если указано имя шаблона, сначала сохраняем как preset
       if (presetName) {
+        if (presetDesc) {
+          config.description = presetDesc;
+        }
         showStatus('💾 Сохранение шаблона "' + presetName + '" и выполнение...', 'info');
         
         google.script.run
