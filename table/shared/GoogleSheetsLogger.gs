@@ -319,6 +319,18 @@ function getUserEmail_() {
   try {
     return Session.getActiveUser().getEmail();
   } catch (e) {
+    // Если не хватает прав, показываем сообщение пользователю
+    if (e.message && e.message.includes('insufficient permissions')) {
+      addSystemLog('⚠️ Требуется авторизация для получения email пользователя. Пожалуйста, обновите разрешения скрипта.', 'WARN', 'AUTH');
+      
+      // Пытаемся инициировать повторную авторизацию
+      try {
+        // Вызов любой функции, требующей авторизацию, автоматически покажет диалог авторизации
+        ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL);
+      } catch (authError) {
+        // Игнорируем ошибку, так как нас интересует только показ диалога
+      }
+    }
     return 'unknown';
   }
 }
