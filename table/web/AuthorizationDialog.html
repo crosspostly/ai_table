@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+        padding: 20px;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        padding: 40px;
+        max-width: 500px;
+        width: 100%;
+      }
+      
+      .icon {
+        text-align: center;
+        font-size: 64px;
+        margin-bottom: 20px;
+      }
+      
+      h1 {
+        color: #333;
+        text-align: center;
+        margin: 0 0 10px 0;
+        font-size: 28px;
+      }
+      
+      .subtitle {
+        color: #666;
+        text-align: center;
+        margin: 0 0 30px 0;
+        font-size: 14px;
+      }
+      
+      .status-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      
+      .status-item {
+        display: flex;
+        align-items: center;
+        margin: 12px 0;
+        font-size: 14px;
+      }
+      
+      .status-icon {
+        margin-right: 12px;
+        font-size: 20px;
+      }
+      
+      .status-text {
+        flex: 1;
+      }
+      
+      .error-list {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      
+      .error-item {
+        margin: 8px 0;
+        font-size: 13px;
+        color: #856404;
+      }
+      
+      .instructions {
+        background: #e7f3ff;
+        border-left: 4px solid #2196F3;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      
+      .instructions-title {
+        font-weight: bold;
+        color: #1976d2;
+        margin-bottom: 10px;
+      }
+      
+      .instructions ol {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      
+      .instructions li {
+        margin: 8px 0;
+        color: #0d47a1;
+        font-size: 13px;
+      }
+      
+      .button-container {
+        display: flex;
+        gap: 12px;
+        margin-top: 30px;
+      }
+      
+      button {
+        flex: 1;
+        padding: 14px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+      }
+      
+      .btn-secondary {
+        background: #f1f3f4;
+        color: #5f6368;
+      }
+      
+      .btn-secondary:hover {
+        background: #e8eaed;
+      }
+      
+      .btn-test {
+        background: #34a853;
+        color: white;
+      }
+      
+      .btn-test:hover {
+        background: #2d8f46;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(52, 168, 83, 0.4);
+      }
+      
+      .loading {
+        text-align: center;
+        padding: 20px;
+      }
+      
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .success-message {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+        color: #155724;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">🔐</div>
+      <h1>Управление авторизацией</h1>
+      <p class="subtitle">Проверка и настройка разрешений</p>
+      
+      <div id="content">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Проверка статуса авторизации...</p>
+        </div>
+      </div>
+      
+      <div class="button-container" id="buttons" style="display: none;">
+        <button class="btn-primary" onclick="authorize()">🚀 Авторизовать</button>
+        <button class="btn-test" onclick="testAuth()">🧪 Тест</button>
+        <button class="btn-secondary" onclick="google.script.host.close()">Закрыть</button>
+      </div>
+    </div>
+    
+    <script>
+      // Загрузка статуса при открытии
+      window.onload = function() {
+        checkStatus();
+      };
+      
+      function checkStatus() {
+        document.getElementById('content').innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Проверка статуса авторизации...</p>
+          </div>
+        `;
+        
+        google.script.run
+          .withSuccessHandler(displayStatus)
+          .withFailureHandler(displayError)
+          .checkAuthorizationStatus();
+      }
+      
+      function displayStatus(status) {
+        let html = '';
+        
+        if (status.authorized) {
+          html = `
+            <div class="success-message">
+              <strong>✅ Все в порядке!</strong><br>
+              Все необходимые разрешения предоставлены.
+            </div>
+            
+            <div class="status-card">
+              <div class="status-item">
+                <span class="status-icon">👤</span>
+                <span class="status-text">Email: <strong>${status.userEmail || 'доступен'}</strong></span>
+              </div>
+              <div class="status-item">
+                <span class="status-icon">📊</span>
+                <span class="status-text">Таблицы: <strong>${status.spreadsheetAccess ? '✅' : '❌'}</strong></span>
+              </div>
+              <div class="status-item">
+                <span class="status-icon">🌐</span>
+                <span class="status-text">Внешние запросы: <strong>${status.urlFetchAccess ? '✅' : '❌'}</strong></span>
+              </div>
+            </div>
+          `;
+        } else {
+          html = `
+            <div class="error-list">
+              <strong>❌ Требуется авторизация</strong>
+              ${status.errors.map(err => `<div class="error-item">• ${err}</div>`).join('')}
+            </div>
+            
+            ${status.missingScopes.length > 0 ? `
+              <div class="status-card">
+                <strong>🔑 Отсутствующие разрешения:</strong>
+                ${status.missingScopes.map(scope => {
+                  const name = scope.split('/').pop();
+                  return `<div class="status-item">
+                    <span class="status-icon">⚠️</span>
+                    <span class="status-text">${name}</span>
+                  </div>`;
+                }).join('')}
+              </div>
+            ` : ''}
+            
+            <div class="instructions">
+              <div class="instructions-title">📋 Инструкция по авторизации:</div>
+              <ol>
+                <li>Нажмите кнопку "🚀 Авторизовать" ниже</li>
+                <li>В новом окне нажмите "Просмотреть разрешения"</li>
+                <li>Выберите "Дополнительные настройки"</li>
+                <li>Нажмите "Перейти на страницу (небезопасно)"</li>
+                <li>Нажмите "Разрешить"</li>
+              </ol>
+              <small>💡 Это безопасно - скрипт работает только с вашими данными</small>
+            </div>
+          `;
+        }
+        
+        document.getElementById('content').innerHTML = html;
+        document.getElementById('buttons').style.display = 'flex';
+      }
+      
+      function displayError(error) {
+        document.getElementById('content').innerHTML = `
+          <div class="error-list">
+            <strong>❌ Ошибка проверки</strong>
+            <div class="error-item">${error.message}</div>
+          </div>
+        `;
+        document.getElementById('buttons').style.display = 'flex';
+      }
+      
+      function authorize() {
+        document.getElementById('content').innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Запуск процесса авторизации...</p>
+          </div>
+        `;
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result) {
+              document.getElementById('content').innerHTML = `
+                <div class="success-message">
+                  <strong>✅ Авторизация успешна!</strong><br>
+                  Все разрешения предоставлены. Можете закрыть это окно.
+                </div>
+              `;
+            } else {
+              checkStatus();
+            }
+          })
+          .withFailureHandler(function(error) {
+            document.getElementById('content').innerHTML = `
+              <div class="error-list">
+                <strong>⚠️ Требуется действие</strong>
+                <div class="error-item">Пожалуйста, разрешите доступ в открывшемся окне.</div>
+                <div class="error-item">Если окно не открылось, попробуйте выполнить любую функцию из меню.</div>
+              </div>
+            `;
+          })
+          .initiateAuthorizationFlow();
+      }
+      
+      function testAuth() {
+        document.getElementById('content').innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Выполнение тестов...</p>
+          </div>
+        `;
+        
+        google.script.run
+          .withSuccessHandler(function(passed) {
+            if (passed) {
+              document.getElementById('content').innerHTML = `
+                <div class="success-message">
+                  <strong>🎉 Все тесты пройдены!</strong><br>
+                  Система полностью авторизована и готова к работе.
+                </div>
+              `;
+            } else {
+              checkStatus();
+            }
+          })
+          .withFailureHandler(displayError)
+          .testAuthorization();
+      }
+    </script>
+  </body>
+</html>
