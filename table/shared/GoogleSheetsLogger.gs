@@ -319,6 +319,8 @@ function getUserEmail_() {
   try {
     return Session.getActiveUser().getEmail();
   } catch (e) {
+    // Если не хватает прав - просто возвращаем unknown
+    // OAuth scope добавлен в appsscript.json, авторизация произойдет автоматически при первом запуске
     return 'unknown';
   }
 }
