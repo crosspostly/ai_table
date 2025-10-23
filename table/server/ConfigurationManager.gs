@@ -170,7 +170,11 @@ function loadCollectConfig(sheetName, cellAddress) {
 }
 
 function findExistingConfig(configSheet, sheetName, cellAddress) {
-  var data = configSheet.getRange(2, 1, configSheet.getLastRow() - 1, 2).getValues();
+  var lastRow = configSheet.getLastRow();
+  if (lastRow <= 1) {
+    return -1; // Only header or empty sheet
+  }
+  var data = configSheet.getRange(2, 1, lastRow - 1, 2).getValues();
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] === sheetName && data[i][1] === cellAddress) return i + 2;
   }

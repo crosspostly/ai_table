@@ -286,10 +286,23 @@
       <button class="add-btn" onclick="addUserDataRow()">+ Добавить данные</button>
     </div>
     
+    <!-- Preset (Template) Save Section -->
+    <div class="section">
+      <div class="section-title">🧩 Шаблон (пресет)</div>
+      <div class="input-group">
+        <input type="text" id="presetName" placeholder="Название шаблона (обязательное)" />
+        <input type="text" id="presetDesc" placeholder="Описание (необязательно)" />
+      </div>
+      <div class="checkbox-group" style="margin-top: 0;">
+        <span>Сохраните текущую конфигурацию как шаблон для повторного использования.</span>
+      </div>
+    </div>
+    
     <!-- Actions -->
     <div class="actions">
       <button class="btn btn-primary" onclick="runConfig()">🚀 Запустить</button>
       <button class="btn btn-secondary" onclick="saveOnly()">💾 Сохранить</button>
+      <button class="btn btn-secondary" onclick="saveAsPreset()">🧩 Сохранить как пресет</button>
       <button class="btn btn-danger" onclick="resetConfig()">🔄 Сбросить</button>
     </div>
     
@@ -545,6 +558,34 @@
           showStatus('❌ Ошибка: ' + error, 'error');
         })
         .saveCollectConfig(sheetName, cellAddress, config);
+    }
+    
+    function saveAsPreset() {
+      const name = (document.getElementById('presetName').value || '').trim();
+      const desc = (document.getElementById('presetDesc').value || '').trim();
+      if (!name) {
+        showStatus('⚠️ Введите название шаблона', 'error');
+        return;
+      }
+      const config = collectConfig();
+      if (desc) {
+        config.description = desc;
+      }
+      showStatus('Сохранение шаблона...', 'info');
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          // saveConfigAsPreset возвращает true при успехе
+          if (result === true) {
+            showStatus('✅ Шаблон сохранён!', 'success');
+          } else {
+            showStatus('❌ Не удалось сохранить шаблон', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showStatus('❌ Ошибка сохранения шаблона: ' + error, 'error');
+        })
+        .saveConfigAsPreset(name, config);
     }
     
     function runConfig() {
