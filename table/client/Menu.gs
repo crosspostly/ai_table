@@ -109,6 +109,15 @@ function onOpen() {
   
   // Получаем версию для отображения в меню
   var versionInfo = getVersionDisplayInfo();
+
+  // Ненавязчивое уведомление, если требуется авторизация email-скоупа
+  try {
+    if (typeof maybeNotifyAuthorizationNeeded === 'function') {
+      maybeNotifyAuthorizationNeeded();
+    }
+  } catch (e) {
+    // no-op
+  }
   
   // АВТОМАТИЧЕСКИ СОЗДАЁМ КНОПКИ
   try {
@@ -156,6 +165,7 @@ function onOpen() {
       .addSeparator()
       .addItem('❓ Что это?', 'showCollectConfigHelp'))
     .addSubMenu(ui.createMenu('⚙️ Настройки')
+      .addItem('🔑 Авторизоваться', 'authorizeAccess')
       .addItem('🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ', 'setupAllCredentialsWithHelp')
       .addSeparator()
       .addItem('📊 Проверить статус системы', 'checkSystemStatus')

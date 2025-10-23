@@ -1,7 +1,7 @@
 {
-  "total": 68,
-  "passed": 60,
-  "failed": 8,
+  "total": 69,
+  "passed": 64,
+  "failed": 5,
   "details": [
     {
       "file": "table/client/AutoButton.gs",
@@ -37,10 +37,8 @@
     },
     {
       "file": "table/client/GeminiClient.gs",
-      "status": "FAILED",
-      "errors": [
-        "Несбалансированные круглые скобки: ( (203) vs ) (210)"
-      ]
+      "status": "OK",
+      "functions": 13
     },
     {
       "file": "table/client/LogViewer.gs",
@@ -60,7 +58,7 @@
     {
       "file": "table/client/Menu.gs",
       "status": "OK",
-      "functions": 11
+      "functions": 13
     },
     {
       "file": "table/client/NetworkRetry.gs",
@@ -71,7 +69,7 @@
       "file": "table/client/OcrHelpers.gs",
       "status": "FAILED",
       "errors": [
-        "Несбалансированные круглые скобки: ( (363) vs ) (364)"
+        "Несбалансированные круглые скобки: ( (114) vs ) (115)"
       ]
     },
     {
@@ -88,7 +86,7 @@
       "file": "table/client/SmartRulesProcessor.gs",
       "status": "FAILED",
       "errors": [
-        "Несбалансированные фигурные скобки: { (48) vs } (49)"
+        "Несбалансированные фигурные скобки: { (29) vs } (30)"
       ]
     },
     {
@@ -129,7 +127,7 @@
     {
       "file": "table/server/ConfigurationManager.gs",
       "status": "OK",
-      "functions": 6
+      "functions": 9
     },
     {
       "file": "table/server/ConfigurationPresets.gs",
@@ -183,10 +181,8 @@
     },
     {
       "file": "table/server/SmartChainService.gs",
-      "status": "FAILED",
-      "errors": [
-        "Несбалансированные круглые скобки: ( (164) vs ) (161)"
-      ]
+      "status": "OK",
+      "functions": 9
     },
     {
       "file": "table/server/SocialImportService.gs",
@@ -197,7 +193,7 @@
       "file": "table/server/SourceDetector.gs",
       "status": "FAILED",
       "errors": [
-        "Несбалансированные круглые скобки: ( (63) vs ) (62)"
+        "Несбалансированные круглые скобки: ( (55) vs ) (56)"
       ]
     },
     {
@@ -222,15 +218,18 @@
     },
     {
       "file": "table/server/VkImportService.gs",
-      "status": "FAILED",
-      "errors": [
-        "Несбалансированные круглые скобки: ( (333) vs ) (335)"
-      ]
+      "status": "OK",
+      "functions": 8
     },
     {
       "file": "table/server/VkTokenValidator.gs",
       "status": "OK",
       "functions": 6
+    },
+    {
+      "file": "table/shared/AuthHelper.gs",
+      "status": "OK",
+      "functions": 2
     },
     {
       "file": "table/shared/Constants.gs",

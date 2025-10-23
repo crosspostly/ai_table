@@ -317,10 +317,22 @@ function sendAlert(type, message) {
  */
 function getUserEmail_() {
   try {
-    return Session.getActiveUser().getEmail();
+    var email = Session.getActiveUser().getEmail();
+    if (!email) {
+      // Может потребоваться явная авторизация
+      if (typeof authorizeAccess === 'function') {
+        try { authorizeAccess(); } catch (e) {}
+      }
+      return 'unknown';
+    }
+    return email;
   } catch (e) {
-    // Если не хватает прав - просто возвращаем unknown
-    // OAuth scope добавлен в appsscript.json, авторизация произойдет автоматически при первом запуске
+    // Подсказка пользователю о необходимости авторизации (ненавязчиво)
+    try {
+      if (typeof maybeNotifyAuthorizationNeeded === 'function') {
+        maybeNotifyAuthorizationNeeded(e && e.message);
+      }
+    } catch (_ignored) {}
     return 'unknown';
   }
 }
