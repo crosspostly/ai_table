@@ -322,18 +322,19 @@ function autoCheckAndAuthorize() {
 /**
  * 🛠️ Wrapper для функций, требующих авторизацию
  * Автоматически проверяет и запускает авторизацию при необходимости
+ * 
+ * @param {Function} func - Функция для выполнения
+ * @param {Object} context - Контекст выполнения (this)
+ * @param {Array} args - Аргументы функции
+ * @returns {*} Результат выполнения функции
  */
-function withAuthorization(func, context) {
+function withAuthorization(func, context, args) {
   try {
     // Пытаемся выполнить функцию
-    return func.call(context);
+    return func.apply(context, args || []);
   } catch (error) {
     // Проверяем, связана ли ошибка с авторизацией
-    if (error.message && 
-        (error.message.includes('insufficient permissions') || 
-         error.message.includes('authorization') ||
-         error.message.includes('Authorization'))) {
-      
+    if (isAuthorizationError(error)) {
       addSystemLog('Authorization error detected, attempting auto-fix', 'WARN', 'AUTH');
       
       // Пытаемся авторизовать
@@ -342,7 +343,7 @@ function withAuthorization(func, context) {
       if (authorized) {
         // Повторяем попытку выполнения функции
         try {
-          return func.call(context);
+          return func.apply(context, args || []);
         } catch (retryError) {
           addSystemLog('Function failed after authorization: ' + retryError.message, 'ERROR', 'AUTH');
           throw retryError;
@@ -353,6 +354,60 @@ function withAuthorization(func, context) {
     } else {
       throw error;
     }
+  }
+}
+
+/**
+ * 🔍 Проверка, является ли ошибка проблемой авторизации
+ */
+function isAuthorizationError(error) {
+  if (!error || !error.message) return false;
+  
+  var authKeywords = [
+    'insufficient permissions',
+    'authorization required',
+    'Authorization',
+    'not authorized',
+    'access denied',
+    'permission denied',
+    'требуется авторизация',
+    'недостаточно прав'
+  ];
+  
+  var message = error.message.toLowerCase();
+  
+  return authKeywords.some(function(keyword) {
+    return message.includes(keyword.toLowerCase());
+  });
+}
+
+/**
+ * 🎯 Безопасное выполнение функции с автообработкой ошибок авторизации
+ * Использование: safeExecute(function() { return Session.getActiveUser().getEmail(); })
+ */
+function safeExecute(func, defaultValue) {
+  try {
+    return withAuthorization(func);
+  } catch (error) {
+    if (isAuthorizationError(error)) {
+      addSystemLog('Failed to authorize: ' + error.message, 'ERROR', 'AUTH');
+      
+      // Показываем уведомление пользователю
+      try {
+        var ui = SpreadsheetApp.getUi();
+        ui.alert(
+          '⚠️ Требуется авторизация',
+          'Операция требует дополнительных разрешений.\n\n' +
+          'Используйте меню:\n⚙️ Настройки → 🔐 Управление авторизацией',
+          ui.ButtonSet.OK
+        );
+      } catch (uiError) {
+        // UI недоступен, просто логируем
+        console.log('UI alert failed: ' + uiError.message);
+      }
+    }
+    
+    return defaultValue;
   }
 }
 
