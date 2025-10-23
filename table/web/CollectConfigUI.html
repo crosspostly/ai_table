@@ -173,25 +173,31 @@
     }
     
     .actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-top: 24px;
     }
     
     .btn {
-      flex: 1;
-      padding: 12px 24px;
+      padding: 12px 16px;
       border: none;
       border-radius: 4px;
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
     }
     
     .btn-primary {
+      grid-column: 1 / -1;
       background: #1a73e8;
       color: white;
+    }
+    
+    .btn-reset {
+      grid-column: 1 / -1;
     }
     
     .btn-primary:hover {
@@ -286,11 +292,21 @@
       <button class="add-btn" onclick="addUserDataRow()">+ Добавить данные</button>
     </div>
     
+    <!-- Preset Name -->
+    <div class="section">
+      <div class="section-title">📋 Сохранить как шаблон (опционально)</div>
+      <input type="text" id="presetName" placeholder="Введите имя шаблона..." style="width: 100%; padding: 10px 12px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px;" />
+      <div style="font-size: 12px; color: #5f6368; margin-top: 4px;">
+        💡 Если указано имя - конфигурация сохранится как многоразовый шаблон
+      </div>
+    </div>
+    
     <!-- Actions -->
     <div class="actions">
       <button class="btn btn-primary" onclick="runConfig()">🚀 Запустить</button>
       <button class="btn btn-secondary" onclick="saveOnly()">💾 Сохранить</button>
-      <button class="btn btn-danger" onclick="resetConfig()">🔄 Сбросить</button>
+      <button class="btn btn-secondary" onclick="saveAsPreset()">📋 Сохранить шаблон</button>
+      <button class="btn btn-danger btn-reset" onclick="resetConfig()">🔄 Сбросить</button>
     </div>
     
     <div class="status" id="status"></div>
@@ -547,7 +563,14 @@
         .saveCollectConfig(sheetName, cellAddress, config);
     }
     
-    function runConfig() {
+    function saveAsPreset() {
+      const presetName = document.getElementById('presetName').value.trim();
+      
+      if (!presetName) {
+        showStatus('⚠️ Введите имя шаблона!', 'error');
+        return;
+      }
+      
       const config = collectConfig();
       
       if (!config.systemPrompt && config.userData.length === 0) {
@@ -555,9 +578,63 @@
         return;
       }
       
-      console.log('Запуск конфигурации с помощью новой функции:', config);
-      showStatus('🚀 Сохранение и выполнение...', 'info');
+      showStatus('💾 Сохранение шаблона "' + presetName + '"...', 'info');
       
+      google.script.run
+        .withSuccessHandler(function(success) {
+          if (success) {
+            showStatus('✅ Шаблон "' + presetName + '" сохранен!', 'success');
+            setTimeout(function() {
+              document.getElementById('presetName').value = '';
+            }, 2000);
+          } else {
+            showStatus('❌ Не удалось сохранить шаблон', 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showStatus('❌ Ошибка сохранения шаблона: ' + error.message, 'error');
+        })
+        .saveConfigAsPreset(presetName, config);
+    }
+    
+    function runConfig() {
+      const config = collectConfig();
+      const presetName = document.getElementById('presetName').value.trim();
+      
+      if (!config.systemPrompt && config.userData.length === 0) {
+        showStatus('⚠️ Заполните хотя бы одно поле!', 'error');
+        return;
+      }
+      
+      console.log('Запуск конфигурации с помощью новой функции:', config);
+      
+      // Если указано имя шаблона, сначала сохраняем как preset
+      if (presetName) {
+        showStatus('💾 Сохранение шаблона "' + presetName + '" и выполнение...', 'info');
+        
+        google.script.run
+          .withSuccessHandler(function(success) {
+            if (success) {
+              console.log('Шаблон сохранен, выполняем конфигурацию');
+              executeConfig(config);
+            } else {
+              showStatus('⚠️ Не удалось сохранить шаблон, но выполняю запрос...', 'info');
+              executeConfig(config);
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.warn('Ошибка сохранения шаблона:', error);
+            showStatus('⚠️ Ошибка сохранения шаблона, но выполняю запрос...', 'info');
+            executeConfig(config);
+          })
+          .saveConfigAsPreset(presetName, config);
+      } else {
+        showStatus('🚀 Сохранение и выполнение...', 'info');
+        executeConfig(config);
+      }
+    }
+    
+    function executeConfig(config) {
       // ИСПРАВЛЕНО: Один вызов новой серверной функции
       google.script.run
         .withSuccessHandler(function(result) {
@@ -576,7 +653,7 @@
           console.error('Критическая ошибка:', error);
           showStatus('❌ Критическая ошибка: ' + error.message, 'error');
         })
-        .saveAndExecuteCollectConfig(sheetName, cellAddress, config); // <--- ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ
+        .saveAndExecuteCollectConfig(sheetName, cellAddress, config);
     }
     
     function resetConfig() {
