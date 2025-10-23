@@ -317,8 +317,22 @@ function sendAlert(type, message) {
  */
 function getUserEmail_() {
   try {
-    return Session.getActiveUser().getEmail();
+    var email = Session.getActiveUser().getEmail();
+    if (!email) {
+      // Может потребоваться явная авторизация
+      if (typeof authorizeAccess === 'function') {
+        try { authorizeAccess(); } catch (e) {}
+      }
+      return 'unknown';
+    }
+    return email;
   } catch (e) {
+    // Подсказка пользователю через мягкое уведомление
+    try {
+      if (typeof maybeNotifyAuthorizationNeeded === 'function') {
+        maybeNotifyAuthorizationNeeded(e && e.message);
+      }
+    } catch (_ignored) {}
     return 'unknown';
   }
 }
