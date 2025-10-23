@@ -20,6 +20,7 @@ function setupAllCredentialsWithHelp() {
 
 /**
  * UI для настройки всех credentials одновременно
+ * С красивым HTML интерфейсом и маскированием паролей
  */
 function setupAllCredentialsUI() {
   var ui = SpreadsheetApp.getUi();
@@ -30,67 +31,74 @@ function setupAllCredentialsUI() {
   var currentToken = props.getProperty('LICENSE_TOKEN') || '';
   var currentGeminiKey = props.getProperty('GEMINI_API_KEY') || '';
   
-  // Email лицензии
-  var emailResult = ui.prompt(
-    '🔐 Настройка credentials (1/3)', 
-    'Email лицензии\n\nТекущий: ' + (currentEmail || 'не установлен') + '\n\nВведите новый email (или оставьте пустым для пропуска):', 
-    ui.ButtonSet.OK_CANCEL
-  );
+  // Маскируем существующие значения
+  var maskedEmail = currentEmail ? currentEmail.replace(/(.{3}).*@/, '$1***@') : '(не установлен)';
+  var maskedToken = currentToken ? '***' + currentToken.slice(-4) : '(не установлен)';
+  var maskedGeminiKey = currentGeminiKey ? '***' + currentGeminiKey.slice(-4) : '(не установлен)';
   
-  if (emailResult.getSelectedButton() !== ui.Button.OK) return;
+  var html = '<!DOCTYPE html>' +
+    '<html><head><base target="_top"><style>' +
+    'body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }' +
+    'h3 { color: #1a73e8; margin-top: 0; }' +
+    '.field { margin-bottom: 20px; }' +
+    '.field label { display: block; font-weight: 500; margin-bottom: 5px; color: #5f6368; }' +
+    '.field .current { font-size: 12px; color: #80868b; margin-bottom: 5px; }' +
+    'input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; box-sizing: border-box; }' +
+    'input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: #1a73e8; }' +
+    '.button-container { margin-top: 25px; text-align: right; }' +
+    'button { background: #1a73e8; color: white; border: none; padding: 10px 24px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }' +
+    'button:hover { background: #1765cc; }' +
+    '.hint { font-size: 12px; color: #80868b; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; }' +
+    '</style></head><body>' +
+    '<h3>🔐 Настройка credentials</h3>' +
+    '<div class="field"><label>📧 Email лицензии</label><div class="current">Текущий: ' + maskedEmail + '</div>' +
+    '<input type="text" id="email" placeholder="Введите новый email (или оставьте пустым)"></div>' +
+    '<div class="field"><label>🔑 Токен лицензии</label><div class="current">Текущий: ' + maskedToken + '</div>' +
+    '<input type="password" id="token" placeholder="Введите новый токен (или оставьте пустым)"></div>' +
+    '<div class="field"><label>🤖 Gemini API Key</label><div class="current">Текущий: ' + maskedGeminiKey + '</div>' +
+    '<input type="password" id="geminiKey" placeholder="Введите новый ключ (или оставьте пустым)"></div>' +
+    '<div class="hint">💡 <strong>Где взять ключи:</strong><br>• Лицензия (email + токен): обратитесь к администратору<br>' +
+    '• Gemini API: <a href="https://aistudio.google.com/app/apikey" target="_blank">https://aistudio.google.com/app/apikey</a></div>' +
+    '<div class="button-container"><button onclick="saveCredentials()">💾 Сохранить</button></div>' +
+    '<script>' +
+    'function saveCredentials() {' +
+    '  var email = document.getElementById("email").value.trim();' +
+    '  var token = document.getElementById("token").value.trim();' +
+    '  var geminiKey = document.getElementById("geminiKey").value.trim();' +
+    '  if (!email && !token && !geminiKey) { alert("Введите хотя бы один параметр для обновления"); return; }' +
+    '  google.script.run.withSuccessHandler(function() { alert("✅ Credentials сохранены успешно!"); google.script.host.close(); })' +
+    '    .withFailureHandler(function(error) { alert("❌ Ошибка сохранения: " + error.message); })' +
+    '    .saveCredentialsData(email, token, geminiKey);' +
+    '}' +
+    '</script></body></html>';
   
-  var newEmail = emailResult.getResponseText().trim();
-  
-  // Токен лицензии
-  var tokenResult = ui.prompt(
-    '🔐 Настройка credentials (2/3)', 
-    'Токен лицензии\n\nТекущий: ' + (currentToken ? 'установлен (' + currentToken.substring(0, 10) + '...)' : 'не установлен') + '\n\nВведите новый токен (или оставьте пустым для пропуска):', 
-    ui.ButtonSet.OK_CANCEL
-  );
-  
-  if (tokenResult.getSelectedButton() !== ui.Button.OK) return;
-  
-  var newToken = tokenResult.getResponseText().trim();
-  
-  // Gemini API Key
-  var geminiResult = ui.prompt(
-    '🔐 Настройка credentials (3/3)', 
-    'Gemini API Key\n\nТекущий: ' + (currentGeminiKey ? 'установлен (' + currentGeminiKey.substring(0, 15) + '...)' : 'не установлен') + '\n\nВведите новый ключ (или оставьте пустым для пропуска):', 
-    ui.ButtonSet.OK_CANCEL
-  );
-  
-  if (geminiResult.getSelectedButton() !== ui.Button.OK) return;
-  
-  var newGeminiKey = geminiResult.getResponseText().trim();
-  
-  // Сохраняем только новые значения
+  var htmlOutput = HtmlService.createHtmlOutput(html).setWidth(450).setHeight(500);
+  ui.showModalDialog(htmlOutput, '🔐 Настройка credentials');
+}
+
+/**
+ * Сохранение credentials от HTML UI
+ */
+function saveCredentialsData(email, token, geminiKey) {
+  var props = PropertiesService.getScriptProperties();
   var updated = [];
   
-  if (newEmail) {
-    props.setProperty('LICENSE_EMAIL', newEmail);
-    updated.push('✅ Email: ' + newEmail);
+  if (email) {
+    props.setProperty('LICENSE_EMAIL', email);
+    updated.push('email');
   }
   
-  if (newToken) {
-    props.setProperty('LICENSE_TOKEN', newToken);
-    updated.push('✅ Токен: ' + newToken.substring(0, 10) + '...');
+  if (token) {
+    props.setProperty('LICENSE_TOKEN', token);
+    updated.push('token');
   }
   
-  if (newGeminiKey) {
-    props.setProperty('GEMINI_API_KEY', newGeminiKey);
-    updated.push('✅ Gemini: ' + newGeminiKey.substring(0, 15) + '...');
+  if (geminiKey) {
+    props.setProperty('GEMINI_API_KEY', geminiKey);
+    updated.push('geminiKey');
   }
   
-  if (updated.length > 0) {
-    ui.alert(
-      '✅ Credentials обновлены', 
-      updated.join('\n') + '\n\n🔄 Попробуйте использовать GM() функции для проверки.',
-      ui.ButtonSet.OK
-    );
-    addSystemLog('All credentials updated successfully', 'INFO', 'SETUP');
-  } else {
-    ui.alert('ℹ️ Настройки не изменены', 'Ни одно поле не было обновлено.', ui.ButtonSet.OK);
-  }
+  addSystemLog('Credentials updated: ' + updated.join(', '), 'INFO', 'SETUP');
 }
 
 /**
@@ -159,6 +167,7 @@ function onOpen() {
     .addSubMenu(ui.createMenu('⚙️ Настройки')
       .addItem('🔑 Авторизоваться', 'authorizeAccess')
       .addItem('🌟 НАСТРОИТЬ ВСЕ КЛЮЧИ', 'setupAllCredentialsWithHelp')
+      .addSeparator()
       .addItem('📊 Проверить статус системы', 'checkSystemStatus')
       .addItem('📋 Очистить ячейки', 'clearChainForA3'))
     .addSubMenu(ui.createMenu('🧠 Управление правилами')

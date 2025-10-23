@@ -327,7 +327,7 @@ function getUserEmail_() {
     }
     return email;
   } catch (e) {
-    // Подсказка пользователю через мягкое уведомление
+    // Подсказка пользователю о необходимости авторизации (ненавязчиво)
     try {
       if (typeof maybeNotifyAuthorizationNeeded === 'function') {
         maybeNotifyAuthorizationNeeded(e && e.message);
